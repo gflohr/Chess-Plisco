@@ -9,12 +9,8 @@ use ExtUtils::MakeMaker;
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Representation of a chess position with move generator, legality checker etc.",
   "AUTHOR" => "Guido Flohr <guido.flohr\@cantanea.com>",
-  "BUILD_REQUIRES" => {
-    "Module::Build" => "0.28"
-  },
   "CONFIGURE_REQUIRES" => {
-    "ExtUtils::MakeMaker" => 0,
-    "Module::Build" => "0.28"
+    "ExtUtils::MakeMaker" => 0
   },
   "DISTNAME" => "Chess-Position",
   "LICENSE" => "unrestricted",
@@ -33,7 +29,6 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
-  "Module::Build" => "0.28",
   "Test::More" => 0,
   "strict" => 0
 );
