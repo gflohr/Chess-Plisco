@@ -5,6 +5,7 @@ MANIFEST
 META.json
 META.yml
 Makefile.PL
+Position-Source.pm
 README.md
 README.pod
 dist.ini
