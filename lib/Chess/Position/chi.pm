@@ -22,9 +22,7 @@ sub extract_arguments;
 
 my %defines;
 
-define chi_concat => 'a', 'b', <<'EOF';
-	a . b
-EOF
+define chi_move_from => 'm', '((m) & 0x3f)';
 
 # FIXME! These can be made constants.  No need to go through the source filter
 # because Perl inlines them anyway.
@@ -140,7 +138,6 @@ sub preprocess {
 			shift @children;
 		}
 
-$DB::single = 1;
 		my $name = $invocation->content;
 		my $macro = $defines{$name}->{code}->clone;
 
