@@ -20,12 +20,14 @@ sub define;
 sub extract_elements;
 sub extract_arguments;
 
-my @defines;
+my %defines;
 
 define chi_concat => 'a', 'b', <<'EOF';
 	a . b
 EOF
 
+# FIXME! These can be made constants.  No need to go through the source filter
+# because Perl inlines them anyway.
 define CHI_A_MASK => 0x8080808080808080;
 define CHI_B_MASK => 0x4040404040404040;
 define CHI_C_MASK => 0x2020202020202020;
@@ -101,7 +103,62 @@ sub filter {
 sub preprocess {
 	my ($code) = @_;
 
-	return $code;
+	my $source = PPI::Document->new(\$code);
+
+	# We always replace the last macro invocation only, and then re-scan the
+	# document. This should ensure that nested macro invocations will work.
+	while (1) {
+		my $invocations = $source->find(sub {
+			$_[1]->isa('PPI::Token::Word') && exists $defines{$_[1]->content}
+		});
+
+		last if !$invocations;
+
+		my $invocation = $invocations->[-1];
+		my $parent = $invocation->parent;
+		my @children = $parent->children;
+
+		# We replace by first removing the invocation itself plus all sibling
+		# following. Then we throw away the appropriate number of elements
+		# and re-add everything.
+		my $pos = 0;
+		foreach my $child (@children) {
+			last if $child == $invocation;
+			++$pos;
+		}
+
+		die "cannot find child node" if $pos >= @children;
+
+		for (my $i = $pos; $i < @children; ++$i) {
+			$parent->remove_child($children[0]);
+		}
+
+		my $delete = 1;
+
+		# Delete the children to replace.  FIXME! Use splice() instead.
+		for (my $i = 0; $i < $delete; ++$i) {
+			shift @children;
+		}
+
+$DB::single = 1;
+		my $name = $invocation->content;
+		my $macro = $defines{$name}->{code}->clone;
+
+		# FIXME! Expand!
+		my $macro_code = $macro->content;
+		$macro = PPI::Document->new(\$macro_code);
+
+		my @replace = $macro->children;
+		foreach my $child (@replace) {
+			$macro->remove_child($child);
+		}
+
+		foreach my $child (@replace, @children) {
+			$parent->add_element($child);
+		}
+last;
+	}
+	return $source->content;
 }
 
 sub define {
@@ -110,8 +167,13 @@ sub define {
 	my $code = pop @args;
 	$code = '' if !defined $code;
 
-	push @defines, {
-		args => @args,
+	if (exists $defines{$name}) {
+		require Carp;
+		Carp::croak("duplicate macro definition '$name'");
+	}
+
+	$defines{$name} = {
+		args => [@args],
 		code => PPI::Document->new(\$code),
 	}
 }
