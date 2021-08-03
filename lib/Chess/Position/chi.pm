@@ -14,8 +14,11 @@ package Chess::Position::chi;
 use strict;
 
 use Filter::Util::Call;
+use PPI::Document;
 
 sub define;
+sub extract_elements;
+sub extract_arguments;
 
 my @defines;
 
@@ -61,7 +64,7 @@ define CHI_RANK_8 => (7);
 
 sub import {
 	my ($type) = @_;
-die;
+
 	my $self = {
 		__source => '',
 		__eof => 0,
@@ -95,6 +98,12 @@ sub filter {
 	return $status;
 }
 
+sub preprocess {
+	my ($code) = @_;
+
+	return $code;
+}
+
 sub define {
 	my ($name, @args) = @_;
 
@@ -103,8 +112,85 @@ sub define {
 
 	push @defines, {
 		args => @args,
-		code => $code,
+		code => PPI::Document->new(\$code),
 	}
+}
+
+sub extract_arguments {
+	my ($doc, @children) = @_;
+
+	# We either have one PPI::Structure::List, or the arguments follow
+	# directly.
+	
+	# Skip insignificant tokens.
+	while (@children) {
+		my $first = $children[0];
+		if (!$first->significant) {
+			shift @children;
+			next;
+		}
+		last;
+	}
+
+	return if !@children;
+
+	my $doc = PPI::Document->new;
+
+	my $first = @children[0];
+	if ($first->isa('PPI::Structure::List')) {
+		my @grandchildren = $first->children;
+		my $first_grandchild = $grandchildren[0];
+		if ($first_grandchild->isa('PPI::Statement::Expression')) {
+			return extract_elements $doc, $first_grandchild->children;
+		} else {
+			return '';
+		}
+	} else {
+		return $doc, extract_elements @children;
+	}
+}
+
+sub extract_elements {
+	my ($root, @children) = @_;
+
+	my $expect_comma;
+	my $statement;
+	foreach my $child (@children) {
+		if ($child->isa('PPI::Token::Structure') && ';' eq $child->content) {
+			last;
+		} elsif ($statement) {
+			$statement .= $child->content;
+			if ($child->isa('PPI::Structure::List')) {
+				my $doc = PPI::Document->new(\$statement);
+				my @children = $doc->children;
+				$root->add_element($children[0]);
+				undef $statement;
+				$expect_comma = 1;
+			}
+		} elsif (!$child->significant) {
+			next;
+		} elsif ($child->isa('PPI::Token::Operator')) {
+			if ($expect_comma && ',' eq $child->content) {
+				undef $expect_comma;
+				next;
+			} else {
+				return;
+			}
+		} elsif ($child->isa('PPI::Token::Word')) {
+			$statement = $child->content;
+		} else {
+			$root->add_element($child);
+			$expect_comma = 1;
+		}
+	}
+
+	if ($statement) {
+		my $doc = PPI::Document->new(\$statement);
+		my @children = $doc->children;
+		$root->add_element($children[0]);
+	}
+
+	return $root;
 }
 
 1;
