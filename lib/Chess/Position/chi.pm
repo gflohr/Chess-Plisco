@@ -15,45 +15,53 @@ use strict;
 
 use Filter::Util::Call;
 
-use constant CHI_A_MASK => 0x8080808080808080;
-use constant CHI_B_MASK => 0x4040404040404040;
-use constant CHI_C_MASK => 0x2020202020202020;
-use constant CHI_D_MASK => 0x1010101010101010;
-use constant CHI_E_MASK => 0x0808080808080808;
-use constant CHI_F_MASK => 0x0404040404040404;
-use constant CHI_G_MASK => 0x0202020202020202;
-use constant CHI_H_MASK => 0x0101010101010101;
+sub define;
 
-use constant CHI_1_MASK => 0x00000000000000ff;
-use constant CHI_2_MASK => 0x000000000000ff00;
-use constant CHI_3_MASK => 0x0000000000ff0000;
-use constant CHI_4_MASK => 0x00000000ff000000;
-use constant CHI_5_MASK => 0x000000ff00000000;
-use constant CHI_6_MASK => 0x0000ff0000000000;
-use constant CHI_7_MASK => 0x00ff000000000000;
-use constant CHI_8_MASK => 0xff00000000000000;
+my @defines;
 
-use constant CHI_FILE_A => (0);
-use constant CHI_FILE_B => (1);
-use constant CHI_FILE_C => (2);
-use constant CHI_FILE_D => (3);
-use constant CHI_FILE_E => (4);
-use constant CHI_FILE_F => (5);
-use constant CHI_FILE_G => (6);
-use constant CHI_FILE_H => (7);
+define chi_concat => 'a', 'b', <<'EOF';
+	a . b
+EOF
 
-use constant CHI_RANK_1 => (0);
-use constant CHI_RANK_2 => (1);
-use constant CHI_RANK_3 => (2);
-use constant CHI_RANK_4 => (3);
-use constant CHI_RANK_5 => (4);
-use constant CHI_RANK_6 => (5);
-use constant CHI_RANK_7 => (6);
-use constant CHI_RANK_8 => (7);
+define CHI_A_MASK => 0x8080808080808080;
+define CHI_B_MASK => 0x4040404040404040;
+define CHI_C_MASK => 0x2020202020202020;
+define CHI_D_MASK => 0x1010101010101010;
+define CHI_E_MASK => 0x0808080808080808;
+define CHI_F_MASK => 0x0404040404040404;
+define CHI_G_MASK => 0x0202020202020202;
+define CHI_H_MASK => 0x0101010101010101;
+
+define CHI_1_MASK => 0x00000000000000ff;
+define CHI_2_MASK => 0x000000000000ff00;
+define CHI_3_MASK => 0x0000000000ff0000;
+define CHI_4_MASK => 0x00000000ff000000;
+define CHI_5_MASK => 0x000000ff00000000;
+define CHI_6_MASK => 0x0000ff0000000000;
+define CHI_7_MASK => 0x00ff000000000000;
+define CHI_8_MASK => 0xff00000000000000;
+
+define CHI_FILE_A => (0);
+define CHI_FILE_B => (1);
+define CHI_FILE_C => (2);
+define CHI_FILE_D => (3);
+define CHI_FILE_E => (4);
+define CHI_FILE_F => (5);
+define CHI_FILE_G => (6);
+define CHI_FILE_H => (7);
+
+define CHI_RANK_1 => (0);
+define CHI_RANK_2 => (1);
+define CHI_RANK_3 => (2);
+define CHI_RANK_4 => (3);
+define CHI_RANK_5 => (4);
+define CHI_RANK_6 => (5);
+define CHI_RANK_7 => (6);
+define CHI_RANK_8 => (7);
 
 sub import {
 	my ($type) = @_;
-
+die;
 	my $self = {
 		__source => '',
 		__eof => 0,
@@ -85,6 +93,18 @@ sub filter {
 	}
 
 	return $status;
+}
+
+sub define {
+	my ($name, @args) = @_;
+
+	my $code = pop @args;
+	$code = '' if !defined $code;
+
+	push @defines, {
+		args => @args,
+		code => $code,
+	}
 }
 
 1;
