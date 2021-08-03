@@ -12,8 +12,13 @@
 use strict;
 
 use Test::More;
+
+# Do not "use" the module because we do not want to acti
 require Chess::Position::chi;
 
-ok 1;
+my ($code);
+
+$code = "CHI_A_MASK";
+is Chess::Position::chi::preprocess($code), "0x8080808080808080", $code;
 
 done_testing;
