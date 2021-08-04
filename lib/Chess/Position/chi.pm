@@ -176,7 +176,28 @@ sub define {
 }
 
 sub extract_arguments {
-	my ($doc, @children) = @_;
+	my ($doc, $name) = @_;
+
+	my @children = $doc->children;
+	my $statement = shift @children;
+	if (!$statement) {
+		die "should not happen";
+	}
+	if (!$statement->isa('PPI::Statement')) {
+		die "should not happen";
+	}
+	
+	my @children = $statement->children;
+	if (!@children) {
+		die "should not happen";
+	}
+	my $invocation = shift @children;
+	if (!$invocation->isa('PPI::Token::Word')) {
+		die "should not happen";
+	}
+	if (!$invocation->content eq $name) {
+		die "should not happen";
+	}
 
 	# We either have one PPI::Structure::List, or the arguments follow
 	# directly.
