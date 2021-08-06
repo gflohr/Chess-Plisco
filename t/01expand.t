@@ -17,16 +17,28 @@ use PPI::Document;
 # Do not "use" the module because we do not want to acti
 require Chess::Position::chi;
 
-my $source = 'chi_move($move)';
-my $sdoc = PPI::Document->new(\$source);
-$DB::single = 1;
-my @arguments = Chess::Position::chi::extract_arguments($sdoc, 'chi_move');
-is((scalar @arguments), 1);
+my ($source, $sdoc, @arguments);
 
-use Scalar::Util qw(blessed);
-foreach my $argument (@arguments) {
-	my $type = blessed $argument;
-	warn "$type: $argument\n";
-}
+$source = 'chi_move_from($move)';
+$sdoc = PPI::Document->new(\$source);
+@arguments = Chess::Position::chi::extract_arguments($sdoc, 'chi_move');
+is((scalar @arguments), 1);
+is $arguments[0]->content, '$move', 'chi_move_from($move)';
+
+$source = 'chi_move_set_from($move, $square)';
+$sdoc = PPI::Document->new(\$source);
+@arguments = Chess::Position::chi::extract_arguments($sdoc, 'chi_move');
+is((scalar @arguments), 2);
+is $arguments[0]->content, '$move', 'chi_move_set_from(>$move<, $square)';
+is $arguments[1]->content, '$square', 'chi_move_set_from($move, >$square<)';
+
+$source = 'chi_move_set_from($move, chi_coords_to_square("e", "2"))';
+$sdoc = PPI::Document->new(\$source);
+@arguments = Chess::Position::chi::extract_arguments($sdoc, 'chi_move');
+is((scalar @arguments), 2);
+is $arguments[0]->content, '$move',
+	'chi_move_set_from(>$move<, chi_coords_to_square("e", "2"))';
+is $arguments[1]->content, 'chi_coords_to_square("e", "2")',
+	'chi_move_set_from($move, >chi_coords_to_square("e", "2")<)';
 
 done_testing;

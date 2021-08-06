@@ -175,6 +175,7 @@ sub define {
 	}
 }
 
+# Extract the arguments to a subroutine or macro call.
 sub extract_arguments {
 	my ($doc, $name) = @_;
 
@@ -214,8 +215,6 @@ sub extract_arguments {
 
 	return if !@children;
 
-	my $doc = PPI::Document->new;
-
 	my $first = @children[0];
 	if ($first->isa('PPI::Structure::List')) {
 		my @grandchildren = $first->children;
@@ -223,7 +222,7 @@ sub extract_arguments {
 		if ($first_grandchild->isa('PPI::Statement::Expression')) {
 			return extract_elements $doc, $first_grandchild->children;
 		} else {
-			return '';
+			return;
 		}
 	} else {
 		return $doc, extract_elements @children;
@@ -235,6 +234,7 @@ sub extract_elements {
 
 	my $expect_comma;
 	my $statement;
+	my @arguments;
 	foreach my $child (@children) {
 		if ($child->isa('PPI::Token::Structure') && ';' eq $child->content) {
 			last;
@@ -243,7 +243,9 @@ sub extract_elements {
 			if ($child->isa('PPI::Structure::List')) {
 				my $doc = PPI::Document->new(\$statement);
 				my @children = $doc->children;
-				$root->add_element($children[0]);
+				my $list = $doc->remove($children[0]);
+				$root->add_element($list);
+				push @arguments, $list;
 				undef $statement;
 				$expect_comma = 1;
 			}
@@ -260,6 +262,7 @@ sub extract_elements {
 			$statement = $child->content;
 		} else {
 			$root->add_element($child);
+			push @arguments, $child;
 			$expect_comma = 1;
 		}
 	}
@@ -268,9 +271,10 @@ sub extract_elements {
 		my $doc = PPI::Document->new(\$statement);
 		my @children = $doc->children;
 		$root->add_element($children[0]);
+		push @arguments, $children[0];
 	}
 
-	return $root;
+	return @arguments;
 }
 
 1;
