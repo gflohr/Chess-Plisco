@@ -14,7 +14,8 @@ use strict;
 use Test::More;
 use PPI::Document;
 
-# Do not "use" the module because we do not want to acti
+# Do not "use" the module because we do not want to activate the source
+# filtering.
 require Chess::Position::chi;
 
 my ($source, $sdoc, @arguments);
