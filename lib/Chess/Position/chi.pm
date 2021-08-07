@@ -23,6 +23,9 @@ sub extract_arguments;
 my %defines;
 
 define chi_move_from => 'm', '((m) & 0x3f)';
+define chi_move_set_from => 'm', 'v', '((m) = ((m) & ~0x3f) | ((v) & 0x3f))';
+
+define chi_coords_to_shift => 'f', 'r', '((r) * 8 + (7 - (f)))';
 
 # FIXME! These can be made constants.  No need to go through the source filter
 # because Perl inlines them anyway.
@@ -98,6 +101,51 @@ sub filter {
 	return $status;
 }
 
+sub expand {
+	my ($parent, $invocation) = @_;
+
+$DB::single = 1;
+
+	# First find the invocation.
+	my @siblings = $parent->children;
+	my $count = -1;
+	my $idx;
+	foreach my $sibling (@siblings) {
+		++$count;
+		if ($sibling == $invocation) {
+			$idx = $count;
+			last;
+		}
+	}
+
+	$parent->remove_child($invocation);
+
+	return if !defined $idx;
+
+	# First remove all elements following the invocation, and later re-add
+	# them.
+	my @tail;
+	for (my $i = $idx + 1; $i < @siblings; ++$i) {
+		push @tail, $parent->remove_child($siblings[$i]);
+	}
+
+	my $name = $invocation->content;
+	my $definition = $defines{$name};
+
+	my $cdoc = $definition->{code}->clone;
+	my @children = $cdoc->children;
+	foreach my $child (@children) {
+		$cdoc->remove_child($child);
+		$parent->add_element($child);
+	}
+
+	foreach my $sibling (@tail) {
+		$parent->add_element($sibling);
+	}
+
+	return $invocation;
+};
+
 sub preprocess {
 	my ($code) = @_;
 
@@ -114,47 +162,10 @@ sub preprocess {
 
 		my $invocation = $invocations->[-1];
 		my $parent = $invocation->parent;
-		my @children = $parent->children;
 
-		# We replace by first removing the invocation itself plus all sibling
-		# following. Then we throw away the appropriate number of elements
-		# and re-add everything.
-		my $pos = 0;
-		foreach my $child (@children) {
-			last if $child == $invocation;
-			++$pos;
-		}
-
-		die "cannot find child node" if $pos >= @children;
-
-		for (my $i = $pos; $i < @children; ++$i) {
-			$parent->remove_child($children[0]);
-		}
-
-		my $delete = 1;
-
-		# Delete the children to replace.  FIXME! Use splice() instead.
-		for (my $i = 0; $i < $delete; ++$i) {
-			shift @children;
-		}
-
-		my $name = $invocation->content;
-		my $macro = $defines{$name}->{code}->clone;
-
-		# FIXME! Expand!
-		my $macro_code = $macro->content;
-		$macro = PPI::Document->new(\$macro_code);
-
-		my @replace = $macro->children;
-		foreach my $child (@replace) {
-			$macro->remove_child($child);
-		}
-
-		foreach my $child (@replace, @children) {
-			$parent->add_element($child);
-		}
-last;
+		expand $parent, $invocation;
 	}
+
 	return $source->content;
 }
 
@@ -243,7 +254,7 @@ sub extract_elements {
 			if ($child->isa('PPI::Structure::List')) {
 				my $doc = PPI::Document->new(\$statement);
 				my @children = $doc->children;
-				my $list = $doc->remove($children[0]);
+				my $list = $doc->remove_child($children[0]);
 				$root->add_element($list);
 				push @arguments, $list;
 				undef $statement;
