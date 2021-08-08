@@ -21,4 +21,13 @@ my ($code);
 $code = 'CHI_A_MASK';
 is Chess::Position::chi::preprocess($code), 0x8080808080808080, $code;
 
+$code = 'CHI_A_MASK()';
+is Chess::Position::chi::preprocess($code), 0x8080808080808080, $code;
+
+$code = 'CHI_A_MASK ()';
+is Chess::Position::chi::preprocess($code), 0x8080808080808080, $code;
+
+$code = 'CHI_A_MASK ($what, $ever, nested(subroutine($sth, $else)))';
+is Chess::Position::chi::preprocess($code), 0x8080808080808080, $code;
+
 done_testing;
