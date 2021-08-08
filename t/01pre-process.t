@@ -34,16 +34,16 @@ $code = 'my $something = CHI_A_MASK + CHI_B_MASK - 2304; say "goodbye";';
 my $expect = 'my $something = 9259542123273814144 + 4629771061636907072 - 2304; say "goodbye";';
 is Chess::Position::chi::preprocess($code), $expect, $code;
 
-$code = 'chi_move_from($move)';
+$code = 'chi_move_to($move)';
 is Chess::Position::chi::preprocess($code), '(($move) & 0x3f)', $code;
 
-$code = 'chi_move_from $move';
+$code = 'chi_move_to $move';
 is Chess::Position::chi::preprocess($code), '(($move) & 0x3f)', $code;
 
-$code = 'chi_move_from($move); return;';
+$code = 'chi_move_to($move); return;';
 is Chess::Position::chi::preprocess($code), '(($move) & 0x3f); return;', $code;
 
-$code = 'chi_move_from $move; return;';
+$code = 'chi_move_to $move; return;';
 is Chess::Position::chi::preprocess($code), '(($move) & 0x3f); return;', $code;
 
 done_testing;
