@@ -9,7 +9,7 @@
 # to Public License, Version 2, as published by Sam Hocevar. See
 # http://www.wtfpl.net/ for more details.
 
-package Chess::Position::chi;
+package Chess::Position::Macro;
 
 use strict;
 
@@ -25,48 +25,48 @@ sub expand_placeholder;
 
 my %defines;
 
-define chi_move_to => '$m', '(($m) & 0x3f)';
-define chi_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
+define cp_move_to => '$m', '(($m) & 0x3f)';
+define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 
-define chi_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
+define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 
 # FIXME! These can be made constants.  No need to go through the source filter
 # because Perl inlines them anyway.
-define CHI_A_MASK => 0x8080808080808080;
-define CHI_B_MASK => 0x4040404040404040;
-define CHI_C_MASK => 0x2020202020202020;
-define CHI_D_MASK => 0x1010101010101010;
-define CHI_E_MASK => 0x0808080808080808;
-define CHI_F_MASK => 0x0404040404040404;
-define CHI_G_MASK => 0x0202020202020202;
-define CHI_H_MASK => 0x0101010101010101;
+define CP_A_MASK => 0x8080808080808080;
+define CP_B_MASK => 0x4040404040404040;
+define CP_C_MASK => 0x2020202020202020;
+define CP_D_MASK => 0x1010101010101010;
+define CP_E_MASK => 0x0808080808080808;
+define CP_F_MASK => 0x0404040404040404;
+define CP_G_MASK => 0x0202020202020202;
+define CP_H_MASK => 0x0101010101010101;
 
-define CHI_1_MASK => 0x00000000000000ff;
-define CHI_2_MASK => 0x000000000000ff00;
-define CHI_3_MASK => 0x0000000000ff0000;
-define CHI_4_MASK => 0x00000000ff000000;
-define CHI_5_MASK => 0x000000ff00000000;
-define CHI_6_MASK => 0x0000ff0000000000;
-define CHI_7_MASK => 0x00ff000000000000;
-define CHI_8_MASK => 0xff00000000000000;
+define CP_1_MASK => 0x00000000000000ff;
+define CP_2_MASK => 0x000000000000ff00;
+define CP_3_MASK => 0x0000000000ff0000;
+define CP_4_MASK => 0x00000000ff000000;
+define CP_5_MASK => 0x000000ff00000000;
+define CP_6_MASK => 0x0000ff0000000000;
+define CP_7_MASK => 0x00ff000000000000;
+define CP_8_MASK => 0xff00000000000000;
 
-define CHI_FILE_A => (0);
-define CHI_FILE_B => (1);
-define CHI_FILE_C => (2);
-define CHI_FILE_D => (3);
-define CHI_FILE_E => (4);
-define CHI_FILE_F => (5);
-define CHI_FILE_G => (6);
-define CHI_FILE_H => (7);
+define CP_FILE_A => (0);
+define CP_FILE_B => (1);
+define CP_FILE_C => (2);
+define CP_FILE_D => (3);
+define CP_FILE_E => (4);
+define CP_FILE_F => (5);
+define CP_FILE_G => (6);
+define CP_FILE_H => (7);
 
-define CHI_RANK_1 => (0);
-define CHI_RANK_2 => (1);
-define CHI_RANK_3 => (2);
-define CHI_RANK_4 => (3);
-define CHI_RANK_5 => (4);
-define CHI_RANK_6 => (5);
-define CHI_RANK_7 => (6);
-define CHI_RANK_8 => (7);
+define CP_RANK_1 => (0);
+define CP_RANK_2 => (1);
+define CP_RANK_3 => (2);
+define CP_RANK_4 => (3);
+define CP_RANK_5 => (4);
+define CP_RANK_6 => (5);
+define CP_RANK_7 => (6);
+define CP_RANK_8 => (7);
 
 sub import {
 	my ($type) = @_;
@@ -88,10 +88,10 @@ sub filter {
 
 	if ($status > 0) {
 		# Expand constants.
-		s/(CHI_[_A-Z0-9]+)/eval $1/ge;
+		s/(CP_[_A-Z0-9]+)/eval $1/ge;
 
 		# And then macros.  That doesn't work ... :(
-		s/(chi_[_a-z0-9]+[ \t]*\(.*?\))/eval $1/ge;
+		s/(cp_[_a-z0-9]+[ \t]*\(.*?\))/eval $1/ge;
 
 		$self->{__source} .= $_;
 		$_ = '';

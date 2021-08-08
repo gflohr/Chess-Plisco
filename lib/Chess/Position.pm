@@ -17,8 +17,7 @@ package Chess::Position;
 use strict;
 use integer;
 
-# This source filter replaces everything here that starts with CHI_ or chi_.
-use Chess::Position::chi;
+use Chess::Position::Macro;
 
 sub new {
 	my ($class) = @_;
