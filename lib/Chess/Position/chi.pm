@@ -157,12 +157,13 @@ sub expand {
 			if (!defined $first_significant && $siblings[$to]->significant) {
 				$first_significant = $siblings[$to];
 				if ($first_significant->isa('PPI::Structure::List')) {
+					--$to;
 					last;
 				}
 			}
 		}
 		$to = $idx if $to >= @siblings;
-		$cut = $to - $idx;
+		$cut = $to - $idx + 1;
 	}
 
 	$parent->remove_child($invocation);
