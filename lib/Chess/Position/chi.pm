@@ -17,8 +17,8 @@ use Filter::Util::Call;
 use PPI::Document;
 
 sub define;
-sub extract_elements;
 sub extract_arguments;
+sub split_arguments;
 
 my %defines;
 
@@ -104,8 +104,6 @@ sub filter {
 sub expand {
 	my ($parent, $invocation) = @_;
 
-$DB::single = 1;
-
 	# First find the invocation.
 	my @siblings = $parent->children;
 	my $count = -1;
@@ -186,103 +184,91 @@ sub define {
 	}
 }
 
-# Extract the arguments to a subroutine or macro call.
 sub extract_arguments {
-	my ($doc, $name) = @_;
+	my ($word) = @_;
 
-	my @children = $doc->children;
-	my $statement = shift @children;
-	if (!$statement) {
-		die "should not happen";
-	}
-	if (!$statement->isa('PPI::Statement')) {
-		die "should not happen";
-	}
-	
-	my @children = $statement->children;
-	if (!@children) {
-		die "should not happen";
-	}
-	my $invocation = shift @children;
-	if (!$invocation->isa('PPI::Token::Word')) {
-		die "should not happen";
-	}
-	if (!$invocation->content eq $name) {
-		die "should not happen";
-	}
-
-	# We either have one PPI::Structure::List, or the arguments follow
-	# directly.
-	
-	# Skip insignificant tokens.
-	while (@children) {
-		my $first = $children[0];
-		if (!$first->significant) {
-			shift @children;
-			next;
+	my $parent = $word->parent;
+	my @siblings = $parent->children;
+	my $pos;
+	for (my $i = 0; $i < @siblings; ++$i) {
+		if ($siblings[$i] == $word) {
+			$pos = $i;
+			last;
 		}
-		last;
 	}
 
-	return if !@children;
+	return if !defined $pos;
 
-	my $first = @children[0];
-	if ($first->isa('PPI::Structure::List')) {
-		my @grandchildren = $first->children;
-		my $first_grandchild = $grandchildren[0];
-		if ($first_grandchild->isa('PPI::Statement::Expression')) {
-			return extract_elements $doc, $first_grandchild->children;
-		} else {
-			return;
+	# No arguments?
+	return if $pos == $#siblings;
+
+	# Skip insignicant tokens.
+	my $argidx;
+	for (my $i = $pos + 1; $i < @siblings; ++$i) {
+		if ($siblings[$i]->significant) {
+			$argidx = $i;
+			last;
 		}
+	}
+
+	return if !defined $argidx;
+
+	my @argnodes;
+	my $argnodes_parent = $parent;
+
+	if ($siblings[$argidx]->isa('PPI::Token::Structure')) {
+		# No arguments.
+		return;
+	} elsif ($siblings[$argidx]->isa('PPI::Structure::List')) {
+		# Call with parentheses.  The only child should be an expression.
+		my @expression = $siblings[$argidx]->children;
+		return if @expression != 1;
+		$argnodes_parent = $expression[0];
+		return if !$argnodes_parent->isa('PPI::Statement::Expression');
+		@argnodes = $argnodes_parent->children;
 	} else {
-		return $doc, extract_elements @children;
+		for (my $i = $argidx; $i < @siblings; ++$i) {
+			# Call without parentheses.
+			if ($siblings[$i]->isa('PPI::Token::Structure')
+			    && ';' eq $siblings[$i]->content) {
+					last;
+			}
+
+			push @argnodes, $siblings[$i];
+		}
 	}
+
+	return split_arguments $argnodes_parent, @argnodes;
 }
 
-sub extract_elements {
-	my ($root, @children) = @_;
+sub split_arguments {
+	my ($parent, @argnodes) = @_;
 
-	my $expect_comma;
-	my $statement;
 	my @arguments;
-	foreach my $child (@children) {
-		if ($child->isa('PPI::Token::Structure') && ';' eq $child->content) {
-			last;
-		} elsif ($statement) {
-			$statement .= $child->content;
-			if ($child->isa('PPI::Structure::List')) {
-				my $doc = PPI::Document->new(\$statement);
-				my @children = $doc->children;
-				my $list = $doc->remove_child($children[0]);
-				$root->add_element($list);
-				push @arguments, $list;
-				undef $statement;
-				$expect_comma = 1;
-			}
-		} elsif (!$child->significant) {
-			next;
-		} elsif ($child->isa('PPI::Token::Operator')) {
-			if ($expect_comma && ',' eq $child->content) {
-				undef $expect_comma;
-				next;
-			} else {
-				return;
-			}
-		} elsif ($child->isa('PPI::Token::Word')) {
-			$statement = $child->content;
+	my @argument;
+
+	for (my $i = 0; $i < @argnodes; ++$i) {
+		my $argnode = $argnodes[$i];
+
+		$parent->remove_child($argnode);
+
+		if ($argnode->isa('PPI::Token::Operator')
+		    && ',' eq $argnode->content) {
+			push @arguments, [@argument];
+			undef @argument;
 		} else {
-			$root->add_element($child);
-			push @arguments, $child;
-			$expect_comma = 1;
+			push @argument, $argnode;
 		}
 	}
+	push @arguments, [@argument] if @argument;
 
-	if ($statement) {
-		my $doc = PPI::Document->new(\$statement);
-		my @children = $doc->children;
-		$root->add_element($children[0]);
-		push @arguments, $children[0];
+	foreach my $argument (@arguments) {
+		while (!$argument->[0]->significant) {
+			shift @$argument;
+		}
+		while (!$argument->[-1]->significant) {
+			pop @$argument;
+		}
 	}
 
 	return @arguments;
