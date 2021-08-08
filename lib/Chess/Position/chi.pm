@@ -191,7 +191,10 @@ sub expand {
 sub expand_placeholders {
 	my ($doc, %placeholders) = @_;
 
-	my $words = $doc->find(sub { exists $placeholders{$_[1]->content} });
+	my $words = $doc->find(sub { 
+		($_[1]->isa('PPI::Token::Symbol') || $_[1]->isa('PPI::Token::Word'))
+		&& exists $placeholders{$_[1]->content} 
+	});
 
 	foreach my $word (@$words) {
 		expand_placeholder $word, @{$placeholders{$word->content}};
@@ -220,7 +223,8 @@ sub expand_placeholder {
 	}
 
 	foreach my $token (@arglist, @tail) {
-		$parent->add_element($token);
+		# We have to clone the token, in case it had been used before.
+		$parent->add_element($token->clone);
 	}
 }
 
