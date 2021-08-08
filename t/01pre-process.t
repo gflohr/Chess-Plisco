@@ -34,4 +34,7 @@ $code = 'my $something = CHI_A_MASK + CHI_B_MASK - 2304; say "goodbye";';
 my $expect = 'my $something = 9259542123273814144 + 4629771061636907072 - 2304; say "goodbye";';
 is Chess::Position::chi::preprocess($code), $expect, $code;
 
+$code = 'chi_move_from($move)';
+is Chess::Position::chi::preprocess($code), '(($move) & 0x3f)', $code;
+
 done_testing;

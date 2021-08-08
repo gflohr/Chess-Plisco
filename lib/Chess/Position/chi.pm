@@ -20,13 +20,15 @@ sub define;
 sub extract_arguments;
 sub split_arguments;
 sub expand;
+sub expand_placeholders;
+sub expand_placeholder;
 
 my %defines;
 
-define chi_move_from => 'm', '((m) & 0x3f)';
-define chi_move_set_from => 'm', 'v', '((m) = ((m) & ~0x3f) | ((v) & 0x3f))';
+define chi_move_from => '$m', '(($m) & 0x3f)';
+define chi_move_set_from => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 
-define chi_coords_to_shift => 'f', 'r', '((r) * 8 + (7 - (f)))';
+define chi_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 
 # FIXME! These can be made constants.  No need to go through the source filter
 # because Perl inlines them anyway.
@@ -117,46 +119,108 @@ sub expand {
 		}
 	}
 
-	$parent->remove_child($invocation);
-
 	return if !defined $idx;
 
 	# First remove all elements following the invocation, and later re-add
 	# them.
+	my $name = $invocation->content;
+
+	my $definition = $defines{$name};
+	my $cdoc = $definition->{code}->clone;
+	my $cut = 0;
+	if (@{$definition->{args}} == 0) {
+		# Just a constant, no arguments.
+		# Check whether there is a list following, and discard it.
+		my $to;
+		foreach ($to = $idx + 1; $to < @siblings; ++$to) {
+			last if $siblings[$to]->significant;
+		}
+		if ($to < @siblings && $siblings[$to]->isa('PPI::Structure::List')) {
+			$cut = $to - $idx;
+		}
+	} else {
+		my @arguments = extract_arguments $invocation;
+		my @placeholders = @{$definition->{args}};
+		my %placeholders;
+		for (my $i = 0; $i < @placeholders; ++$i) {
+			my $placeholder = $placeholders[$i];
+			if ($i > $#arguments) {
+				$placeholders{$placeholder} = [];
+			} else {
+				$placeholders{$placeholder} = $arguments[$i];
+			}
+		}
+		expand_placeholders $cdoc, %placeholders;
+
+		my ($to, $first_significant);
+		foreach ($to = $idx + 1; $to < @siblings; ++$to) {
+			if (!defined $first_significant && $siblings[$to]->significant) {
+				$first_significant = $siblings[$to];
+				if ($first_significant->isa('PPI::Structure::List')) {
+					last;
+				}
+			}
+		}
+		$to = $idx if $to >= @siblings;
+		$cut = $to - $idx;
+	}
+
+	$parent->remove_child($invocation);
+
 	my @tail;
 	for (my $i = $idx + 1; $i < @siblings; ++$i) {
 		push @tail, $parent->remove_child($siblings[$i]);
 	}
 
-	my $name = $invocation->content;
-
-	my $definition = $defines{$name};
-	my $cdoc = $definition->{code}->clone;
-	my $is_constant;
-	if (@{$definition->{args}} == 0) {
-		# Just a constant, no arguments.
-		# Check whether there is a list following, and discard it.
-		$is_constant = 1;
-		my $to;
-		foreach ($to = 0; $to < @tail; ++$to) {
-			last if $tail[$to]->significant;
-		}
-		if ($to < @tail && $tail[$to]->isa('PPI::Structure::List')) {
-			splice @tail, 0, $to + 1;
-		}
-	}
+	splice @tail, 0, $cut;
 
 	my @children = $cdoc->children;
 	foreach my $child (@children) {
 		$cdoc->remove_child($child);
-		$parent->add_element($child);
 	}
 
-	foreach my $sibling (@tail) {
+
+	foreach my $sibling (@children, @tail) {
 		$parent->add_element($sibling);
 	}
 
 	return $invocation;
+}
+
+sub expand_placeholders {
+	my ($doc, %placeholders) = @_;
+
+	my $words = $doc->find(sub { exists $placeholders{$_[1]->content} });
+
+	foreach my $word (@$words) {
+		expand_placeholder $word, @{$placeholders{$word->content}};
+	}
+}
+
+sub expand_placeholder {
+	my ($word, @arglist) = @_;
+
+	# Find the word in the parent.
+	my $parent = $word->parent;
+	my $idx;
+
+	my @siblings = $parent->children;
+	my $word_idx;
+	my @tail;
+	for (my $i = 0; $i < @siblings; ++$i) {
+		if (defined $word_idx) {
+			my $sibling = $siblings[$i];
+			$parent->remove_child($sibling);
+			push @tail, $sibling;
+		} elsif ($siblings[$i] == $word) {
+			$word_idx = $i;
+			$parent->remove_child($word);
+		}
+	}
+
+	foreach my $token (@arglist, @tail) {
+		$parent->add_element($token);
+	}
 }
 
 sub preprocess {
