@@ -11,7 +11,7 @@
 
 use strict;
 
-use Test::More skip_all => 'must implement preprocessor first';
+use Test::More;
 use Chess::Position;
 
 my $pos = Chess::Position->new;

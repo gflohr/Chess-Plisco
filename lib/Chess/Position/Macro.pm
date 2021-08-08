@@ -17,6 +17,7 @@ use Filter::Util::Call;
 use PPI::Document;
 
 sub define;
+sub preprocess;
 sub extract_arguments;
 sub split_arguments;
 sub expand;
@@ -25,13 +26,11 @@ sub expand_placeholder;
 
 my %defines;
 
-define cp_move_to => '$m', '(($m) & 0x3f)';
-define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
-
-define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
-
 # FIXME! These can be made constants.  No need to go through the source filter
 # because Perl inlines them anyway.
+define CP_WHITE => 0;
+define CP_BLACK => 1;
+
 define CP_A_MASK => 0x8080808080808080;
 define CP_B_MASK => 0x4040404040404040;
 define CP_C_MASK => 0x2020202020202020;
@@ -68,6 +67,24 @@ define CP_RANK_6 => (5);
 define CP_RANK_7 => (6);
 define CP_RANK_8 => (7);
 
+define cp_pos_w_pieces => '$p', '$p->[0]';
+define cp_pos_b_pieces => '$p', '$p->[1]';
+define cp_pos_kings => '$p', '$p->[2]';
+define cp_pos_rooks => '$p', '$p->[3]';
+define cp_pos_bishops => '$p', '$p->[4]';
+define cp_pos_knights => '$p', '$p->[5]';
+define cp_pos_pawns => '$p', '$p->[6]';
+define cp_pos_on_move => '$p', '$p->[7]';
+define cp_pos_w_kcastle => '$p', '$p->[8]';
+define cp_pos_w_qcastle => '$p', '$p->[9]';
+define cp_pos_b_kcastle => '$p', '$p->[10]';
+define cp_pos_b_qcastle => '$p', '$p->[11]';
+
+define cp_move_to => '$m', '(($m) & 0x3f)';
+define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
+
+define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
+
 sub import {
 	my ($type) = @_;
 
@@ -87,16 +104,10 @@ sub filter {
 	my $status = filter_read();
 
 	if ($status > 0) {
-		# Expand constants.
-		s/(CP_[_A-Z0-9]+)/eval $1/ge;
-
-		# And then macros.  That doesn't work ... :(
-		s/(cp_[_a-z0-9]+[ \t]*\(.*?\))/eval $1/ge;
-
 		$self->{__source} .= $_;
 		$_ = '';
 	} elsif ($status == 0) {
-		$_ = $self->{__source};
+		$_ = preprocess $self->{__source};
 		$self->{__eof} = 1;
 		return 1;
 	}
