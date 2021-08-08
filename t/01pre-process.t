@@ -46,4 +46,7 @@ is Chess::Position::chi::preprocess($code), '(($move) & 0x3f); return;', $code;
 $code = 'chi_move_to $move; return;';
 is Chess::Position::chi::preprocess($code), '(($move) & 0x3f); return;', $code;
 
+$code = 'chi_move_set_to($move, 32);';
+is Chess::Position::chi::preprocess($code), '(($move) = (($move) & ~0x3f) | ((32) & 0x3f));', $code;
+
 done_testing;
