@@ -25,8 +25,8 @@ sub expand_placeholder;
 
 my %defines;
 
-define chi_move_from => '$m', '(($m) & 0x3f)';
-define chi_move_set_from => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
+define chi_move_to => '$m', '(($m) & 0x3f)';
+define chi_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 
 define chi_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 
