@@ -22,99 +22,117 @@ use Chess::Position::Macro;
 sub new {
 	my ($class) = @_;
 
-	# my $self = {
-	# 	w_pieces => CHI_1_MASK | CHI_2_MASK,
-	# 	b_pieces => CHI_8_MASK | CHI_7_MASK,
-	# 	kings => (CHI_1_MASK | CHI_8_MASK) & CHI_E_MASK,
-	# 	rooks => ((CHI_A_MASK | CHI_D_MASK | CHI_H_MASK) & CHI_1_MASK)
-	# 		| ((CHI_A_MASK | CHI_D_MASK | CHI_H_MASK) & CHI_8_MASK),
-	# 	bishops => ((CHI_C_MASK | CHI_D_MASK | CHI_F_MASK) & CHI_1_MASK)
-	# 		| ((CHI_C_MASK | CHI_D_MASK | CHI_F_MASK) & CHI_8_MASK),
-	# 	knights => ((CHI_B_MASK | CHI_G_MASK) & CHI_1_MASK)
-	# 		| ((CHI_B_MASK | CHI_G_MASK) & CHI_8_MASK),
-	# 	pawns => CHI_2_MASK | CHI_7_MASK,
-	# };
-	my $self = {};
+	my $self = [];
+	cp_pos_w_pieces($self) = CP_1_MASK | CP_2_MASK;
+	cp_pos_b_pieces($self) = CP_8_MASK | CP_7_MASK,
+	cp_pos_kings($self) = (CP_1_MASK | CP_8_MASK) & CP_E_MASK;
+	cp_pos_rooks($self) = ((CP_A_MASK | CP_D_MASK | CP_H_MASK) & CP_1_MASK)
+			| ((CP_A_MASK | CP_D_MASK | CP_H_MASK) & CP_8_MASK),
+	cp_pos_bishops($self) = ((CP_C_MASK | CP_D_MASK | CP_F_MASK) & CP_1_MASK)
+			| ((CP_C_MASK | CP_D_MASK | CP_F_MASK) & CP_8_MASK),
+	cp_pos_knights($self) => ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
+			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK),
+	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
+	cp_pos_on_move($self) = CP_WHITE;
+	cp_pos_w_kcastle($self) = 1;
+	cp_pos_w_qcastle($self) = 1;
+	cp_pos_b_kcastle($self) = 1;
+	cp_pos_b_qcastle($self) = 1;
+
 	bless $self, $class;
 }
 
 sub toFEN {
 	my ($self) = @_;
 
-	return '';
+	my $w_pieces = cp_pos_w_pieces($self);
+	my $b_pieces = cp_pos_b_pieces($self);
+	my $pieces = $w_pieces | $b_pieces;
+	my $pawns = cp_pos_pawns($self);
+	my $bishops = cp_pos_pawns($self);
+	my $knights = cp_pos_pawns($self);
+	my $rooks = cp_pos_pawns($self);
 
-	# my $w_pieces = $self->{w_pieces};
-	# my $b_pieces = $self->{b_pieces};
-	# my $pieces = $w_pieces | $b_pieces;
-	# my $pawns = $self->{pawns};
-	# my $bishops = $self->{bishops};
-	# my $knights = $self->{knights};
-	# my $rooks = $self->{rooks};
+	my $fen = '';
 
-	# my $fen = '';
+	for (my $rank = CP_RANK_8; $rank >= CP_RANK_1; --$rank) {
+		my $empty = 0;
+		for (my $file = CP_FILE_A; $file <= CP_FILE_H; ++$file) {
+			my $shift = $self->coordinatesToShift($file, $rank);
+			my $mask = 1 << $shift;
 
-	# for (my $rank = CHI_RANK_8; $rank >= CHI_RANK_1; --$rank) {
-	# 	my $empty = 0;
-	# 	for (my $file = CHI_FILE_A; $file <= CHI_FILE_H; ++$file) {
-	# 		my $shift = $self->coordinatesToShift($file, $rank);
-	# 		my $mask = 1 << $shift;
+			if ($mask & $pieces) {
+				if ($empty) {
+					$fen .= $empty;
+					$empty = 0;
+				}
 
-	# 		if ($mask & $pieces) {
-	# 			if ($empty) {
-	# 				$fen .= $empty;
-	# 				$empty = 0;
-	# 			}
+				if ($mask & $w_pieces) {
+					if ($mask & $pawns) {
+						$fen .= 'P';
+					} elsif ($mask & $knights) {
+						$fen .= 'N';
+					} elsif ($mask & $bishops) {
+						if ($mask & $rooks) {
+							$fen .= 'Q';
+						} else {
+							$fen .= 'B';
+						}
+					} elsif ($mask & $rooks) {
+						$fen .= 'R';
+					} else {
+						$fen .= 'K';
+					}
+				} elsif ($mask & $b_pieces) {
+					if ($mask & $pawns) {
+						$fen .= 'p';
+					} elsif ($mask & $knights) {
+						$fen .= 'n';
+					} elsif ($mask & $bishops) {
+						if ($mask & $rooks) {
+							$fen .= 'q';
+						} else {
+							$fen .= 'b';
+						}
+					} elsif ($mask & $rooks) {
+						$fen .= 'r';
+					} else {
+						$fen .= 'k';
+					}
+				}
+			} else {
+				++$empty;
+			}
 
-	# 			if ($mask & $w_pieces) {
-	# 				if ($mask & $pawns) {
-	# 					$fen .= 'P';
-	# 				} elsif ($mask & $knights) {
-	# 					$fen .= 'N';
-	# 				} elsif ($mask & $bishops) {
-	# 					if ($mask & $rooks) {
-	# 						$fen .= 'Q';
-	# 					} else {
-	# 						$fen .= 'B';
-	# 					}
-	# 				} elsif ($mask & $rooks) {
-	# 					$fen .= 'R';
-	# 				} else {
-	# 					$fen .= 'K';
-	# 				}
-	# 			} elsif ($mask & $b_pieces) {
-	# 				if ($mask & $pawns) {
-	# 					$fen .= 'p';
-	# 				} elsif ($mask & $knights) {
-	# 					$fen .= 'n';
-	# 				} elsif ($mask & $bishops) {
-	# 					if ($mask & $rooks) {
-	# 						$fen .= 'q';
-	# 					} else {
-	# 						$fen .= 'b';
-	# 					}
-	# 				} elsif ($mask & $rooks) {
-	# 					$fen .= 'r';
-	# 				} else {
-	# 					$fen .= 'k';
-	# 				}
-	# 			}
-	# 		} else {
-	# 			++$empty;
-	# 		}
+			if ($file == CP_FILE_H) {
+				if ($empty) {
+					$fen .= $empty;
+					$empty = 0;
+				}
+				if ($rank != CP_RANK_1) {
+					$fen .= '/';
+				}
+			}
+		}
+	}
 
-	# 		if ($file == CHI_FILE_H) {
-	# 			if ($empty) {
-	# 				$fen .= $empty;
-	# 				$empty = 0;
-	# 			}
-	# 			if ($rank != CHI_RANK_1) {
-	# 				$fen .= '/';
-	# 			}
-	# 		}
-	# 	}
-	# }
+	$fen .= (cp_pos_on_move($self) == CP_WHITE) ? ' w ' : ' b ';
 
-	# return $fen;
+	my $w_kcastle = cp_pos_w_kcastle($self) || 0;
+	my $w_qcastle = cp_pos_w_kcastle($self) || 0;
+	my $b_kcastle = cp_pos_w_kcastle($self) || 0;
+	my $b_qcastle = cp_pos_w_kcastle($self) || 0;
+
+	my $castle = '';
+	$castle .= 'K' if $w_kcastle;
+	$castle .= 'Q' if $w_qcastle;
+	$castle .= 'k' if $b_kcastle;
+	$castle .= 'q' if $b_qcastle;
+	$castle ||= '-';
+
+	$fen .= $castle;
+	
+	return $fen;
 }
 
 sub coordinatesToShift {
