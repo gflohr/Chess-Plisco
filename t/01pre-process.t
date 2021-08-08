@@ -37,4 +37,13 @@ is Chess::Position::chi::preprocess($code), $expect, $code;
 $code = 'chi_move_from($move)';
 is Chess::Position::chi::preprocess($code), '(($move) & 0x3f)', $code;
 
+$code = 'chi_move_from $move';
+is Chess::Position::chi::preprocess($code), '(($move) & 0x3f)', $code;
+
+$code = 'chi_move_from($move); return;';
+is Chess::Position::chi::preprocess($code), '(($move) & 0x3f); return;', $code;
+
+$code = 'chi_move_from $move; return;';
+is Chess::Position::chi::preprocess($code), '(($move) & 0x3f); return;', $code;
+
 done_testing;
