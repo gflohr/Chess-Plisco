@@ -30,4 +30,8 @@ is Chess::Position::chi::preprocess($code), 0x8080808080808080, $code;
 $code = 'CHI_A_MASK ($what, $ever, nested(subroutine($sth, $else)))';
 is Chess::Position::chi::preprocess($code), 0x8080808080808080, $code;
 
+$code = 'my $something = CHI_A_MASK + CHI_B_MASK - 2304; say "goodbye";';
+my $expect = 'my $something = 9259542123273814144 + 4629771061636907072 - 2304; say "goodbye";';
+is Chess::Position::chi::preprocess($code), $expect, $code;
+
 done_testing;

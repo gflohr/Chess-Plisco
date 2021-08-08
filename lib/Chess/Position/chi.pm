@@ -20,7 +20,6 @@ sub define;
 sub extract_arguments;
 sub split_arguments;
 sub expand;
-sub expand_constant;
 
 my %defines;
 
@@ -133,10 +132,18 @@ sub expand {
 
 	my $definition = $defines{$name};
 	my $cdoc = $definition->{code}->clone;
+	my $is_constant;
 	if (@{$definition->{args}} == 0) {
-		# Just a constant, no arguments.  Just return the code.
-		expand_constant $parent, $idx, $cdoc, @siblings;
-		return $invocation;
+		# Just a constant, no arguments.
+		# Check whether there is a list following, and discard it.
+		$is_constant = 1;
+		my $to;
+		foreach ($to = 0; $to < @tail; ++$to) {
+			last if $tail[$to]->significant;
+		}
+		if ($to < @tail && $tail[$to]->isa('PPI::Structure::List')) {
+			splice @tail, 0, $to + 1;
+		}
 	}
 
 	my @children = $cdoc->children;
@@ -150,28 +157,6 @@ sub expand {
 	}
 
 	return $invocation;
-};
-
-sub expand_constant {
-	my ($parent, $idx, $cdoc, @siblings) = @_;
-
-	my @children = $cdoc->children;
-	foreach my $child (@children) {
-		$cdoc->remove_child($child);
-		$parent->add_element($child);
-	}
-
-	# Check whether there is a list following. In that case remove it.
-	my $to;
-	for ($to = $idx + 1; $to < @siblings; ++$to) {
-		last if $siblings[$to]->significant;
-	}
-
-	if ($to < @siblings && $siblings[$to]->isa('PPI::Structure::List')) {
-		for (my $i = $idx + 1; $i < @siblings; ++$i) {
-			$parent->remove_child($siblings[$i]);
-		}
-	}
 }
 
 sub preprocess {
