@@ -35,4 +35,14 @@ ok $@, "castling state required";
 is(Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq')
    ->toFEN, $initial, 'defaults');
 
+eval {
+	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w');
+};
+ok $@, "exactly 8 ranks";
+
+eval {
+	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w');
+};
+ok $@, "exactly 8 ranks";
+
 done_testing;
