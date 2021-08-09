@@ -24,4 +24,6 @@ my $wanted = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 is $got, $wanted, 'FEN initial position';
 is "$pos", $wanted, 'FEN initial position stringified';
 
+is_deeply(Chess::Position->newFromFEN($wanted), $pos, 'newFromFEN');
+
 done_testing;
