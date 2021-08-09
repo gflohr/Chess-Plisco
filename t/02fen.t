@@ -22,5 +22,6 @@ my $got = $pos->toFEN;
 my $wanted = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 is $got, $wanted, 'FEN initial position';
+is "$pos", $wanted, 'FEN initial position stringified';
 
 done_testing;

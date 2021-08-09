@@ -16,6 +16,7 @@ package Chess::Position;
 
 use strict;
 use integer;
+use overload '""' => sub { shift->toFEN };
 
 use Chess::Position::Macro;
 
