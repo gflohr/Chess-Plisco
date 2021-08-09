@@ -36,13 +36,28 @@ is(Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ
    ->toFEN, $initial, 'defaults');
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w');
+	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 ok $@, "exactly 8 ranks";
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w');
+	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 ok $@, "exactly 8 ranks";
+
+eval {
+	Chess::Position->newFromFEN('rsbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+};
+ok $@, "illegal character";
+
+eval {
+	Chess::Position->newFromFEN('rsbqkbnr/pppppppp/8/8/9/8/PPPPPPPP/RNBQKBNR w KQkq');
+};
+ok $@, "illegal number 9";
+
+eval {
+	Chess::Position->newFromFEN('rsbqkbnr/pppp0pppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+};
+ok $@, "illegal number 0";
 
 done_testing;
