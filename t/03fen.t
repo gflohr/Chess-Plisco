@@ -30,7 +30,7 @@ is_deeply(Chess::Position->newFromFEN($wanted), $pos, 'newFromFEN');
 eval {
 	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w');
 };
-ok $@, "castling state required";
+like $@, qr/incomplete/i;
 
 is(Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq')
    ->toFEN, $initial, 'defaults');
@@ -38,32 +38,36 @@ is(Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ
 eval {
 	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
-ok $@, "exactly 8 ranks";
+like $@, qr/exactly eight ranks/i;
 
 eval {
 	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
-ok $@, "exactly 8 ranks";
+like $@, qr/exactly eight ranks/i;
 
 eval {
 	Chess::Position->newFromFEN('rsbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
-ok $@, "illegal character";
+like $@, qr/illegal piece\/number 's'/i;
 
 eval {
-	Chess::Position->newFromFEN('rsbqkbnr/pppppppp/8/8/9/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/9/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
-ok $@, "illegal number 9";
+like $@, qr/illegal piece\/number '9'/i;
 
 eval {
-	Chess::Position->newFromFEN('rsbqkbnr/pppp0pppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Position->newFromFEN('rnbqkbnr/pppp0pppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
-ok $@, "illegal number 0";
-
+like $@, qr/illegal piece\/number '0'/i, "illegal number 0";
 
 eval {
-	Chess::Position->newFromFEN('rsbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Position->newFromFEN('rnbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
-ok $@, "incomplete rank";
+like $@, qr/incomplete or overpopulated rank/i;
+
+eval {
+	Chess::Position->newFromFEN('rnbqkbnr/ppppppp1/8/8/8/3Q4/PPPPPPPP/RNBQKBNR w KQkq');
+};
+like $@, qr/too many white pieces/i;
 
 done_testing;
