@@ -30,7 +30,7 @@ sub new {
 			| ((CP_A_MASK | CP_D_MASK | CP_H_MASK) & CP_8_MASK),
 	cp_pos_bishops($self) = ((CP_C_MASK | CP_D_MASK | CP_F_MASK) & CP_1_MASK)
 			| ((CP_C_MASK | CP_D_MASK | CP_F_MASK) & CP_8_MASK),
-	cp_pos_knights($self) => ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
+	cp_pos_knights($self) = ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK),
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
 	cp_pos_on_move($self) = CP_WHITE;
@@ -38,6 +38,9 @@ sub new {
 	cp_pos_w_qcastle($self) = 1;
 	cp_pos_b_kcastle($self) = 1;
 	cp_pos_b_qcastle($self) = 1;
+	cp_pos_ep_shift($self) = 0;
+	cp_pos_half_move_clock($self) = 0;
+	cp_pos_half_moves($self) = 0;
 
 	bless $self, $class;
 }
@@ -49,9 +52,9 @@ sub toFEN {
 	my $b_pieces = cp_pos_b_pieces($self);
 	my $pieces = $w_pieces | $b_pieces;
 	my $pawns = cp_pos_pawns($self);
-	my $bishops = cp_pos_pawns($self);
-	my $knights = cp_pos_pawns($self);
-	my $rooks = cp_pos_pawns($self);
+	my $bishops = cp_pos_bishops($self);
+	my $knights = cp_pos_knights($self);
+	my $rooks = cp_pos_rooks($self);
 
 	my $fen = '';
 
@@ -130,15 +133,33 @@ sub toFEN {
 	$castle .= 'q' if $b_qcastle;
 	$castle ||= '-';
 
-	$fen .= $castle;
-	
+	$fen .= $castle . ' ';
+
+	if (cp_pos_ep_shift $self) {
+		$fen .= $self->shiftToSquare(cp_pos_ep_shift $self);
+	} else {
+		$fen .= '-';
+	}
+
+	$fen .= sprintf ' %u %u', cp_pos_half_move_clock($self),
+			1 + (cp_pos_half_moves($self) >> 1);
+
 	return $fen;
 }
 
 sub coordinatesToShift {
-	my ($self, $file, $rank) = @_;
+	my (undef, $file, $rank) = @_;
 
 	return $rank * 8 + 7 - $file;
+}
+
+sub shiftToSquare {
+	my (undef, $shift) = @_;
+
+	my $rank = 1 + ($shift >> 3);
+	my $file = 7 - ($shift & 0x7);
+
+	return sprintf '%c%u ', $file + ord 'a', $rank;
 }
 
 1;
