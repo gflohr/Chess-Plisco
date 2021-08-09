@@ -81,8 +81,8 @@ define CP_POS_KNIGHTS => 5;
 define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
 define CP_POS_PAWNS => 6;
 define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
-define CP_POS_ON_MOVE => 7;
-define cp_pos_on_move => '$p', '$p->[CP_POS_ON_MOVE]';
+define CP_POS_TO_MOVE => 7;
+define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
 define CP_POS_W_KCASTLE => 8;
 define cp_pos_w_kcastle => '$p', '$p->[CP_POS_W_KCASTLE]';
 define CP_POS_W_QCASTLE => 9;
@@ -101,6 +101,9 @@ define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 
+# Other macros.
+define cp_popcount => '$b', '$c',
+		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
 define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 
 sub import {
