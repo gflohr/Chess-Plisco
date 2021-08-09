@@ -19,11 +19,20 @@ my $pos = Chess::Position->new;
 ok $pos, 'created';
 
 my $got = $pos->toFEN;
-my $wanted = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+my $initial = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+my $wanted = $initial;
 
 is $got, $wanted, 'FEN initial position';
 is "$pos", $wanted, 'FEN initial position stringified';
 
 is_deeply(Chess::Position->newFromFEN($wanted), $pos, 'newFromFEN');
+
+eval {
+	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w');
+};
+ok $@, "castling state required";
+
+is(Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq')
+   ->toFEN, $initial, 'defaults');
 
 done_testing;
