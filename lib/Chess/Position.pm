@@ -57,7 +57,7 @@ sub newFromFEN {
 	$moveno = 1 if !defined $moveno;
 
 	if (!(defined $pieces && defined $to_move && defined $castling)) {
-		die __"Illegal FEN.\n";
+		die __"Illegal FEN: Incomplete.\n";
 	}
 
 	my @ranks = split '/', $pieces;
@@ -131,13 +131,32 @@ sub newFromFEN {
 		}
 
 		if ($rankno-- << 3 != $shift + 1) {
-			die __"Illegal FEN: Corrupt piece string.\n";
+			die __"Illegal FEN: Incomplete or overpopulated rank.\n";
 		}
+	}
+
+	my $popcount;
+
+	cp_popcount $w_pieces, $popcount;
+	if ($popcount > 16) {
+		die __"Illegal FEN: Too many white pieces.\n";
+	}
+	cp_popcount $b_pieces, $popcount;
+	if ($popcount > 16) {
+		die __"Illegal FEN: Too many black pieces.\n";
+	}
+
+	cp_popcount $w_pieces & $kings, $popcount;
+	if ($popcount != 1) {
+		die __"Illegal FEN: White must have exactly one king.\n";
+	}
+	cp_popcount $b_pieces & $kings, $popcount;
+	if ($popcount != 1) {
+		die __"Illegal FEN: Black must have exactly one king.\n";
 	}
 
 	my $self = bless [], $class;
 
-	# FIXME! Consistency checks for number of pieces!
 	$self->[CP_POS_W_PIECES] = $w_pieces;
 	$self->[CP_POS_B_PIECES] = $b_pieces;
 	$self->[CP_POS_KINGS] = $kings;
