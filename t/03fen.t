@@ -60,4 +60,10 @@ eval {
 };
 ok $@, "illegal number 0";
 
+
+eval {
+	Chess::Position->newFromFEN('rsbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+};
+ok $@, "incomplete rank";
+
 done_testing;

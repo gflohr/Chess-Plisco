@@ -131,8 +131,6 @@ sub newFromFEN {
 		}
 
 		if ($rankno-- << 3 != $shift + 1) {
-			warn (($rankno + 1) << 3);
-			warn $shift + 1;
 			die __"Illegal FEN: Corrupt piece string.\n";
 		}
 	}
