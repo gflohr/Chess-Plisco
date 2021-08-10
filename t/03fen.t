@@ -65,9 +65,4 @@ eval {
 };
 like $@, qr/incomplete or overpopulated rank/i;
 
-eval {
-	Chess::Position->newFromFEN('rnbqkbnr/ppppppp1/8/8/8/3Q4/PPPPPPPP/RNBQKBNR w KQkq');
-};
-like $@, qr/too many white pieces/i;
-
 done_testing;
