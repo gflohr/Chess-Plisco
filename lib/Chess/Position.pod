@@ -225,6 +225,73 @@ The index of the half-move clock.
 
 The index of the number of half-moves made.
 
+=head2 Piece Constants (:pieces)
+
+=head3 CP_WHITE =E<gt> 0
+
+Symbolic constant for white pieces, side to move, and so on.
+
+=head3 CP_BLACK =C<gt> 1
+
+Symbolic constant for black pieces, side to move, and so on.  Actually, usage
+of this constant is avoided internally so that any truthy value can be used.
+Most of the time, this is simply the else branch of a conditional.
+
+=head3 CP_NO_PIECE =E<gt> 0
+
+Symbolic constant for no piece.
+
+=head3 CP_PAWN
+
+Symbolic constant for a pawn.
+
+=head3 CP_KNIGHT
+
+Symbolic constant for a knight.
+
+=head3 CP_BISHOP
+
+Symbolic constant for a bishop.
+
+=head3 CP_ROOK
+
+Symbolic constant for a rook.
+
+=head3 CP_QUEEN
+
+Symbolic constant for a queen.
+
+=head3 CP_KING
+
+Symbolic constant for a king.
+
+=head3 CP_PAWN_VALUE =E<gt> 100
+
+Value of a pawn in centipawns.  Feel free to override this constant in derived
+classes.
+
+=head3 CP_KNIGHT_VALUE =E<gt> 300
+
+Value of a knight in centipawns.  Feel free to override this constant in derived
+classes.
+
+=head3 CP_BISHOP_VALUE =E<gt> 300
+
+Value of a bishop in centipawns.  Feel free to override this constant in derived
+classes.
+
+=head3 CP_ROOK_VALUE =E<gt> 500
+
+Value of a rook in centipawns.  Feel free to override this constant in derived
+classes.
+
+=head3 CP_QUEEN_VALUE =E<gt> 900
+
+Value of a queen in centipawns.  Feel free to override this constant in derived
+classes.
+
+Note that there is no value for a king.  This is on purpose.
+
 =head2 Board Constants (:board)
 
 =head3 CP_A_MASK =E<gt> 0x8080808080808080
@@ -390,4 +457,4 @@ Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
 
 =head1 SEE ALSO
 
-L<Chess::Pos::Macro>, perl(1)
+L<Chess::Position::Macro>, perl(1)

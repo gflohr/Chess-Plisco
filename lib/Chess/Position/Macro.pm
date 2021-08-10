@@ -337,3 +337,251 @@ sub split_arguments {
 }
 
 1;
+
+=head 1 NAME
+
+Chess::Position::Macro - Macros/inline functions for Chess::Position
+
+=head1 SYNOPSIS
+
+    use Chess::Position::Macro;
+
+    my $white_pieces = cp_pos_w_pieces(Chess::Position->new);
+
+    my $bitboard = '0x8080808080808080';
+    my $popcount;
+
+    cp_popcount $bitboard, $popcount;
+    cp_popcount($bitboard, $popcount); # You can also use parentheses ...
+
+    print "There are $popcount bits set in $bitboard.\n";
+
+=head1 DESCRIPTION
+
+The module L<Chess::Position::Macro> is a source filter.  It makes a number
+of macros respectively inline functions available that can be invoked without
+any subroutine call overhead.  In fact, all invocations of these macros are
+translated into constant expressions at compile-time.
+
+The source filter is probably not perfect but is able to translate at least
+the source code of L<Chess::Position>.  If you have trouble like unexpected
+syntax errors in your own code, you can use the function C<preprocess()< (see
+below), to get a translation of your source file, and find the problem.
+
+Please note that not all translation errors are considered a bug of the
+source filter.  If the problem can be avoided by re-formulating your code,
+a fix will probably be refused.
+
+You may also think that the biggest bug of this module is its mere existance
+because it is a dirty hack.  Welcome to the world of chess programming, where
+performance is always more important than beauty or elegance.  And if you
+do not like the approach taken here, simply do not use the module.  You can
+use L<Chess::Position> without L<Chess::Position::Macro>, only that your code
+will maybe become slower, more error-prone, and more likely to break with
+future versions of L<Chess::Position>.
+
+=head1 MOTIVATION
+
+Chess programming should be really fast, and in this context the unavoidable
+overhead of method or subroutine calls contributes enormously to the execution
+time of the software.
+
+In the C programming language, you can use preprocessor macros or inline
+functions in order to avoid the calling overhead.  In Perl, this can only
+be done for constants with the L<constant> pragma:
+
+    use constant CP_FILE_A => 0;
+    use constant CP_SQUARE_E1 => 0x0808080808080808 | 0x00000000000000ff;
+
+These are actually subroutines but Perl inlines them into your code, even
+with constant folding (see the second example), so that you pay no price for
+the use of these constants.
+
+But L<Chess::Position> needs parametrized macros.  For example, if you want
+to extract the start square of a move, you have to do this:
+
+    $from = ((($move) >> 6) & 0x3f);
+
+But it is awkward to remember.  Other computations are even more complicated.
+For example to get the number of bits set in a bitboard C<$bb>, you have to
+do the following:
+
+    my $_b = $bb;
+
+    for ($popcount = 0; $_b; ++$popcount) {
+        $_b &= $_b - 1;
+    }
+
+This is a well-known algorithm but you either have to implement it in a function
+or method and pay the price of subroutine calls, or you have to repeat it over
+and over in your code.
+
+This module tries to mitigate that dilemma. If you just "use" it, all
+invocations of the macros defined here, are translated into a regular statements
+so that you can do these computations without subroutine call overhead.
+Depending on the exact implementation of the macro, you can often use them as
+l-vales (the left-hand side of an assignment).  This is mentioned in the
+documentation below.
+
+=head1 FUNCTIONS
+
+You should only use one single function of this module, the function
+C<preprocess()> that does the actual translation of your code.  Example:
+
+    require Chess::Position::Macro;
+    open my $fh, '<', 'YourModule.pm' or die;
+    print Chess::Position::Macro::preprocess(join '', <$fh>);
+
+This will dump the translated source code of F<YourModule.pm> on standard
+output.
+
+=head1 MACROS
+
+Note that the source filter is theoretically able to inline constants (that
+are macros without arguments) as well but this feature is not used because
+it does not have any advantage over the regular L<constant> pragma of Perl.
+
+=head2 Macros for L<Chess::Position> Instances
+
+=over 4
+
+=item B<cp_pos_w_pieces(POS)>
+
+Get or set the bitboard for all white pieces from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_b_pieces(POS)>
+
+Get or set the bitboard for all black pieces from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_kings(POS)>
+
+Get or set the bitboard for all kings from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_rooks(POS)>
+
+Get or set the bitboard for all rooks from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_bishops(POS)>
+
+Get or set the bitboard for all bishops from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_knights(POS)>
+
+Get or set the bitboard for all knights from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_pawns(POS)>
+
+Get or set the bitboard for all pawns from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_to_move(POS)>
+
+Get or set the side to move from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_w_kcastle(POS)>
+
+Get or set the king-side castling status for white from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_w_qcastle(POS)>
+
+Get or set the king-side castling status for white from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_b_kcastle(POS)>
+
+Get or set the king-side castling status for black from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_b_qcastle(POS)>
+
+Get or set the king-side castling status for black from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_half_move_clock(POS)>
+
+Get or set the half-move clock from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_half_moves(POS)>
+
+Get or set the number of half-moves from the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=back
+
+=head2 Move Macros
+
+These macros operate on scalar moves for L<Chess::Position> which are just
+plain integers.  They do I<not> work for instances of a
+L<Chess::Position::Move>!
+
+=over 4
+
+=item B<cp_move_to(MOVE)>
+
+Get the destination square of B<MOVE> as a bit-shift offset.
+
+L-value: no.
+
+=item B<cp_move_set_to(MOVE, TO)>
+
+Set the destination square of B<MOVE> as a bit-shift offset to B<TO>.
+
+L-value: no.
+
+=back
+
+=head2 Bit-fiddling Macros
+
+=over 4
+
+=item B<cp_popcount(BITBOARD, COUNT)>
+
+Count the number of bits set in B<BITBOARD> and save it in B<COUNT>.
+
+L-value: no.
+
+=back
+
+=head2 Miscellaneous Macros
+
+=over 4
+
+=item B<cp_coords_to_shift(FILE, RANK)>
+
+Calculate a bit shift offset for the square that B<FILE> (0-7) and B<RANK>
+(0-7) point to.
+
+L-value: no.
+
+=back
+
+=head1 COPYRIGHT
+
+Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
+
+=head1 SEE ALSO
+
+L<Chess::Position>, L<constant>, L<Filter::Util::Call>, perl(1)
