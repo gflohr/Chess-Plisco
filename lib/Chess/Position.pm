@@ -245,15 +245,6 @@ sub newFromFEN {
 
 	my $popcount;
 
-	cp_popcount $w_pieces, $popcount;
-	if ($popcount > 16) {
-		die __"Illegal FEN: Too many white pieces.\n";
-	}
-	cp_popcount $b_pieces, $popcount;
-	if ($popcount > 16) {
-		die __"Illegal FEN: Too many black pieces.\n";
-	}
-
 	cp_popcount $w_pieces & $kings, $popcount;
 	if ($popcount != 1) {
 		die __"Illegal FEN: White must have exactly one king.\n";
