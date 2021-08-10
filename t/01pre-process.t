@@ -18,22 +18,6 @@ require Chess::Position::Macro;
 
 my ($code);
 
-$code = 'CP_A_MASK';
-is Chess::Position::Macro::preprocess($code), 0x8080808080808080, $code;
-
-$code = 'CP_A_MASK()';
-is Chess::Position::Macro::preprocess($code), 0x8080808080808080, $code;
-
-$code = 'CP_A_MASK ()';
-is Chess::Position::Macro::preprocess($code), 0x8080808080808080, $code;
-
-$code = 'CP_A_MASK ($what, $ever, nested(subroutine($sth, $else)))';
-is Chess::Position::Macro::preprocess($code), 0x8080808080808080, $code;
-
-$code = 'my $something = CP_A_MASK + CP_B_MASK - 2304; say "goodbye";';
-my $expect = 'my $something = 9259542123273814144 + 4629771061636907072 - 2304; say "goodbye";';
-is Chess::Position::Macro::preprocess($code), $expect, $code;
-
 $code = 'cp_move_to($move)';
 is Chess::Position::Macro::preprocess($code), '(($move) & 0x3f)', $code;
 

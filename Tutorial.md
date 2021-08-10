@@ -117,6 +117,24 @@ $white_bishops = $w_pieces & ($bishops & ~$rooks)
 But these bitwise operations are very fast and cheap, and in fact, you rarely
 have to find out whether a square is really occupied by a queen or a rook.
 
+### Other Board Representations
+
+#### Forsyth-Edwards Notation FEN
+
+The Forsyth-Edwards Notation of a chess position is mostly used for data
+exchange between chess software.  See for example the [Wikipedia article
+on FEN](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) for
+details.
+
+The constructor `newFromFEN()` of `Chess::Position` can be used to initialize
+a chess position from a FEN string.
+
+#### Extended Position Description EPD
+
+A similar notation to FEN is the [Extended Position
+Description](https://en.wikipedia.org/wiki/Extended_Position_Description).
+You can think of it as FEN with meta data.
+
 ### Coordinates and Squares
 
 The chess board is actually a Cartesian coordinate system.  There are
@@ -163,8 +181,9 @@ chess board:
    a  b  c  d  e  f  g  h
 ```
 
-So the square "e4" is represented by the 27th bit of a bitboard.  So, a better
-term may actually be "index" or "bit number".
+So the square "e4" is represented by the bit with the index 27 of a bitboard
+(actually the 28th bit if you count from 1).  So, a better term may actually
+be "index" or "bit number".
 
 #### Shift Masks
 
@@ -178,5 +197,109 @@ $e4_square = (1 << 27) | $w_pieces
 ```
 
 You "shift" the one 27 places to the left.  And this is why the indexes or
-bit numbers are called "shifts" here.
+bit numbers are called "shifts" here.  And a shift mask is a bitboard with
+exactly one bit set.
 
+### `Chess::Position` Instances
+
+Unlike most Perl objects, instances of `Chess::Position` are blessed array
+references.  This design decision was taken because accessing accessing
+array elements is faster than accessing hash elements.  But there is no
+need to remember the exact ordering of the array.  You can either use
+dedicated macros that operate on directly on `Chess::Position` indexes
+or use constants for the indexes:
+
+```
+use Chess::Position (:all);
+use Chess::Position::Macro;
+
+$pos = Chess::Position->new;
+
+# Equivalent!
+$w_pieces = $pos[CP_POS_W_PIECES];
+$pos[CP_POS_W_PIECES] = $_pieces;
+$w_pieces = cp_pos_w_pieces $pos;
+cp_pos_w_pieces $pos = $w_pieces;
+```
+
+### Pieces
+
+The chess pieces are specified by an enumeration:
+
+* `CP_NO_PIECE` 0
+* `CP_PAWN` 1
+* `CP_KNIGHT` 2
+* `CP_BISHOP` 3
+* `CP_ROOK` 4
+* `CP_QUEEN` 5
+* `CP_KING` 6
+
+The default values are defined by these constants in `Chess::Position`:
+
+* `CP_PAWN_VALUE` 100
+* `CP_KNIGHT_VALUE` 300
+* `CP_BISHOP_VALUE` 300
+* `CP_ROOK_VALUE` 500
+* `CP_QUEEN_VALUE` 900
+
+These constants can be overridden in derived classes.  This is not
+recommended for the constants specifiying the pieces (see above), as the data
+values may not fit into the other structures.
+
+### Moves
+
+A move in `Chess::Position` is simply an integer.  There is also a convenience
+class `Chess::Position::Move` which is constructed from a reference to an
+integer but this class is not used internally for performance reasons.  The
+individual bits of a move are:
+
+* 21-.. (20-..): raw material balance (viewed from the side to move)
+* 20-22 (19-21): piece that gets removed (resp. victim) if any
+* 17-19 (16-18): piece that moves (resp. attacker)
+*    16 (15): en passant flag
+* 13-15 (12-14): promotion piece
+*  7-12 (6-11): from shift (0-63)
+*  1- 6 (0- 5): to shift (0-63)
+
+*The numbers in parentheses are the 0-based bit numbers.*
+
+Only bits 1 to 15 are really needed to characterize a move, and the bits 13 to
+15 are only needed for pawn promotions.  The other bits can be derived from
+the position that the move is applied to, and there are not always present:
+
+The en passant flag is set, when a pawn hits (moves diagonally) but the target
+square is empty.
+
+The piece that moves, the attacker is the piece that stands on the starting
+square.
+
+The piece that gets removed, the victim, is the piece that stands on the target
+square, if any.
+
+The raw material balance is only added to a move, when moves are meant to
+be sorted.
+
+You do not have to remember the exact structure of a move but use macros
+resp. inline functions for accessing individual properties:
+
+* `cp_move_to($move)`: the starting square as a shift
+* `cp_move_from($move)`: the destination square as a shift
+* `cp_move_promotion($move)`: the promotion piece
+* `cp_move_attacker($move)`: the attacking piece
+* `cp_move_victim($move)`: the captured piece if any
+* `cp_move_material($move)`: the raw material balance
+
+None of these macros can be used as l-values (on the left-hand side of an
+assignment)!  For this, use other macros:
+
+* `cp_move_set_to($move, $to)`: the starting square as a shift
+* `cp_move_set_from($move, $from)`: the destination square as a shift
+* `cp_move_set_promotion($move, $piece)`: the promotion piece
+* `cp_move_set_attacker($move, $piece)`: the attacking piece
+* `cp_move_set_victim($move, $piece)`: the captured piece if any
+* `cp_move_set_material($move, $mat)`: the raw material balance
+
+In fact, the semantics of the raw material balance are not well-defined.
+Actually, it is just whatever is stored in the upper bits of the move.  So,
+you can stuff in there whatever you want to use for sorting or comparing
+moves.

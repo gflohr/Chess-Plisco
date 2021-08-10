@@ -1,0 +1,393 @@
+=head1 NAME 
+
+Chess::Position - A comprehensive chess library for Perl
+
+=head1 SYNOPSIS
+
+    use Chess::Position(:all);
+
+    $pos = Chess::Position->new;
+    $pos = Chess::Position->newFromFEN('k7/8/8/8/8/8/8/7K w - - 0 1');
+
+=head1 DESCRIPTION
+
+B<Chess-Position> is a comprehensive chess library for Perl, aiming at being
+as fast and efficient as possible for a scripting language.  It is also
+somewhat opinionated but this is not an end in itself but owed to it intention
+to be fast and efficient.  In doubt, flexibility is sacrificed for performance
+and efficiency.
+
+The library features:
+
+=over 4
+
+=item bitboards for board representation
+=item macros/inline functions for often used computations
+=item pseudo-legal move generation
+=item legality checks for moves
+=item magic bitboards for generation of sliding piece moves and attacks
+=item FEN (Forsyth-Edwards Notation) import and export
+
+=back
+
+For a gentler introduction, please see L<Chess::Position::Tutorial>.  The rest
+of this document contains reference documentation only.
+
+You are also strongly advised to have a look at L<Chess::Position::Macro>
+which documnents macros resp. inline functions that are helpful for working
+with L<Chess::Position> and related objects.
+
+The class exports a number of constants that can either be imported
+individually, by export tag, or all at once by the export tag ':all'.  All
+constants are prefixed with 'CP_' and you will have little reason to not
+import all constants.
+
+=head1 INTERNALS
+
+An instance of a B<Chess::Position> is a blessed array reference.  You can
+access its properties through accessor macros or by using constants for
+the array indices.
+
+=head1 CONSTRUCTORS
+
+=over 4
+
+=item B<new>
+
+Creates a new B<Chess::Position> instance that represents the starting position
+of standard chess.
+
+=item B<newFromFEN(FEN)>
+
+Creates a new B<Chess::Position> instance from a string containing the
+Forsyth-Edwards Notation (FEN) of a chess position.
+
+This constructor may throw an exception if the described position does not meet
+the requirements of the library.
+
+All legal chess positions meet the requirements of the library.  But positions
+that are not legal and may cause the library to malfunction, are rejected.
+
+=back
+
+=head1 OVERLOADED OPERATORS
+
+In string context, the position is encoded in Forsyth-Edwards Notation.  No
+other operators are overloaded.
+
+Note that the Forsyth-Edwards Notation does not cover all aspects of a chess
+position, especially the history of moves.  Stringwise equality of two
+instances of a B<Chess::Position> does therefore not imply that the two
+positions are identical.
+
+=head1 PROPERTIES
+
+You can access individual properties either by using index constants or by
+using accessor macros from L<Chess::Position::Macro>.  All accessor macros
+can be assigned to; they are L-values.
+
+For example getting or setting the bitboard of all white pieces, you have
+these options:
+
+    $whites_pieces = $pos->[CP_W_PIECES];
+    $white_pieces = cp_w_pieces $pos;
+    $white_pieces = cp_w_pieces($pos);
+    $pos->[CP_W_PIECES] = $white_pieces;
+    cp_w_pieces $pos = $white_pieces;
+    cp_w_pieces($pos) = $white_pieces;
+
+=over 4
+
+=item B<cp_pos_white_pieces(POS); POS-E<gt>[CP_POS_WHITE_PIECES]>
+
+A bitboard of all white pieces on the board.
+
+=item B<cp_pos_black_pieces(POS); POS-E<gt>[CP_POS_BLACK_PIECES]>
+
+A bitboard of all black pieces on the board.
+
+=item B<cp_pos_kings(POS); POS-E<gt>[CP_POS_KINGS]>
+
+A bitboard of all kings (black and white) on the board.
+
+=item B<cp_pos_rooks(POS); POS-E<gt>[CP_POS_ROOKS]>
+
+A bitboard of all rooks (black and white) on the board.  There is no bitboard
+for queens.  The queens bitboard can be computed with the bitwise AND of the
+rooks and bishops bitboard.
+
+=item B<cp_pos_bishops(POS); POS-E<gt>[CP_POS_BISHOPS]>
+
+A bitboard of all bishops (black and white) on the board. There is no bitboard
+for queens.  The queens bitboard can be computed with the bitwise AND of the
+rooks and bishops bitboard.
+
+=item B<cp_pos_knights(POS); POS-E<gt>[CP_POS_KNIGHTS]>
+
+A bitboard of all knights (black and white) on the board.
+
+=item B<cp_pos_pawns(POS); POS-E<gt>[CP_POS_PAWNS]>
+
+A bitboard of all pawns (black and white) on the board.
+
+=item B<cp_pos_to_move(POS); POS-E<gt>[CP_POS_TO_MOVE]>
+
+The side to move, either 0 (aka B<CP_WHITE>) or 1 (aka B<CP_BLACK>).
+
+=item B<cp_pos_w_kcastle(POS); POS-E<gt>[CP_POS_W_KCASTLE]>
+
+True if white can castle king-side, false otherwise.
+
+=item B<cp_pos_w_qcastle(POS); POS-E<gt>[CP_POS_W_QCASTLE]>
+
+True if white can castle queen-side, false otherwise.
+
+=item B<cp_pos_b_kcastle(POS); POS-E<gt>[CP_POS_B_KCASTLE]>
+
+True if black can castle king-side, false otherwise.
+
+=item B<cp_pos_b_qcastle(POS); POS-E<gt>[CP_POS_B_QCASTLE]>
+
+True if black can castle queen-side, false otherwise.
+
+=item B<cp_pos_ep_shift(POS); POS-E<gt>[CP_POS_EP_SHIFT]>
+
+True if black can castle queen-side, false otherwise.
+
+=back
+
+=head1 EXPORT TAGS
+
+The module exports only constants, all prefixed with "CP_".
+
+Note that (lowercase) macros "cp_" are defined by using
+L<Chess::Position::Macro>.
+
+=head2 All Constants (:all)
+
+You can import all constants with the export tag ":all".
+
+=head2 Accessor Indexes (:accessors)
+
+=head3 CP_POS_W_PIECES
+
+The index of the white bitboard.
+
+=head3 CP_POS_B_PIECES
+
+The index of the black bitboard.
+
+=head3 CP_POS_KINGS
+
+The index of the kings bitboard.
+
+=head3 CP_POS_ROOKS
+
+The index of the rooks bitboard.
+
+=head3 CP_POS_BISHOPS
+
+The index of the bishops bitboard.
+
+=head3 CP_POS_KNIGHTS
+
+The index of the knights bitboard.
+
+=head3 CP_POS_PAWNS
+
+The index of the pawns bitboard.
+
+=head3 CP_POS_TO_MOVE
+
+The index of the color to move.
+
+=head3 CP_POS_W_KCASTLE
+
+The index of the white king castling state.
+
+=head3 CP_POS_W_QCASTLE
+
+The index of the white queen castling state.
+
+=head3 CP_POS_B_KCASTLE
+
+The index of the black king castling state.
+
+=head3 CP_POS_B_QCASTLE
+
+The index of the black queen castling state.
+
+=head3 CP_POS_HALF_MOVE_CLOCK
+
+The index of the half-move clock.
+
+=head3 CP_POS_HALF_MOVES
+
+The index of the number of half-moves made.
+
+=head2 Board Constants (:board)
+
+=head3 CP_A_MASK =E<gt> 0x8080808080808080
+
+Bit masks for all squares on the "a" file.
+
+=head3 CP_B_MASK =E<gt> 0x4040404040404040
+
+Bit masks for all squares on the "b" file.
+
+=head3 CP_C_MASK =E<gt> 0x2020202020202020
+
+Bit masks for all squares on the "c" file.
+
+=head3 CP_D_MASK =E<gt> 0x1010101010101010
+
+Bit masks for all squares on the "d" file.
+
+=head3 CP_E_MASK =E<gt> 0x0808080808080808
+
+Bit masks for all squares on the "e" file.
+
+=head3 CP_F_MASK =E<gt> 0x0404040404040404
+
+Bit masks for all squares on the "f" file.
+
+=head3 CP_G_MASK =E<gt> 0x0202020202020202
+
+Bit masks for all squares on the "g" file.
+
+=head3 CP_H_MASK =E<gt> 0x0101010101010101
+
+Bit masks for all squares on the "h" file.
+
+=head3 CP_1_MASK =E<gt> 0x00000000000000ff
+
+Bit masks for all squares on the 1st rank.
+
+=head3 CP_2_MASK =E<gt> 0x000000000000ff00
+
+Bit masks for all squares on the 2nd rank.
+
+=head3 CP_3_MASK =E<gt> 0x0000000000ff0000
+
+Bit masks for all squares on the 3rd rank.
+
+=head3 CP_4_MASK =E<gt> 0x00000000ff000000
+
+Bit masks for all squares on the 4th rank.
+
+=head3 CP_5_MASK =E<gt> 0x000000ff00000000
+
+Bit masks for all squares on the 5th rank.
+
+=head3 CP_6_MASK =E<gt> 0x0000ff0000000000
+
+Bit masks for all squares on the 6th rank.
+
+=head3 CP_7_MASK =E<gt> 0x00ff000000000000
+
+Bit masks for all squares on the 7th rank.
+
+=head3 CP_8_MASK =E<gt> 0xff00000000000000
+
+Bit masks for all squares on the 8th rank.
+
+=head3 CP_FILE_A =E<gt> 0
+
+0-based number of the "a" file.
+
+=head3 CP_FILE_B =E<gt> 1
+
+0-based number of the "b" file.
+
+=head3 CP_FILE_C =E<gt> 2
+
+0-based number of the "c" file.
+
+=head3 CP_FILE_D =E<gt> 3
+
+0-based number of the "d" file.
+
+=head3 CP_FILE_E =E<gt> 4
+
+0-based number of the "e" file.
+
+=head3 CP_FILE_F =E<gt> 5
+
+0-based number of the "f" file.
+
+=head3 CP_FILE_G =E<gt> 6
+
+0-based number of the "g" file.
+
+=head3 CP_FILE_H =E<gt> 7
+
+0-based number of the "h" file.
+
+=head3 CP_RANK_1 =E<gt> 0
+
+0-based number of the 1st rank
+
+=head3 CP_RANK_2 =E<gt> 1
+
+0-based number
+
+=head3 CP_RANK_3 =E<gt> 2
+
+0-based number of the 3rd rank
+
+=head3 CP_RANK_4 =E<gt> 3
+
+0-based number of the 4th rank.
+
+=head3 CP_RANK_5 =E<gt> 4
+
+0-based number of the 5th rank.
+
+=head3 CP_RANK_6 =E<gt> 5
+
+0-based number of the 6th rank.
+
+=head3 CP_RANK_7 =E<gt> 6
+
+0-based number of the 7th rank.
+
+=head3 CP_RANK_8 =E<gt> 7
+
+0-based number of the 8th rank.
+
+=head1 OTHER
+
+=head2 TERMINOLOGY
+
+=head3 SHIFT
+
+A "shift" is a number from 0-63 that denotes how many places a lone 1 has to
+be bit-shifted to the left in order to create a mask for selecting a single
+square of the chess board.  The square "a8" has a shift of 63, the square "h1"
+has a shift of 0.
+
+You can think of it as the 0-based bit number.
+
+=head3 SHIFT MASK
+
+A shift mask is a lone 1 bit-shifted a number of places to the left, so that
+it can be used as a mask for selecting a single square of the chess board.
+
+=head3 SQUARE
+
+A square is one square resp. field of the chess board.  If used in method names,
+constants or variable names, it is a conventional specification like "e4" or
+"c5".
+
+=head3 COORDINATES
+
+Coordinates are a pair of two integers, a file (1st) and a rank (2nd).  Both
+of them have a valid range of 0-7.
+
+=head1 COPYRIGHT
+
+Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
+
+=head1 SEE ALSO
+
+L<Chess::Pos::Macro>, perl(1)
