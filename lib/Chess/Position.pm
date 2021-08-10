@@ -21,6 +21,114 @@ use overload '""' => sub { shift->toFEN };
 use Locale::TextDomain qw('Chess-Position');
 use Chess::Position::Macro;
 
+use base qw(Exporter);
+
+my @export_accessors = qw(
+	CP_POS_W_PIECES CP_POS_B_PIECES
+	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
+	CP_POS_TO_MOVE
+	CP_POS_W_KCASTLE CP_POS_W_QCASTLE CP_POS_B_KCASTLE CP_POS_B_QCASTLE
+	CP_POS_EP_SHIFT CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
+);
+
+my @export_board = qw(
+	CP_FILE_A CP_FILE_B CP_FILE_C CP_FILE_D
+	CP_FILE_E CP_FILE_F CP_FILE_G CP_FILE_H
+	CP_RANK_1 CP_RANK_2 CP_RANK_3 CP_RANK_4
+	CP_RANK_5 CP_RANK_6 CP_RANK_7 CP_RANK_8
+	CP_A_MASK CP_B_MASK CP_C_MASK CP_D_MASK
+	CP_E_MASK CP_F_MASK CP_G_MASK CP_H_MASK
+	CP_1_MASK CP_2_MASK CP_3_MASK CP_4_MASK
+	CP_5_MASK CP_6_MASK CP_7_MASK CP_8_MASK
+);
+
+my @export_pieces = qw(
+	CP_WHITE CP_BLACK
+	CP_NO_PIECE CP_PAWN CP_KNIGHT CP_BISHOP CP_ROOK CP_QUEEN CP_KING
+	CP_PAWN_VALUE CP_KNIGHT_VALUE CP_BISHOP_VALUE CP_ROOK_VALUE CP_QUEEN_VALUE
+);
+
+our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors);
+
+our %EXPORT_TAGS = (
+	accessors => [@export_accessors],
+	board => [@export_board],
+	pieces => [@export_pieces],
+	all => [@EXPORT_OK],
+);
+
+# Accessor indexes.
+use constant CP_POS_W_PIECES => 0;
+use constant CP_POS_B_PIECES => 1;
+use constant CP_POS_KINGS => 2;
+use constant CP_POS_ROOKS => 3;
+use constant CP_POS_BISHOPS => 4;
+use constant CP_POS_KNIGHTS => 5;
+use constant CP_POS_PAWNS => 6;
+use constant CP_POS_TO_MOVE => 7;
+use constant CP_POS_W_KCASTLE => 8;
+use constant CP_POS_W_QCASTLE => 9;
+use constant CP_POS_B_KCASTLE => 10;
+use constant CP_POS_B_QCASTLE => 11;
+use constant CP_POS_EP_SHIFT => 12;
+use constant CP_POS_HALF_MOVE_CLOCK => 13;
+use constant CP_POS_HALF_MOVES => 14;
+
+# Board.
+use constant CP_A_MASK => 0x8080808080808080;
+use constant CP_B_MASK => 0x4040404040404040;
+use constant CP_C_MASK => 0x2020202020202020;
+use constant CP_D_MASK => 0x1010101010101010;
+use constant CP_E_MASK => 0x0808080808080808;
+use constant CP_F_MASK => 0x0404040404040404;
+use constant CP_G_MASK => 0x0202020202020202;
+use constant CP_H_MASK => 0x0101010101010101;
+
+use constant CP_1_MASK => 0x00000000000000ff;
+use constant CP_2_MASK => 0x000000000000ff00;
+use constant CP_3_MASK => 0x0000000000ff0000;
+use constant CP_4_MASK => 0x00000000ff000000;
+use constant CP_5_MASK => 0x000000ff00000000;
+use constant CP_6_MASK => 0x0000ff0000000000;
+use constant CP_7_MASK => 0x00ff000000000000;
+use constant CP_8_MASK => 0xff00000000000000;
+
+use constant CP_FILE_A => (0);
+use constant CP_FILE_B => (1);
+use constant CP_FILE_C => (2);
+use constant CP_FILE_D => (3);
+use constant CP_FILE_E => (4);
+use constant CP_FILE_F => (5);
+use constant CP_FILE_G => (6);
+use constant CP_FILE_H => (7);
+
+use constant CP_RANK_1 => (0);
+use constant CP_RANK_2 => (1);
+use constant CP_RANK_3 => (2);
+use constant CP_RANK_4 => (3);
+use constant CP_RANK_5 => (4);
+use constant CP_RANK_6 => (5);
+use constant CP_RANK_7 => (6);
+use constant CP_RANK_8 => (7);
+
+# Colors.
+use constant CP_WHITE => 0;
+use constant CP_BLACK => 1;
+
+# Piece constants.
+use constant CP_NO_PIECE => 0;
+use constant CP_PAWN => 1;
+use constant CP_KNIGHT => 2;
+use constant CP_BISHOP => 3;
+use constant CP_ROOK => 4;
+use constant CP_QUEEN => 5;
+use constant CP_KING => 6;
+use constant CP_PAWN_VALUE => 100;
+use constant CP_KNIGHT_VALUE => 300;
+use constant CP_BISHOP_VALUE => 300;
+use constant CP_ROOK_VALUE => 500;
+use constant CP_QUEEN_VALUE => 900;
+
 sub new {
 	my ($class) = @_;
 

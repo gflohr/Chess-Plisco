@@ -16,6 +16,8 @@ use strict;
 use Filter::Util::Call;
 use PPI::Document;
 
+use Chess::Position qw(:all);
+
 sub define;
 sub preprocess;
 sub extract_arguments;
@@ -26,76 +28,20 @@ sub expand_placeholder;
 
 my %defines;
 
-# FIXME! These can be made constants.  No need to go through the source filter
-# because Perl inlines them anyway.
-define CP_WHITE => 0;
-define CP_BLACK => 1;
-
-define CP_A_MASK => 0x8080808080808080;
-define CP_B_MASK => 0x4040404040404040;
-define CP_C_MASK => 0x2020202020202020;
-define CP_D_MASK => 0x1010101010101010;
-define CP_E_MASK => 0x0808080808080808;
-define CP_F_MASK => 0x0404040404040404;
-define CP_G_MASK => 0x0202020202020202;
-define CP_H_MASK => 0x0101010101010101;
-
-define CP_1_MASK => 0x00000000000000ff;
-define CP_2_MASK => 0x000000000000ff00;
-define CP_3_MASK => 0x0000000000ff0000;
-define CP_4_MASK => 0x00000000ff000000;
-define CP_5_MASK => 0x000000ff00000000;
-define CP_6_MASK => 0x0000ff0000000000;
-define CP_7_MASK => 0x00ff000000000000;
-define CP_8_MASK => 0xff00000000000000;
-
-define CP_FILE_A => (0);
-define CP_FILE_B => (1);
-define CP_FILE_C => (2);
-define CP_FILE_D => (3);
-define CP_FILE_E => (4);
-define CP_FILE_F => (5);
-define CP_FILE_G => (6);
-define CP_FILE_H => (7);
-
-define CP_RANK_1 => (0);
-define CP_RANK_2 => (1);
-define CP_RANK_3 => (2);
-define CP_RANK_4 => (3);
-define CP_RANK_5 => (4);
-define CP_RANK_6 => (5);
-define CP_RANK_7 => (6);
-define CP_RANK_8 => (7);
-
-define CP_POS_W_PIECES => 0;
 define cp_pos_w_pieces => '$p', '$p->[CP_POS_W_PIECES]';
-define CP_POS_B_PIECES => 1;
 define cp_pos_b_pieces => '$p', '$p->[CP_POS_B_PIECES]';
-define CP_POS_KINGS => 2;
 define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
-define CP_POS_ROOKS => 3;
 define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
-define CP_POS_BISHOPS => 4;
 define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
-define CP_POS_KNIGHTS => 5;
 define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
-define CP_POS_PAWNS => 6;
 define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
-define CP_POS_TO_MOVE => 7;
 define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
-define CP_POS_W_KCASTLE => 8;
 define cp_pos_w_kcastle => '$p', '$p->[CP_POS_W_KCASTLE]';
-define CP_POS_W_QCASTLE => 9;
 define cp_pos_w_qcastle => '$p', '$p->[CP_POS_W_QCASTLE]';
-define CP_POS_B_KCASTLE => 10;
 define cp_pos_b_kcastle => '$p', '$p->[CP_POS_B_KCASTLE]';
-define CP_POS_B_QCASTLE => 11;
 define cp_pos_b_qcastle => '$p', '$p->[CP_POS_B_QCASTLE]';
-define CP_POS_EP_SHIFT => 12;
 define cp_pos_ep_shift => '$p', '$p->[CP_POS_EP_SHIFT]';
-define CP_POS_HALF_MOVE_CLOCK => 13;
 define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
-define CP_POS_HALF_MOVES => 14;
 define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 
 define cp_move_to => '$m', '(($m) & 0x3f)';
