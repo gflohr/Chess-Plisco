@@ -52,8 +52,8 @@ our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors);
 
 our %EXPORT_TAGS = (
 	accessors => [@export_accessors],
-	board => [@export_board],
 	pieces => [@export_pieces],
+	board => [@export_board],
 	all => [@EXPORT_OK],
 );
 
