@@ -443,6 +443,15 @@ sub coordinatesToShift {
 	return $rank * 8 + 7 - $file;
 }
 
+sub shiftToCoordinates {
+	my (undef, $shift) = @_;
+
+	my $file = $shift & 0x7f;
+	my $rank = $shift >> 3;
+
+	return $file, $rank;
+}
+
 sub shiftToSquare {
 	my (undef, $shift) = @_;
 

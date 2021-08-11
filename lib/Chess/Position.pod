@@ -80,6 +80,23 @@ position, especially the history of moves.  Stringwise equality of two
 instances of a B<Chess::Position> does therefore not imply that the two
 positions are identical.
 
+=head1 METHODS
+
+=over 4
+
+=item B<moves>
+
+Generates all pseudo-legal moves for the current position.
+
+Pseudo-legal are all moves that can be executed by the pieces on the side to
+move ignoring whether the side to move is in check after the move.
+
+Only the lower 16 bits of the move are set, that means the start and destination
+square, a possible promotion piece and the en passant flag in case the move
+is an en passant capture.
+
+=back
+
 =head1 PROPERTIES
 
 You can access individual properties either by using index constants or by
