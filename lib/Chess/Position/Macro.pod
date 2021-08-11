@@ -1,5 +1,4 @@
-
-=head 1 NAME
+=head1 NAME
 
 Chess::Position::Macro - Macros/inline functions for Chess::Position
 
@@ -26,7 +25,7 @@ translated into constant expressions at compile-time.
 
 The source filter is probably not perfect but is able to translate at least
 the source code of L<Chess::Position>.  If you have trouble like unexpected
-syntax errors in your own code, you can use the function C<preprocess()< (see
+syntax errors in your own code, you can use the function C<preprocess()> (see
 below), to get a translation of your source file, and find the problem.
 
 Please note that not all translation errors are considered a bug of the
