@@ -88,4 +88,6 @@ for (my $shift = 0; $shift < 64; ++$shift) {
 
 	is(cp_coords_to_shift($wfile, $wrank), $shift,
 		"cp_coords_to_shift($wfile, $wrank) != $shift");
+	is_deeply([cp_shift_to_coords($shift)], [$wfile, $wrank],
+		"cp_shift_to_coords($shift) != [$wfile, $wrank]");
 }

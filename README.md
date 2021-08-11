@@ -7,6 +7,17 @@ bit integers!
 
 It is currently work in progress.
 
+See the [tutorial]('Tutorial.md') for a gentle introduction to the library.
+When installed, you can also try the command
+`perldoc Chess::Position::Tutorial`.
+
+Reference documentation is available for
+[Chess::Position](blob/main/lib/Chess/Position.pod) (`perldoc Chess::Position`)
+and
+[Chess::Position](blob/main/lib/Chess/Position/Macro.pod)
+(`perldoc Chess::Position::Macro`).
+
+
 ## Copryight
 
 Copyright (C) 2021, Guido Flohr, guido.flohr@cantanea.com, all rights reserved.
