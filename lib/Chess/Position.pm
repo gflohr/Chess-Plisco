@@ -250,11 +250,11 @@ sub newFromFEN {
 
 	my $popcount;
 
-	cp_popcount $w_pieces & $kings, $popcount;
+	cp_bb_popcount $w_pieces & $kings, $popcount;
 	if ($popcount != 1) {
 		die __"Illegal FEN: White must have exactly one king.\n";
 	}
-	cp_popcount $b_pieces & $kings, $popcount;
+	cp_bb_popcount $b_pieces & $kings, $popcount;
 	if ($popcount != 1) {
 		die __"Illegal FEN: Black must have exactly one king.\n";
 	}
