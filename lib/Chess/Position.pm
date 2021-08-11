@@ -129,6 +129,11 @@ use constant CP_BISHOP_VALUE => 300;
 use constant CP_ROOK_VALUE => 500;
 use constant CP_QUEEN_VALUE => 900;
 
+# This arrays map a bit shift offset to bitboards that the corresponding
+# piece can attack from that square.  They are filled at compile-time at the
+# end of this file.
+my @king_attack_masks;
+
 sub new {
 	my ($class) = @_;
 
@@ -472,6 +477,46 @@ sub squareToShift {
 	my $rank = $2 - 1;
 
 	return $whatever->coordinatesToShift($file, $rank);
+}
+
+###########################################################################
+# Generate attack masks.
+###########################################################################
+
+# This would be slightly more efficient in one giant loop but with separate
+# loops for each variable, it is easier to understand and maintain.
+
+# King attack masks.
+for my $shift (0 .. 63) {
+	my ($file, $rank) = shiftToCoordinates undef, $shift;
+
+	my $mask = 0;
+
+	# East.
+	$mask |= (1 << ($shift - 1)) if $file < 7;
+
+	# South-east.
+	$mask |= (1 << ($shift - 9)) if $file < 7 && $rank > 0;
+
+	# South.
+	$mask |= (1 << ($shift - 8)) if $rank > 0;
+
+	# South-west.
+	$mask |= (1 << ($shift - 7)) if $file > 0 && $rank > 0;
+
+	# West.
+	$mask |= (1 << ($shift + 1)) if $file > 0;
+
+	# North-west.
+	$mask |= (1 << ($shift + 9)) if $file > 0 && $rank < 7;
+
+	# North.
+	$mask |= (1 << ($shift + 8)) if $rank < 7;
+
+	# North-east.
+	$mask |= (1 << ($shift + 7)) if $file < 7 && $rank < 7;
+
+	$king_attack_masks[$shift] = $mask;
 }
 
 1;
