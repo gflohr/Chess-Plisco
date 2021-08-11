@@ -10,6 +10,7 @@
 # http://www.wtfpl.net/ for more details.
 
 use strict;
+use integer;
 
 use Test::More;
 use Chess::Position::Macro;
@@ -17,13 +18,41 @@ use Chess::Position::Macro;
 my ($bitboard, $count);
 
 $bitboard = 0x88;
-cp_popcount $bitboard, $count;
+cp_bb_popcount $bitboard, $count;
 is $count, 2, 'popcount 0x88';
 is $bitboard, 0x88, 'popcount 0x88';
 
 $bitboard = 0xffff_ffff_ffff_ffff;
-cp_popcount $bitboard, $count;
+cp_bb_popcount $bitboard, $count;
 is $count, 64, 'popcount 0xffff_ffff_ffff_ffff';
 is $bitboard, 0xffff_ffff_ffff_ffff, 'popcount 0xffff_ffff_ffff_ffff';
+
+$bitboard = 0x1;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
+
+$bitboard = 0x3;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
+
+$bitboard = 0x7;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
+
+$bitboard = 0xf;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
+
+$bitboard = 0x7fff_ffff_ffff_ffff;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
+
+$bitboard = 0x8fff_ffff_ffff_ffff;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
+
+$bitboard = 0xffff_ffff_ffff_ffff;
+is (cp_bb_clear_but_least_set($bitboard), 0x1,
+	"cp_bb_clear_but_least_set($bitboard)");
 
 done_testing;
