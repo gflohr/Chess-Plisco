@@ -90,4 +90,6 @@ for (my $shift = 0; $shift < 64; ++$shift) {
 		"cp_coords_to_shift($wfile, $wrank) != $shift");
 	is_deeply([cp_shift_to_coords($shift)], [$wfile, $wrank],
 		"cp_shift_to_coords($shift) != [$wfile, $wrank]");
+	is(cp_coords_to_square($wfile, $wrank), $wsquare,
+		"cp_coords_to_square($wfile, $wrank) ne $wsquare");
 }
