@@ -14,7 +14,7 @@ When installed, you can also try the command
 Reference documentation is available for
 [Chess::Position](lib/Chess/Position.pod) (`perldoc Chess::Position`)
 and
-[Chess::Position](lib/Chess/Position/Macro.pod)
+[Chess::Position::Macro](lib/Chess/Position/Macro.pod)
 (`perldoc Chess::Position::Macro`).
 
 
