@@ -231,6 +231,12 @@ Important! This works only under the "use integer" pragma!
 
 L-value: no.
 
+=item B<cp_bb_count_trailing_zbits(BITBOARD)>
+
+Count trailing zero bits in B<BITBOARD>.  Only works for B<BITBOARD> != 0!
+
+L-value: no.
+
 =back
 
 =head2 Miscellaneous Macros
