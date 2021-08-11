@@ -51,7 +51,16 @@ define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 define cp_bb_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
 define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
+define cp_bb_count_trailing_zbits => '$bb', '(do {'
+	. 'my $A = $bb - 1 - ((($bb - 1) >> 1) & 0x5555_5555_5555_5555);'
+	. 'my $C = ($A & 0x3333_3333_3333_3333) + (($A >> 2) & 0x3333_3333_3333_3333);'
+	. 'my $n = $C + ($C >> 32);'
+	. '$n = ($n & 0x0f0f0f0f) + (($n >> 4) & 0x0f0f0f0f);'
+	. '$n = ($n & 0xffff) + ($n >> 16);'
+	. '$n = ($n & 0xff) + ($n >> 8);'
+	. '})';
 
+# Conversion between different notions of a square.
 define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 define cp_shift_to_coords => '$s', '((7 - $s & 0x7), ($s >> 3))';
 define cp_coords_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
@@ -207,9 +216,13 @@ sub expand_placeholder {
 		}
 	}
 
-	foreach my $token (@arglist, @tail) {
+	foreach my $token (@arglist) {
 		# We have to clone the token, in case it had been used before.
-		$parent->add_element($token->clone);
+		$token = $token->clone;
+	}
+
+	foreach my $token (@arglist, @tail) {
+		$parent->add_element($token);
 	}
 }
 
