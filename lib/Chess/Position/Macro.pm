@@ -54,6 +54,7 @@ define cp_popcount => '$b', '$c',
 define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 define cp_shift_to_coords => '$s', '((7 - $s & 0x7), ($s >> 3))';
 define cp_coords_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
+define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
 
 sub import {
 	my ($type) = @_;
