@@ -252,7 +252,8 @@ sub newFromFEN {
 		}
 
 		if ($rankno-- << 3 != $shift + 1) {
-			die __"Illegal FEN: Incomplete or overpopulated rank.\n";
+			die __x("Illegal FEN: Incomplete or overpopulated rank '{rank}'.\n",
+				rank => $rank);
 		}
 	}
 
@@ -513,7 +514,7 @@ sub coordinatesToShift {
 sub shiftToCoordinates {
 	my (undef, $shift) = @_;
 
-	my $file = $shift & 0x7;
+	my $file = (7 - $shift) & 0x7;
 	my $rank = $shift >> 3;
 
 	return $file, $rank;
@@ -561,7 +562,7 @@ for my $shift (0 .. 63) {
 	$mask |= (1 << ($shift - 9)) if $file < 7 && $rank > 0;
 
 	# South.
-	$mask |= (1 << ($shift - 8)) if $rank > 0;
+	$mask |= (1 << ($shift - 8)) if              $rank > 0;
 
 	# South-west.
 	$mask |= (1 << ($shift - 7)) if $file > 0 && $rank > 0;
@@ -573,7 +574,7 @@ for my $shift (0 .. 63) {
 	$mask |= (1 << ($shift + 9)) if $file > 0 && $rank < 7;
 
 	# North.
-	$mask |= (1 << ($shift + 8)) if $rank < 7;
+	$mask |= (1 << ($shift + 8)) if              $rank < 7;
 
 	# North-east.
 	$mask |= (1 << ($shift + 7)) if $file < 7 && $rank < 7;

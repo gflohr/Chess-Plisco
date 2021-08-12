@@ -18,16 +18,28 @@ use Chess::Position::Macro;
 
 my ($pos, @moves, @expect);
 
-$pos = Chess::Position->newFromFEN('8/3k4/8/8/8/8/4K3/8 w - - 0 1');
+$pos = Chess::Position->new('8/3k4/8/8/8/8/4K3/8 w - - 0 1');
 @moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
 is(scalar @moves, 8, 'number of moves lone white king');
 @expect = sort qw(e2f2 e2f1 e2e1 e2d1 e2d2 e2d3 e2e3 e2f3);
 is_deeply \@moves, \@expect, 'moves for lone white king';
 
-$pos = Chess::Position->newFromFEN('8/3k4/8/8/8/8/4K3/8 b - - 0 1');
+$pos = Chess::Position->new('8/3k4/8/8/8/8/4K3/8 b - - 0 1');
 @moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
 is(scalar @moves, 8, 'number of moves lone black king');
 @expect = sort qw(d7e7 d7e6 d7d6 d7c6 d7c7 d7c8 d7d8 d7e8);
 is_deeply \@moves, \@expect, 'moves for lone black king';
+
+$pos = Chess::Position->new('8/3k4/8/8/8/8/8/7K w - - 0 1');
+@moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
+is(scalar @moves, 3, 'number of moves lone white king on h1');
+@expect = sort qw(h1g1 h1g2 h1h2);
+is_deeply \@moves, \@expect, 'moves for lone white king on h1';
+
+$pos = Chess::Position->new('k7/8/8/8/8/8/3K4/8 b - - 0 1');
+@moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
+is(scalar @moves, 3, 'number of moves lone black king on a8');
+@expect = sort qw(a8b8 a8b7 a8a7);
+is_deeply \@moves, \@expect, 'moves for lone black king on a8';
 
 done_testing;
