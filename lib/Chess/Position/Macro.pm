@@ -46,6 +46,11 @@ define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 
 define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
+define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
+define cp_move_set_from => '$m', '$v', '(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
+define cp_move_promote => '$m', '(($m >> 13) & 0x7)';
+define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 13)';
+define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 
 # Bitboard macros.
 define cp_bb_popcount => '$b', '$c',

@@ -253,6 +253,13 @@ Set the destination square of B<MOVE> as a bit-shift offset to B<TO>.
 
 L-value: no.
 
+=item B<cp_move_coordinate_notation(MOVE)>
+
+Convert the move to coordinate notation.  Example: "g1f3" would be the
+coordinate notation for a piece moving from "g1" to "f3".  And "e7d8q" would
+be the cordinate notation for a pawn on "e7", capturing a piece on "d8", being
+promoted to a queen.
+
 =back
 
 =head2 Bit-fiddling Macros
