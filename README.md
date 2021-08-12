@@ -7,8 +7,8 @@ bit integers!
 
 It is currently work in progress.
 
-See the [tutorial](Tutorial.md) for a gentle introduction to the library.
-When installed, you can also try the command
+See the [tutorial](lib/Chess/Position/Tutorial.md) for a gentle introduction
+to the library.  When installed, you can also try the command
 `perldoc Chess::Position::Tutorial`.
 
 Reference documentation is available for

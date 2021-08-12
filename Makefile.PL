@@ -16,11 +16,18 @@ my %WriteMakefileArgs = (
   "LICENSE" => "unrestricted",
   "NAME" => "Chess::Position",
   "PREREQ_PM" => {
-    "Chess::Position::chi" => 0,
+    "Carp" => 0,
+    "Exporter" => 0,
+    "Filter::Util::Call" => 0,
+    "Locale::TextDomain" => 0,
+    "PPI::Document" => 0,
+    "base" => 0,
+    "constant" => 0,
+    "integer" => 0,
+    "overload" => 0,
     "strict" => 0
   },
   "TEST_REQUIRES" => {
-    "Data::Dumper" => 0,
     "Test::More" => 0
   },
   "VERSION" => "0.1",
@@ -31,9 +38,16 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
-  "Chess::Position::chi" => 0,
-  "Data::Dumper" => 0,
+  "Carp" => 0,
+  "Exporter" => 0,
+  "Filter::Util::Call" => 0,
+  "Locale::TextDomain" => 0,
+  "PPI::Document" => 0,
   "Test::More" => 0,
+  "base" => 0,
+  "constant" => 0,
+  "integer" => 0,
+  "overload" => 0,
   "strict" => 0
 );
 
