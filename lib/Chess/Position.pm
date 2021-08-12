@@ -141,7 +141,9 @@ use constant CP_PIECE_CHARS => [
 my @king_attack_masks;
 
 sub new {
-	my ($class) = @_;
+	my ($class, $fen) = @_;
+
+	return $class->newFromFEN($fen) if defined $fen && length $fen;
 
 	my $self = [];
 	cp_pos_w_pieces($self) = CP_1_MASK | CP_2_MASK;
