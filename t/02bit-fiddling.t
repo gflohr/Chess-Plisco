@@ -28,47 +28,51 @@ is $count, 64, 'popcount 0xffff_ffff_ffff_ffff';
 is $bitboard, 0xffff_ffff_ffff_ffff, 'popcount 0xffff_ffff_ffff_ffff';
 
 $bitboard = 0x1;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0x3;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0x7;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0xf;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0x7fff_ffff_ffff_ffff;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0x8fff_ffff_ffff_ffff;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0xffff_ffff_ffff_ffff;
-is (cp_bb_clear_but_least_set($bitboard), 0x1,
+is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0x2;
-is (cp_bb_count_trailing_zbits($bitboard), 1,
+is(cp_bb_count_trailing_zbits($bitboard), 1,
 	"cp_bb_count_trailing_zbits($bitboard)");
 
 $bitboard = 0x8000;
-is (cp_bb_count_trailing_zbits($bitboard), 15,
+is(cp_bb_count_trailing_zbits($bitboard), 15,
 	"cp_bb_count_trailing_zbits($bitboard)");
 
 $bitboard = 0x8000_0000_0000_0000;
-is (cp_bb_count_trailing_zbits($bitboard), 63,
+is(cp_bb_count_trailing_zbits($bitboard), 63,
 	"cp_bb_count_trailing_zbits($bitboard)");
 
 $bitboard = 0x1;
-is (cp_bb_count_trailing_zbits($bitboard), 0,
+is(cp_bb_count_trailing_zbits($bitboard), 0,
 	"cp_bb_count_trailing_zbits($bitboard)");
+
+$bitboard = 0x3;
+is(cp_bb_clear_least_set($bitboard), 0x2,
+	"cp_bb_clear_least_set($bitboard)");
 
 done_testing;
