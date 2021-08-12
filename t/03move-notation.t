@@ -29,7 +29,7 @@ $from = cp_square_to_shift 'd7';
 $to = cp_square_to_shift 'e8';
 cp_move_set_from $move, $from;
 cp_move_set_to $move, $to;
-cp_move_set_promote $move, CP_PIECE_CHARS->[CP_BLACK]->[CP_QUEEN];
+cp_move_set_promote $move, CP_QUEEN;
 is(cp_move_coordinate_notation($move), 'd7e8q', 'd7e8q');
 
 done_testing;
