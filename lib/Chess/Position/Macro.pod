@@ -4,6 +4,8 @@ Chess::Position::Macro - Macros/inline functions for Chess::Position
 
 =head1 SYNOPSIS
 
+    use integer;
+    use Chess::Position qw(:all);
     use Chess::Position::Macro;
 
     my $white_pieces = cp_pos_w_pieces(Chess::Position->new);
@@ -82,6 +84,46 @@ so that you can do these computations without subroutine call overhead.
 Depending on the exact implementation of the macro, you can often use them as
 l-vales (the left-hand side of an assignment).  This is mentioned in the
 documentation below.
+
+=head1 PITFALLS
+
+There are some caveats, when using this module.
+
+=head2 Import Constants from L<Chess::Position>
+
+Remember that the macro calls defined in your code will be replaced by other
+code at compile-time and that other code makes use of constants defined in
+L<Chess::Position>.  Therefore, you should always import these constants
+with C<use Chess::Position ':all'>.
+
+=head2 Use C<integer>
+
+Almost all of the macros run a lot faster with C<use integer> and some of them
+I<only> work with C<use integer>.  Therefore, you should always enable that
+pragma for your code.
+
+=head2 Do not Create References to Macros
+
+The macro calls will be replaced at compile-time with other code.  Therefore,
+it is not possible to create a reference to a macro.  Doing so may or may not
+cause a compile-time error but it will never do what you wanted.
+
+=head2 Do not Use the String Form of C<eval>
+
+You should not do that anyway but with macros it would not even work because
+the source code filter cannot know whether a string constant is really code.
+
+The same applies to using the L<Benchmark> module.  If you want to benchmark
+the macros, you either have to translate them first with C<preprocess()>
+before (see below), or somehow wrap it into a function call.  Doing the latter
+will probably eat up the performance gain the macros give you.
+
+=head2 Expect Errors
+
+Macros are expanded with the use of L<PPI::Document> and so the technique
+shares all limitations of L<PPI::Document>.
+
+And some more esoteric usages will probaly also not work.
 
 =head1 FUNCTIONS
 
