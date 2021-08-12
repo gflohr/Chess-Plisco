@@ -139,6 +139,7 @@ use constant CP_PIECE_CHARS => [
 # piece can attack from that square.  They are filled at compile-time at the
 # end of this file.
 my @king_attack_masks;
+my @knight_attack_masks;
 
 sub new {
 	my ($class, $fen) = @_;
@@ -456,7 +457,28 @@ sub pseudoLegalMoves {
 	my $my_pieces = $self->[cp_pos_to_move $self];
 	my $her_pieces = $self->[!cp_pos_to_move $self];
 
+	# FIXME! $shift -> $from!
 	my (@moves, $shift, $target_mask, $base_move);
+
+	# Generate knight moves.
+	my $knight_mask = $my_pieces & cp_pos_knights $self;
+	while ($knight_mask) {
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $knight_mask;
+
+		$base_move = $from << 6;
+	
+		$target_mask = ~$my_pieces & $knight_attack_masks[$from];
+
+		# FIXME! This can be made a macro!
+		while ($target_mask) {
+			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
+			push @moves, $base_move | $to;
+
+			$target_mask = cp_bb_clear_least_set $target_mask;
+		}
+
+		$knight_mask = cp_bb_clear_least_set $knight_mask;
+	}
 
 	# Generate king moves.  We take advantage of the fact that there is always
 	# exactly one king of each color on the board.  So there is no need for a
@@ -580,6 +602,39 @@ for my $shift (0 .. 63) {
 	$mask |= (1 << ($shift + 7)) if $file < 7 && $rank < 7;
 
 	$king_attack_masks[$shift] = $mask;
+}
+
+# Knight attack masks.
+for my $shift (0 .. 63) {
+	my ($file, $rank) = shiftToCoordinates undef, $shift;
+
+	my $mask = 0;
+
+	# North-north-east.
+	$mask |= (1 << ($shift + 15)) if $file < 7 && $rank < 6;
+
+	# North-east-east.
+	$mask |= (1 << ($shift +  6)) if $file < 6 && $rank < 7;
+
+	# South-east-east.
+	$mask |= (1 << ($shift - 10)) if $file < 6 && $rank > 0;
+
+	# South-south-east.
+	$mask |= (1 << ($shift - 17)) if $file < 7&&  $rank > 1;
+
+	# South-south-west.
+	$mask |= (1 << ($shift - 15)) if $file > 0 && $rank > 1;
+
+	# South-west-west.
+	$mask |= (1 << ($shift -  6)) if $file > 1 && $rank > 0;
+
+	# North-west-west.
+	$mask |= (1 << ($shift + 10)) if $file > 1 && $rank < 7;
+
+	# North-north-west.
+	$mask |= (1 << ($shift + 17)) if $file > 0 && $rank < 6;
+
+	$knight_attack_masks[$shift] = $mask;
 }
 
 1;
