@@ -42,4 +42,16 @@ is(scalar @moves, 3, 'number of moves lone black king on a8');
 @expect = sort qw(a8b8 a8b7 a8a7);
 is_deeply \@moves, \@expect, 'moves for lone black king on a8';
 
+$pos = Chess::Position->new('3k4/8/8/8/8/8/8/4K3 w - - 0 1');
+@moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
+is(scalar @moves, 5, 'number of moves king on 1st rank');
+@expect = sort qw(e1d1 e1d2 e1e2 e1f2 e1f1);
+is_deeply \@moves, \@expect, 'moves king on 1st rank';
+
+$pos = Chess::Position->new('3k4/8/8/8/8/8/8/4K3 b - - 0 1');
+@moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
+is(scalar @moves, 5, 'number of moves king on 8th rank');
+@expect = sort qw(d8e8 d8e7 d8d7 d8c7 d8c8);
+is_deeply \@moves, \@expect, 'moves king on 8th rank';
+
 done_testing;
