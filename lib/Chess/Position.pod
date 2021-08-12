@@ -7,7 +7,7 @@ Chess::Position - A comprehensive chess library for Perl
     use Chess::Position(:all);
 
     $pos = Chess::Position->new;
-    $pos = Chess::Position->newFromFEN('k7/8/8/8/8/8/8/7K w - - 0 1');
+    $pos = Chess::Position->new('k7/8/8/8/8/8/8/7K w - - 0 1');
 
 =head1 DESCRIPTION
 
@@ -52,10 +52,14 @@ the array indices.
 
 =over 4
 
-=item B<new>
+=item B<new([FEN])>
 
 Creates a new B<Chess::Position> instance that represents the starting position
 of standard chess.
+
+If an argument is passed to the constructor, it is interpreted as a position in
+Forsyth-Edwards Notation (FEN).  This has the same effect as using the
+constructor C<newFromFEN>.
 
 =item B<newFromFEN(FEN)>
 
