@@ -197,16 +197,16 @@ used for presentational purposes.
 A bitboard has 64 bits, and each bit stands for a particular square of
 the chess board:
 
-    a  b  c  d  e  f  g  h
- 8 63 62 61 60 59 58 57 56 8
- 7 55 54 53 52 51 50 49 48 7
- 6 47 46 45 44 43 42 41 40 6
- 5 39 38 37 36 35 34 33 32 5
- 4 31 30 29 28 27 26 25 24 4
- 3 23 22 21 20 19 18 17 16 3
- 2 15 14 13 12 11 10  9  8 2
- 1  7  6  5  4  3  2  1  0 1
-    a  b  c  d  e  f  g  h
+       a  b  c  d  e  f  g  h
+    8 63 62 61 60 59 58 57 56 8
+    7 55 54 53 52 51 50 49 48 7
+    6 47 46 45 44 43 42 41 40 6
+    5 39 38 37 36 35 34 33 32 5
+    4 31 30 29 28 27 26 25 24 4
+    3 23 22 21 20 19 18 17 16 3
+    2 15 14 13 12 11 10  9  8 2
+    1  7  6  5  4  3  2  1  0 1
+       a  b  c  d  e  f  g  h
 
 So the square "e4" is represented by the bit with the index 27 of a
 bitboard (actually the 28th bit if you count from 1). So, a better term
@@ -446,3 +446,82 @@ Task: Count the number of white pawns on the board.
 The important line is the last but one. The macro C<cp_bb_popcount>
 counts the number of bits set in an integer, and this is exactly what
 you need here.
+
+=head3 Iterating Bitboards
+
+Task: Print the square for every white pawn on the board.
+
+=head4 Conventional and Slow Approach
+
+Iterating over a bitboard can be done in an intuitive and straightforward way:
+
+    use integer;
+    use Chess::Position qw(:all);
+    use Chess::Position::Macro;
+
+    my $white_pawn_mask = cp_pos_w_pieces($pos) & cp_pos_pawns($pos);
+
+    foreach my $shift (0 .. 63) {
+        my $shift_mask = 1 << $shift;
+
+        if ($shift_mask & $white_pawn_mask) {
+            my $square = cp_shift_to_square $shift;
+            print "There is a white pawn on $square.\n";
+         }
+    }
+
+You basically shift a 1 bit subsequently to the left, and then test whether the
+corresponding bit is set in the bitboard.  There is nothing wrong with this
+approach and it is actually reasonably fast.
+
+=head4 Efficient and Fast Approach
+
+But there is a better technique to achieve the same result:
+
+    use integer;
+    use Chess::Position qw(:all);
+    use Chess::Position::Macro;
+
+    my $pos = Chess::Position->new;
+    my $white_pawn_mask = cp_pos_w_pieces($pos) & cp_pos_pawns($pos);
+
+    while ($white_pawn_mask) {
+        my $shift_mask = cp_bb_clear_but_least_set $white_pawn_mask;
+        my $shift = cp_bb_count_trailing_zbits $shift_mask;
+
+        my $square = cp_shift_to_square $shift;
+        print "There is a white pawn on $square.\n";
+
+        $white_pawn_mask = cp_bb_clear_least_set $white_pawn_mask;
+    }
+
+The macro `cp_bb_clear_but_least_set()` clears all bits in a bitboard except
+for the last significant one.  If you count the trailing zero bits with the
+macro `cp_bb_count_trailing_zbits()` you get the position of that bit in the
+bitboard and you can now use that information for whatever you want to do.
+
+At the end of the loop body, you clear the least significant bit of the
+bitboard.  Therefore, the population count of the bitboard decreases by
+one with each iteration.
+
+If you want to benchmark both approaches, make sure to remove the expensive
+operations inside the loop body, that is the call to `cp_shift_to_square()`
+and especially the print to the console.
+
+What you will find out is that the second approach runs around 10-15 %
+faster than the conventional approach.  On the one hand you have less
+iterations (8 vs. 64) but masking out the bits and especially counting the
+trailing zero bits outweighs that mostly.
+
+But if you replace "pawn" with "king" in the code, the 2nd variation runs
+around 700 % or seven times faster than the conventional approach.  This is
+because you always have exactly one loop iteration instead of 64.  And in
+the case of kings you could improve that even further by taking advantage of
+the fact that there is always exactly one white king on the board.  So you
+do not even need a loop.
+
+Most of the time, the bitboards you are dealing with are sparsely populated
+and it is advantageous to take the second approach.  Only in the exceptional
+case that you want to iterate over a bitboard with all pieces of one color
+or even all pieces of both colors, you are better off using the conventional
+approach.
