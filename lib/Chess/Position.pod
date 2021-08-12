@@ -84,7 +84,7 @@ positions are identical.
 
 =over 4
 
-=item B<moves>
+=item B<pseudoLegalMoves>
 
 Generates all pseudo-legal moves for the current position.
 
@@ -94,6 +94,10 @@ move ignoring whether the side to move is in check after the move.
 Only the lower 16 bits of the move are set, that means the start and destination
 square, a possible promotion piece and the en passant flag in case the move
 is an en passant capture.
+
+=item B<dumpBitboard(BITBOARD)
+
+Generate a string representation of B<BITBOARD> in ASCII art.
 
 =back
 
@@ -308,6 +312,17 @@ Value of a queen in centipawns.  Feel free to override this constant in derived
 classes.
 
 Note that there is no value for a king.  This is on purpose.
+
+=head3 CP_PIECE_CHARS
+
+An array of arrays that maps numeric piece constants (C<CP_PAWN>, C<CP_KNIGHT>,
+...) to characters.  The first array are uppercase letters, normally used
+for white pieces, the second one are lowercase letters, normally used for
+black pieces.
+
+Example to get the character for a black knight:
+
+    $char = CP_PIECE_CHARS->[CP_BLACK]->[CP_KNIGHT];
 
 =head2 Board Constants (:board)
 

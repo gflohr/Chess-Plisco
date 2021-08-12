@@ -46,6 +46,7 @@ my @export_pieces = qw(
 	CP_WHITE CP_BLACK
 	CP_NO_PIECE CP_PAWN CP_KNIGHT CP_BISHOP CP_ROOK CP_QUEEN CP_KING
 	CP_PAWN_VALUE CP_KNIGHT_VALUE CP_BISHOP_VALUE CP_ROOK_VALUE CP_QUEEN_VALUE
+	CP_PIECE_CHARS
 );
 
 our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors);
@@ -128,6 +129,11 @@ use constant CP_KNIGHT_VALUE => 300;
 use constant CP_BISHOP_VALUE => 300;
 use constant CP_ROOK_VALUE => 500;
 use constant CP_QUEEN_VALUE => 900;
+
+use constant CP_PIECE_CHARS => [
+	['', 'P', 'N', 'B', 'R', 'Q', 'K'],
+	['', 'p', 'n', 'b', 'r', 'q', 'k'],
+];
 
 # This arrays map a bit shift offset to bitboards that the corresponding
 # piece can attack from that square.  They are filled at compile-time at the
@@ -441,7 +447,61 @@ sub toFEN {
 	return $fen;
 }
 
+sub pseudoLegalMoves {
+	my ($self) = @_;
+
+	my $my_pieces = $self->[cp_pos_to_move $self];
+	my $her_pieces = $self->[!cp_pos_to_move $self];
+
+	my (@moves, $shift, $target_mask, $base_move);
+
+	# Generate king moves.  We take advantage of the fact that there is always
+	# exactly one king of each color on the board.  So there is no need for a
+	# loop.
+	my $king_mask = $my_pieces & cp_pos_kings $self;
+	$shift = cp_bb_count_trailing_zbits $king_mask;
+
+	# FIXME! 6 should be a constant!
+	$base_move = $shift << 6;
+
+	$target_mask = ~$my_pieces & $king_attack_masks[$shift];
+	while ($target_mask) {
+		my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
+		push @moves, $base_move | $to;
+
+		$target_mask = cp_bb_clear_least_set $target_mask;
+	}
+
+	return @moves;
+}
+
 # Class methods.
+sub dumpBitboard {
+	my (undef, $bitboard) = @_;
+
+	my $output = "  a b c d e f g h\n";
+	foreach my $shift (reverse (0 .. 63)) {
+		if (($shift & 0x7) == 0x7) {
+			$output .= 1 + ($shift >> 3);
+		}
+		if ($bitboard & 1 << $shift) {
+			$output .= ' x';
+		} else {
+			$output .= ' .';
+		}
+
+		if (($shift & 0x7) == 0) {
+			$output .= ' ';
+			$output .= 1 + ($shift >> 3);
+			$output .= "\n";
+		}
+	}
+	$output .= "  a b c d e f g h\n";
+
+
+	return $output;
+}
+
 sub coordinatesToShift {
 	my (undef, $file, $rank) = @_;
 
@@ -451,7 +511,7 @@ sub coordinatesToShift {
 sub shiftToCoordinates {
 	my (undef, $shift) = @_;
 
-	my $file = $shift & 0x7f;
+	my $file = $shift & 0x7;
 	my $rank = $shift >> 3;
 
 	return $file, $rank;
