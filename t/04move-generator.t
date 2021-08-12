@@ -54,4 +54,16 @@ is(scalar @moves, 5, 'number of moves king on 8th rank');
 @expect = sort qw(d8e8 d8e7 d8d7 d8c7 d8c8);
 is_deeply \@moves, \@expect, 'moves king on 8th rank';
 
+$pos = Chess::Position->new('8/8/k7/8/8/7K/8/8 w - - 0 1');
+@moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
+is(scalar @moves, 5, 'number of moves king on h file');
+@expect = sort qw(h3h2 h3g2 h3g3 h3g4 h3h4);
+is_deeply \@moves, \@expect, 'moves king on h file';
+
+$pos = Chess::Position->new('8/8/k7/8/8/7K/8/8 b - - 0 1');
+@moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
+is(scalar @moves, 5, 'number of moves king on h file');
+@expect = sort qw(a6b6 a6b5 a6a5 a6a7 a6b7);
+is_deeply \@moves, \@expect, 'moves king on h file';
+
 done_testing;
