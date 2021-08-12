@@ -165,17 +165,17 @@ dedicated class methods:
 
 =over
 
-=item C<< my $square = Chess::Position-E<gt>coordinatesToSquare($file, $rank) >>
+=item C<my $square = Chess::Position-E<gt>coordinatesToSquare($file, $rank)>
 
-=item C<< my $shift = Chess::Position-E<gt>coordinatesToShift($file, $rank) >>
+=item C<my $shift = Chess::Position-E<gt>coordinatesToShift($file, $rank)>
 
-=item C<< my $shift = Chess::Position-E<gt>squareToShift($square) >>
+=item C<my $shift = Chess::Position-E<gt>squareToShift($square)>
 
-=item C<< my ($file, $rank) = Chess::Position-E<gt>squareToCoordinates($square) >>
+=item C<my ($file, $rank) = Chess::Position-E<gt>squareToCoordinates($square)>
 
-=item C<< my $square = Chess::Position-E<gt>shiftToSquare($shift) >>
+=item C<my $square = Chess::Position-E<gt>shiftToSquare($shift)>
 
-=item C<< my ($file, $rank) = Chess::Position-E<gt>shiftToCoordinates($shift) >>
+=item C<my ($file, $rank) = Chess::Position-E<gt>shiftToCoordinates($shift)>
 
 =back
 
