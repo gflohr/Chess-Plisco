@@ -59,6 +59,7 @@ define cp_bb_count_trailing_zbits => '$bb', '(do {'
 	. '$n = ($n & 0xffff) + ($n >> 16);'
 	. '$n = ($n & 0xff) + ($n >> 8);'
 	. '})';
+define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 
 # Conversion between different notions of a square.
 define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';

@@ -75,4 +75,8 @@ $bitboard = 0x3;
 is(cp_bb_clear_least_set($bitboard), 0x2,
 	"cp_bb_clear_least_set($bitboard)");
 
+$bitboard = 0xffff_ffff_ffff_ffff;
+is(cp_bb_clear_least_set($bitboard), -2,
+	"cp_bb_clear_least_set($bitboard)");
+
 done_testing;
