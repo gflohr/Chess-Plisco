@@ -135,7 +135,22 @@ my @tests = (
 	{
 		name => 'bishop on e4',
 		fen => '4b1nK/6PP/8/6p1/4B1P1/8/2n1b3/k7 w - - 0 1',
-		moves => [qw(h8g8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4b1 e4d5 e4c6
+		moves => [qw(h8g8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4d5 e4c6
+				e4b7 e4a8)],
+	},
+	# Rook moves.
+	{
+		name => 'bishop on e4',
+		fen => '4b1nK/6PP/8/6p1/4R1P1/8/2n1b3/k7 w - - 0 1',
+		moves => [qw(h8g8 e4f4 e4e3 e4e2 e4d4 e4c4 e4b4 e4a4 e4e5 e4e6 e4e7
+				e4e8)],
+	},
+	# Queen moves.
+	{
+		name => 'queen on e4',
+		fen => '4b1nK/6PP/8/6p1/4Q1P1/8/2n1b3/k7 w - - 0 1',
+		moves => [qw(h8g8 e4f4 e4e3 e4e2 e4d4 e4c4 e4b4 e4a4 e4e5 e4e6 e4e7
+				e4e8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4d5 e4c6
 				e4b7 e4a8)],
 	},
 );

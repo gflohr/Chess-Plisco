@@ -68,9 +68,9 @@ define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 
 # Magic moves.
 define cp_mm_bmagic => '$s', '$o',
-	'CP_MAGICMOVESBDB->[$s][(((($o) & CP_MAGICMOVES_B_MASK->[$s]) * CP_MAGICMOVES_B_MAGICS->[$s]) >> 55) & (1 << (64 - 55) - 1)]';
+	'CP_MAGICMOVESBDB->[$s][(((($o) & CP_MAGICMOVES_B_MASK->[$s]) * CP_MAGICMOVES_B_MAGICS->[$s]) >> 55) & ((1 << (64 - 55)) - 1)]';
 define cp_mm_rmagic => '$s', '$o',
-	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & (1 << (64 - 52) - 1)]';
+	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & ((1 << (64 - 52)) - 1)]';
 
 # Conversion between different notions of a square.
 define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
