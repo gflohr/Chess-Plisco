@@ -90,7 +90,7 @@ our %EXPORT_TAGS = (
 	all => [@EXPORT_OK],
 );
 
-# Accessor indexes.
+# Accessor indices.
 use constant CP_POS_W_PIECES => 0;
 use constant CP_POS_B_PIECES => 1;
 use constant CP_POS_KINGS => 2;
