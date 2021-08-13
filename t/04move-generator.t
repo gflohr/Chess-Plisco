@@ -96,6 +96,21 @@ my @tests = (
 		fen => '6nK/6PP/8/N7/8/8/8/k7 w - - 0 1',
 		moves => [qw(h8g8 a5b7 a5c6 a5c4 a5b3)],
 	},
+	{
+		name => 'knight on d7',
+		fen => '6nK/3N2PP/8/8/8/8/8/k7 w - - 0 1',
+		moves => [qw(h8g8 d7f8 d7f6 d7e5 d7c5 d7b6 d7b8)],
+	},
+	{
+		name => 'knight on d8',
+		fen => '3N2nK/6PP/8/8/8/8/8/k7 w - - 0 1',
+		moves => [qw(h8g8 d8f7 d8e6 d8c6 d8b7)],
+	},
+	{
+		name => 'knight on f6 with capture on g8',
+		fen => '6nK/6PP/5N2/8/8/8/8/k7 w - - 0 1',
+		moves => [qw(h8g8 f6g8 f6h5 f6g4 f6e4 f6d5 f6d7 f6e8)],
+	},
 );
 
 foreach my $test (@tests) {
