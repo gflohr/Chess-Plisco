@@ -600,8 +600,7 @@ sub pseudoLegalMoves {
 	my $occupancy = $my_pieces | $her_pieces;
 	my $empty = ~$occupancy;
 
-	# FIXME! $shift -> $from!
-	my (@moves, $shift, $target_mask, $base_move);
+	my (@moves, $target_mask, $base_move);
 
 	# Generate knight moves.
 	my $knight_mask = $my_pieces & cp_pos_knights $self;
@@ -612,13 +611,7 @@ sub pseudoLegalMoves {
 	
 		$target_mask = ~$my_pieces & $knight_attack_masks[$from];
 
-		# FIXME! This can be made a macro!
-		while ($target_mask) {
-			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
-			push @moves, $base_move | $to;
-
-			$target_mask = cp_bb_clear_least_set $target_mask;
-		}
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 		$knight_mask = cp_bb_clear_least_set $knight_mask;
 	}
@@ -632,12 +625,7 @@ sub pseudoLegalMoves {
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
 
-		while ($target_mask) {
-			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
-			push @moves, $base_move | $to;
-
-			$target_mask = cp_bb_clear_least_set $target_mask;
-		}
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 		$bishop_mask = cp_bb_clear_least_set $bishop_mask;
 	}
@@ -651,12 +639,7 @@ sub pseudoLegalMoves {
 	
 		$target_mask = cp_mm_rmagic($from, $occupancy) & ($empty | $her_pieces);
 
-		while ($target_mask) {
-			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
-			push @moves, $base_move | $to;
-
-			$target_mask = cp_bb_clear_least_set $target_mask;
-		}
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 		$rook_mask = cp_bb_clear_least_set $rook_mask;
 	}
@@ -665,18 +648,14 @@ sub pseudoLegalMoves {
 	# exactly one king of each color on the board.  So there is no need for a
 	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
-	$shift = cp_bb_count_trailing_zbits $king_mask;
+	my $from = cp_bb_count_trailing_zbits $king_mask;
 
 	# FIXME! 6 should be a constant!
-	$base_move = $shift << 6;
+	$base_move = $from << 6;
 
-	$target_mask = ~$my_pieces & $king_attack_masks[$shift];
-	while ($target_mask) {
-		my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
-		push @moves, $base_move | $to;
+	$target_mask = ~$my_pieces & $king_attack_masks[$from];
 
-		$target_mask = cp_bb_clear_least_set $target_mask;
-	}
+	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 	return @moves;
 }
