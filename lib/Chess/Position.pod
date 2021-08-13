@@ -458,6 +458,37 @@ Bit masks for all squares on the 8th rank.
 
 0-based number of the 8th rank.
 
+=head2 Magic Moves Resp. Magic Bitboard Constants (:magicmoves)
+
+These are all large data tables that are used internally for the magic
+bitboards that generate the attack masks for the sliding pieces (queens,
+bishops, and rooks).  See the source if you are curious.  Otherwise just import
+them if you want to use the macros C<cp_mm_bmagic()> and C<cp_mm_rmagic()>.
+
+=head3 CP_MAGICMOVES_B_MAGICS
+
+Internal.
+
+=head3 CP_MAGICMOVES_R_MAGICS
+
+Internal.
+
+=head3 CP_MAGICMOVES_B_MASK
+
+Internal.
+
+=head3 CP_MAGICMOVES_R_MASK
+
+Internal.
+
+=head3 CP_MAGICMOVESBDB
+
+Internal.
+
+=head3 CP_MAGICMOVESRDB
+
+Internal.
+
 =head1 OTHER
 
 =head2 TERMINOLOGY

@@ -70,12 +70,23 @@ my @export_pieces = qw(
 	CP_PIECE_CHARS
 );
 
-our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors);
+my @export_magicmoves = qw(
+	CP_MAGICMOVES_B_MAGICS
+	CP_MAGICMOVES_R_MAGICS
+	CP_MAGICMOVES_B_MASK
+	CP_MAGICMOVES_R_MASK
+	CP_MAGICMOVESBDB
+	CP_MAGICMOVESRDB
+);
+
+our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors,
+		@export_magicmoves);
 
 our %EXPORT_TAGS = (
 	accessors => [@export_accessors],
 	pieces => [@export_pieces],
 	board => [@export_board],
+	magicmoves => [@export_magicmoves],
 	all => [@EXPORT_OK],
 );
 
@@ -263,6 +274,13 @@ my @magicmoves_b_mask = (
 
 my @magicmovesbdb;
 my @magicmovesrdb;
+
+use constant CP_MAGICMOVES_B_MAGICS => \@magicmoves_b_magics;
+use constant CP_MAGICMOVES_R_MAGICS => \@magicmoves_r_magics;
+use constant CP_MAGICMOVES_B_MASK => \@magicmoves_b_mask;
+use constant CP_MAGICMOVES_R_MASK => \@magicmoves_r_mask;
+use constant CP_MAGICMOVESBDB => \@magicmovesbdb;
+use constant CP_MAGICMOVESRDB => \@magicmovesbdb;
 
 sub new {
 	my ($class, $fen) = @_;
@@ -952,12 +970,6 @@ for (my $i = 0; $i < 64; ++$i)
 			my $k = ($j >> MINIMAL_R_BITS_SHIFT) & $r_bits_shift_mask;
 			$magicmovesrdb[$i][$k] = initmagicmoves_Rmoves($i, $tempocc);
 		}
-}
-
-for (my $i = 0; $i < 64; ++$i) {
-	for (my $j = 0; $j < (1 << 12); ++$j) {
-		printf STDERR "magicmovesrdb[%d][%d]: 0x%016llx\n", $i, $j, $magicmovesrdb[$i][$j];
-	}
 }
 
 1;
