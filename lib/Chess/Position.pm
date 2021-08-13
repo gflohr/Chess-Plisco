@@ -261,6 +261,9 @@ my @magicmoves_b_mask = (
 	0x0028440200000000, 0x0050080402000000, 0x0020100804020000, 0x0040201008040200
 );
 
+my @magicmovesbdb;
+my @magicmovesrdb;
+
 sub new {
 	my ($class, $fen) = @_;
 
@@ -755,6 +758,20 @@ for my $shift (0 .. 63) {
 	$mask |= (1 << ($shift + 17)) if $file > 0 && $rank < 6;
 
 	$knight_attack_masks[$shift] = $mask;
+}
+
+# Magic moves.
+sub initmagicmoves_occ {
+	my ($squares, $linocc) = @_;
+
+	my $ret = 0;
+	for (my $i = 0; $i < @$squares; ++$i) {
+		if ($linocc & (1 << $i)) {
+			$ret |= (1 << $squares->[$i]);
+		}
+	}
+
+	return $ret;
 }
 
 1;
