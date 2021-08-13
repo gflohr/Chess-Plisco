@@ -597,6 +597,8 @@ sub pseudoLegalMoves {
 
 	my $my_pieces = $self->[cp_pos_to_move $self];
 	my $her_pieces = $self->[!cp_pos_to_move $self];
+	my $occupancy = $my_pieces | $her_pieces;
+	my $empty = ~$occupancy;
 
 	# FIXME! $shift -> $from!
 	my (@moves, $shift, $target_mask, $base_move);
@@ -619,6 +621,24 @@ sub pseudoLegalMoves {
 		}
 
 		$knight_mask = cp_bb_clear_least_set $knight_mask;
+	}
+
+	# Generate bishop moves.
+	my $bishop_mask = $my_pieces & cp_pos_bishops $self;
+	while ($bishop_mask) {
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $bishop_mask;
+
+		$base_move = $from << 6;
+	
+		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
+		while ($target_mask) {
+			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
+			push @moves, $base_move | $to;
+
+			$target_mask = cp_bb_clear_least_set $target_mask;
+		}
+
+		$bishop_mask = cp_bb_clear_least_set $bishop_mask;
 	}
 
 	# Generate king moves.  We take advantage of the fact that there is always

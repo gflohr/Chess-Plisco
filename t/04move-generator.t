@@ -131,6 +131,13 @@ my @tests = (
 		fen => 'Kn5N/PP6/8/8/8/8/8/7k w - - 0 1',
 		moves => [qw(a8b8 h8g6 h8f7)],
 	},
+	# Bishop moves.
+	{
+		name => 'bishop on e4',
+		fen => '4b1nK/6PP/8/6p1/4B1P1/8/2n1b3/k7 w - - 0 1',
+		moves => [qw(h8g8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4b1 e4d5 e4c6
+				e4b7 e4a8)],
+	},
 );
 
 foreach my $test (@tests) {

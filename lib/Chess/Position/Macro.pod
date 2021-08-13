@@ -264,13 +264,13 @@ promoted to a queen.
 
 =head2 Macros for Magic Moves Resp. Magic Bitboards
 
-=item B<cp_mm_bmagic(OCCUPANCY, SHIFT)>
+=item B<cp_mm_bmagic(SHIFT, OCCUPANCY)>
 
 Returns a bitboard of all squares that a bishop attacks from the square denoted
 by B<SHIFT> if B<OCCUPANCY> is a bitboard of all squares that are occupied by
 own pieces.
 
-=item B<cp_mm_bmagic(OCCUPANCY, SHIFT)>
+=item B<cp_mm_bmagic(SHIFT, OCCUPANCY)>
 
 Returns a bitboard of all squares that a rook attacks from the square denoted
 by B<SHIFT> if B<OCCUPANCY> is a bitboard of all squares that are occupied by
