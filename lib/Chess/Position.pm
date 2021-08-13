@@ -972,23 +972,22 @@ for (my $i = 0; $i < 64; ++$i) {
 	}
 }
 
-for (my $i = 0; $i < 64; ++$i)
-{
-		my @squares;
-		my $numsquares = 0;
-		my $temp = $magicmoves_r_mask[$i];
-		while ($temp) {
-				my $bit = $temp & -$temp;
-				$squares[$numsquares++] = $initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
-				$temp ^= $bit;
-		}
-		for ($temp = 0; $temp < 1 << $numsquares; ++$temp) {
-			my $tempocc = initmagicmoves_occ(\@squares, $temp);
+for (my $i = 0; $i < 64; ++$i) {
+	my @squares;
+	my $numsquares = 0;
+	my $temp = $magicmoves_r_mask[$i];
+	while ($temp) {
+			my $bit = $temp & -$temp;
+			$squares[$numsquares++] = $initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
+			$temp ^= $bit;
+	}
+	for ($temp = 0; $temp < 1 << $numsquares; ++$temp) {
+		my $tempocc = initmagicmoves_occ(\@squares, $temp);
 
-			my $j = (($tempocc) * $magicmoves_r_magics[$i]);
-			my $k = ($j >> MINIMAL_R_BITS_SHIFT) & $r_bits_shift_mask;
-			$magicmovesrdb[$i][$k] = initmagicmoves_Rmoves($i, $tempocc);
-		}
+		my $j = (($tempocc) * $magicmoves_r_magics[$i]);
+		my $k = ($j >> MINIMAL_R_BITS_SHIFT) & $r_bits_shift_mask;
+		$magicmovesrdb[$i][$k] = initmagicmoves_Rmoves($i, $tempocc);
+	}
 }
 
 1;
