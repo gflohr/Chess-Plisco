@@ -280,7 +280,7 @@ use constant CP_MAGICMOVES_R_MAGICS => \@magicmoves_r_magics;
 use constant CP_MAGICMOVES_B_MASK => \@magicmoves_b_mask;
 use constant CP_MAGICMOVES_R_MASK => \@magicmoves_r_mask;
 use constant CP_MAGICMOVESBDB => \@magicmovesbdb;
-use constant CP_MAGICMOVESRDB => \@magicmovesbdb;
+use constant CP_MAGICMOVESRDB => \@magicmovesrdb;
 
 sub new {
 	my ($class, $fen) = @_;
@@ -631,6 +631,7 @@ sub pseudoLegalMoves {
 		$base_move = $from << 6;
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
+
 		while ($target_mask) {
 			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
 			push @moves, $base_move | $to;
@@ -639,6 +640,25 @@ sub pseudoLegalMoves {
 		}
 
 		$bishop_mask = cp_bb_clear_least_set $bishop_mask;
+	}
+
+	# Generate rook moves.
+	my $rook_mask = $my_pieces & cp_pos_rooks $self;
+	while ($rook_mask) {
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $rook_mask;
+
+		$base_move = $from << 6;
+	
+		$target_mask = cp_mm_rmagic($from, $occupancy) & ($empty | $her_pieces);
+
+		while ($target_mask) {
+			my $to = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $target_mask;
+			push @moves, $base_move | $to;
+
+			$target_mask = cp_bb_clear_least_set $target_mask;
+		}
+
+		$rook_mask = cp_bb_clear_least_set $rook_mask;
 	}
 
 	# Generate king moves.  We take advantage of the fact that there is always
