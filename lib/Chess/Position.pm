@@ -826,6 +826,9 @@ sub initmagicmoves_Bmoves {
 	my $bit;
 	my $bit2;
 	my $rowbits = ((0xFF) << (8 * ($square / 8)));
+	my $bit_7_mask = (1 << (64 - 7)) - 1;
+	my $bit_9_mask = (1 << (64 - 9)) - 1;
+	my $bit2_sign_mask = (1 << 63) - 1;
 
 	$bit = (1 << $square);
 	$bit2 = $bit;
@@ -833,6 +836,7 @@ sub initmagicmoves_Bmoves {
 		do {
 			$bit <<= 8 - 1;
 			$bit2 >>= 1;
+			$bit2 &= $bit2_sign_mask;
 			if ($bit2 & $rowbits) {
 				$ret |= $bit;
 			} else {
@@ -860,6 +864,7 @@ sub initmagicmoves_Bmoves {
 	{
 		do {
 			$bit >>= 8 - 1;
+			$bit &= $bit_7_mask;
 			$bit2 <<= 1;
 			if ($bit2 & $rowbits)
 				{
@@ -875,7 +880,9 @@ sub initmagicmoves_Bmoves {
 	{
 		do {
 			$bit >>= 8 + 1;
+			$bit &= $bit_9_mask;
 			$bit2 >>= 1;
+			$bit2 &= $bit2_sign_mask;
 			if ($bit2 & $rowbits) {
 				$ret |= $bit;
 			} else {
@@ -886,5 +893,50 @@ sub initmagicmoves_Bmoves {
 
 	return $ret;
 }
+
+# Init magicmoves.
+my @initmagicmoves_bitpos64_database = (
+	63,  0, 58,  1, 59, 47, 53,  2,
+	60, 39, 48, 27, 54, 33, 42,  3,
+	61, 51, 37, 40, 49, 18, 28, 20,
+	55, 30, 34, 11, 43, 14, 22,  4,
+	62, 57, 46, 52, 38, 26, 32, 41,
+	50, 36, 17, 19, 29, 10, 13, 21,
+	56, 45, 25, 31, 35, 16,  9, 12,
+	44, 24, 15,  8, 23,  7,  6,  5
+);
+
+use constant MINIMAL_B_BITS_SHIFT => 55;
+use constant MINIMAL_R_BITS_SHIFT => 52;
+
+my $b_bits_shift_mask = (1 << (64 - MINIMAL_B_BITS_SHIFT)) - 1;
+my $mask58 = (1 << (64 - 58)) - 1;
+for (my $i = 0; $i < 64; ++$i) {
+	my @squares;
+	my $numsquares = 0;
+	my $temp = $magicmoves_b_mask[$i];
+
+	while ($temp) {
+		my $bit = $temp & -$temp;
+		$squares[$numsquares++] = $initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
+		$temp ^= $bit;
+	}
+	for ($temp = 0; $temp < (1 << $numsquares); ++$temp) {
+		my $tempocc = initmagicmoves_occ(\@squares, $temp);
+
+		my $j = (($tempocc) * $magicmoves_b_magics[$i]);
+		#$j = 1 + ~$j if $j < 0;
+		# Remove the leading sign bits.
+		my $k = ($j >> MINIMAL_B_BITS_SHIFT) & $b_bits_shift_mask;
+		$magicmovesbdb[$i]->[$k]
+				= initmagicmoves_Bmoves($i, $tempocc);
+	}
+}
+
+#for (my $i = 0; $i < 64; ++$i) {
+#	for (my $j = 0; $j < (1 << 9); ++$j) {
+#		printf STDERR "magicmovesbdb[%d][%d]: 0x%016llx\n", $i, $j, $magicmovesbdb[$i][$j];
+#	}
+#}
 
 1;
