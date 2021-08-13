@@ -19,6 +19,47 @@ use Chess::Position::Macro;
 my ($pos, @moves, @expect);
 
 my @tests = (
+	# King moves.
+	{
+		name => 'lone white king on e2',
+		fen => '8/3k4/8/8/8/8/4K3/8 w - - 0 1',
+		moves => [qw(e2f2 e2f1 e2e1 e2d1 e2d2 e2d3 e2e3 e2f3)],
+	},
+	{
+		name => 'lone black king on d7',
+		fen => '8/3k4/8/8/8/8/4K3/8 b - - 0 1',
+		moves => [qw(d7e7 d7e6 d7d6 d7c6 d7c7 d7c8 d7d8 d7e8)],
+	},
+	{
+		name => 'lone white king on h1',
+		fen => '8/3k4/8/8/8/8/8/7K w - - 0 1',
+		moves => [qw(h1g1 h1g2 h1h2)],
+	},
+	{
+		name => 'lone black king on a8',
+		fen => 'k7/8/8/8/8/8/3K4/8 b - - 0 1',
+		moves => [qw(a8b8 a8b7 a8a7)],
+	},
+	{
+		name => 'lone white king on 1st rank',
+		fen => '3k4/8/8/8/8/8/8/4K3 w - - 0 1',
+		moves => [qw(e1d1 e1d2 e1e2 e1f2 e1f1)],
+	},
+	{
+		name => 'lone black king on 8th rank',
+		fen => '3k4/8/8/8/8/8/8/4K3 b - - 0 1',
+		moves => [qw(d8e8 d8e7 d8d7 d8c7 d8c8)],
+	},
+	{
+		name => 'lone white king on h file',
+		fen => '8/8/k7/8/8/7K/8/8 w - - 0 1',
+		moves => [qw(h3h2 h3g2 h3g3 h3g4 h3h4)],
+	},
+	{
+		name => 'lone black king on a file',
+		fen => '8/8/k7/8/8/7K/8/8 b - - 0 1',
+		moves => [qw(a6b6 a6b5 a6a5 a6a7 a6b7)],
+	},
 	# Knight moves.
 	{
 		name => 'knight on d5',
@@ -44,6 +85,16 @@ my @tests = (
 		name => 'knight on d1',
 		fen => '6nK/6PP/8/8/8/8/8/k2N4 w - - 0 1',
 		moves => [qw(h8g8 d1b2 d1c3 d1e3 d1f2)],
+	},
+	{
+		name => 'knight on b5',
+		fen => '6nK/6PP/8/1N6/8/8/8/k7 w - - 0 1',
+		moves => [qw(h8g8 b5c7 b5d6 b5d4 b5c3 b5a3 b5a7)],
+	},
+	{
+		name => 'knight on a5',
+		fen => '6nK/6PP/8/N7/8/8/8/k7 w - - 0 1',
+		moves => [qw(h8g8 a5b7 a5c6 a5c4 a5b3)],
 	},
 );
 
