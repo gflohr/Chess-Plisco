@@ -153,6 +153,17 @@ my @tests = (
 				e4e8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4d5 e4c6
 				e4b7 e4a8)],
 	},
+	# Pawn moves.
+	{
+		name => 'white passed pawn on e4',
+		fen => '6nK/6Pn/8/8/4P3/8/8/k7 w - - 0 1',
+		moves => [qw(h8g8 h8h7 e4e5)],
+	},
+	{
+		name => 'black passed pawn on e5',
+		fen => 'K7/8/8/4p3/8/8/6pN/6Nk b - - 0 1',
+		moves => [qw(h1g1 h1h2 e5e4)],
+	},
 );
 
 foreach my $test (@tests) {
