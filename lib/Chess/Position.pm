@@ -167,11 +167,40 @@ use constant CP_PIECE_CHARS => [
 	['', 'p', 'n', 'b', 'r', 'q', 'k'],
 ];
 
+my @pawn_aux_data = (
+	# White.
+	[
+		# Mask for regular moves.
+		~(CP_7_MASK | CP_8_MASK),
+		# Mask for double moves.
+		CP_2_MASK,
+		# Promotion mask.
+		CP_7_MASK,
+		# Single step offset.
+		8,
+	],
+	# Black.
+	[
+		# Mask for regular moves.
+		~(CP_2_MASK | CP_1_MASK),
+		# Mask for double moves.
+		CP_7_MASK,
+		# Promotion mask.
+		CP_2_MASK,
+		# Single step offset.
+		-8,
+	],
+);
+
 # These arrays map a bit shift offset to bitboards that the corresponding
 # piece can attack from that square.  They are filled at compile-time at the
 # end of this file.
 my @king_attack_masks;
 my @knight_attack_masks;
+
+# These are for pawn single steps, double steps, and captures, first for
+# white then for black.
+my @pawn_masks;
 
 # Magic moves.
 my @magicmoves_r_shift = (
@@ -657,6 +686,27 @@ sub pseudoLegalMoves {
 
 	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
+	# Generate pawn moves.
+	my ($regular_mask, $double_mask, $promotion_mask, $offset) =
+		@{$pawn_aux_data[cp_pos_to_move $self]};
+
+	my ($pawn_single_masks, $pawn_double_masks, $pawn_capture_masks) = 
+		@{$pawn_masks[cp_pos_to_move $self]};
+
+	my $pawns = cp_pos_pawns $self;
+
+	my $pawn_mask;
+
+	# Pawn single steps.
+	$pawn_mask = $my_pieces & $pawns;
+	while ($pawn_mask) {
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		$base_move = $from << 6;
+		$target_mask = $pawn_single_masks->[$from] & $empty;
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+	}
+
 	return @moves;
 }
 
@@ -796,6 +846,59 @@ for my $shift (0 .. 63) {
 
 	$knight_attack_masks[$shift] = $mask;
 }
+
+# Pawn masks.
+my @white_pawn_single_masks;
+for my $shift (0 .. 63) {
+	push @white_pawn_single_masks, 1 << ($shift + 8);
+}
+my @white_pawn_double_masks;
+for my $shift (0 .. 63) {
+	if ($shift >= 8 && $shift <= 15) {
+		push @white_pawn_double_masks, 1 << ($shift + 16);
+	} else {
+		push @white_pawn_double_masks, 0;
+	}
+}
+my @white_pawn_attack_masks;
+for my $shift (0 .. 63) {
+	my ($file, $rank) = shiftToCoordinates undef, $shift;
+	my $mask = 0;
+	if ($file > 0) {
+		push @white_pawn_attack_masks, 1 << ($shift + 9);
+	}
+	if ($file < 7) {
+		push @white_pawn_attack_masks, 1 << ($shift + 7);
+	}
+}
+$pawn_masks[CP_WHITE] = [\@white_pawn_single_masks, \@white_pawn_double_masks,
+		\@white_pawn_attack_masks];
+
+my @black_pawn_single_masks;
+for my $shift (0 .. 63) {
+	push @black_pawn_single_masks, 1 << ($shift - 8);
+}
+my @black_pawn_double_masks;
+for my $shift (0 .. 63) {
+	if ($shift >= 48 && $shift <= 55) {
+		push @black_pawn_double_masks, 1 << ($shift - 16);
+	} else {
+		push @black_pawn_double_masks, 0;
+	}
+}
+my @black_pawn_attack_masks;
+for my $shift (0 .. 63) {
+	my ($file, $rank) = shiftToCoordinates undef, $shift;
+	my $mask = 0;
+	if ($file > 0) {
+		push @black_pawn_attack_masks, 1 << ($shift - 7);
+	}
+	if ($file < 7) {
+		push @black_pawn_attack_masks, 1 << ($shift - 9);
+	}
+}
+$pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
+		\@black_pawn_attack_masks];
 
 # Magic moves.
 sub initmagicmoves_occ {
