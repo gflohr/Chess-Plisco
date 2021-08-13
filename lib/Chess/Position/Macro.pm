@@ -80,6 +80,11 @@ define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
 define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + 104 - ord($s)';
 define cp_shift_to_square => '$s', 'chr(97 + ((7 - $s) & 0x7)) . (1 + ($s >> 3))';
 
+define _cp_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) {'
+		. 'push @m, $b | cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $t;'
+		. '$target_mask = cp_bb_clear_least_set $target_mask;'
+		. '}';
+
 sub import {
 	my ($type) = @_;
 
