@@ -774,4 +774,50 @@ sub initmagicmoves_occ {
 	return $ret;
 }
 
+sub initmagicmoves_Rmoves {
+	my ($square, $occ) = @_;
+
+	my $ret = 0;
+	my $bit;
+	my $rowbits = (0xFF) << (8 * ($square / 8));
+
+	$bit = 1 << $square;
+	do {
+		$bit <<= 8;
+		$ret |= $bit;
+	} while ($bit && !($bit & $occ));
+
+	$bit = 1 << $square;
+	do {
+		$bit >>= 8;
+		$ret |= $bit;
+	} while ($bit && !($bit & $occ));
+
+	$bit = 1 << $square;
+	{
+		do {
+			$bit <<= 1;
+			if ($bit & $rowbits) {
+				$ret |= $bit;
+			} else {
+				last;
+			}
+		} while (!($bit & $occ));
+	}
+
+	$bit = (1 << $square);
+	{
+		do {
+			$bit >>= 1;
+			if ($bit & $rowbits) {
+				$ret |= $bit; }
+			else { 
+				last;
+			}
+		} while (!($bit & $occ));
+	}
+	
+	return $ret;
+}
+
 1;
