@@ -66,6 +66,12 @@ define cp_bb_count_trailing_zbits => '$bb', '(do {'
 	. '})';
 define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 
+# Magic moves.
+defined cp_mm_bmagic => '$o', '$s',
+	'CP_MAGICMOVESBDB->[$s][(((($o) & CP_MAGICMOVES_B_MASK->[$s]) * CP_MAGICMOVES_B_MAGICS->[$s]) >> 55) & (1 << (64 - 55) - 1)]';
+defined cp_mm_rmagic => '$o', '$s',
+	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & (1 << (64 - 52) - 1)]';
+
 # Conversion between different notions of a square.
 define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
 define cp_shift_to_coords => '$s', '(7 - $s & 0x7, $s >> 3)';
