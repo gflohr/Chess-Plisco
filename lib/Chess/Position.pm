@@ -820,4 +820,71 @@ sub initmagicmoves_Rmoves {
 	return $ret;
 }
 
+sub initmagicmoves_Bmoves {
+	my ($square, $occ) = @_;
+	my $ret = 0;
+	my $bit;
+	my $bit2;
+	my $rowbits = ((0xFF) << (8 * ($square / 8)));
+
+	$bit = (1 << $square);
+	$bit2 = $bit;
+	{
+		do {
+			$bit <<= 8 - 1;
+			$bit2 >>= 1;
+			if ($bit2 & $rowbits) {
+				$ret |= $bit;
+			} else {
+				last;
+			}
+		} while ($bit && !($bit & $occ));
+	}
+
+	$bit = (1 << $square);
+	$bit2 = $bit;
+	{
+		do {
+			$bit <<= 8 + 1;
+			$bit2 <<= 1;
+			if ($bit2 & $rowbits) {
+				$ret |= $bit;
+			} else {
+				last;
+			}
+		} while ($bit && !($bit & $occ));
+	}
+
+	$bit = (1 << $square);
+	$bit2 = $bit;
+	{
+		do {
+			$bit >>= 8 - 1;
+			$bit2 <<= 1;
+			if ($bit2 & $rowbits)
+				{
+					$ret |= $bit;
+				} else {
+					last;
+				} 
+		} while ($bit && !($bit & $occ));
+	}
+
+	$bit = (1 << $square);
+	$bit2 = $bit;
+	{
+		do {
+			$bit >>= 8 + 1;
+			$bit2 >>= 1;
+			if ($bit2 & $rowbits) {
+				$ret |= $bit;
+			} else {
+				last;
+			}
+		} while ($bit && !($bit & $occ));
+	}
+
+	return $ret;
+}
+
 1;
