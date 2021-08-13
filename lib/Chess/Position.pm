@@ -779,6 +779,8 @@ sub initmagicmoves_Rmoves {
 
 	my $ret = 0;
 	my $bit;
+	my $bit_8_mask = (1 << (64 - 8)) - 1;
+	my $bit_1_mask = (1 << (64 - 1)) - 1;
 	my $rowbits = (0xFF) << (8 * ($square / 8));
 
 	$bit = 1 << $square;
@@ -790,6 +792,7 @@ sub initmagicmoves_Rmoves {
 	$bit = 1 << $square;
 	do {
 		$bit >>= 8;
+		$bit &= $bit_8_mask;
 		$ret |= $bit;
 	} while ($bit && !($bit & $occ));
 
@@ -809,6 +812,7 @@ sub initmagicmoves_Rmoves {
 	{
 		do {
 			$bit >>= 1;
+			$bit &= $bit_1_mask;
 			if ($bit & $rowbits) {
 				$ret |= $bit; }
 			else { 
@@ -910,6 +914,7 @@ use constant MINIMAL_B_BITS_SHIFT => 55;
 use constant MINIMAL_R_BITS_SHIFT => 52;
 
 my $b_bits_shift_mask = (1 << (64 - MINIMAL_B_BITS_SHIFT)) - 1;
+my $r_bits_shift_mask = (1 << (64 - MINIMAL_R_BITS_SHIFT)) - 1;
 my $mask58 = (1 << (64 - 58)) - 1;
 for (my $i = 0; $i < 64; ++$i) {
 	my @squares;
@@ -923,20 +928,36 @@ for (my $i = 0; $i < 64; ++$i) {
 	}
 	for ($temp = 0; $temp < (1 << $numsquares); ++$temp) {
 		my $tempocc = initmagicmoves_occ(\@squares, $temp);
-
 		my $j = (($tempocc) * $magicmoves_b_magics[$i]);
-		#$j = 1 + ~$j if $j < 0;
-		# Remove the leading sign bits.
 		my $k = ($j >> MINIMAL_B_BITS_SHIFT) & $b_bits_shift_mask;
 		$magicmovesbdb[$i]->[$k]
 				= initmagicmoves_Bmoves($i, $tempocc);
 	}
 }
 
-#for (my $i = 0; $i < 64; ++$i) {
-#	for (my $j = 0; $j < (1 << 9); ++$j) {
-#		printf STDERR "magicmovesbdb[%d][%d]: 0x%016llx\n", $i, $j, $magicmovesbdb[$i][$j];
-#	}
-#}
+for (my $i = 0; $i < 64; ++$i)
+{
+		my @squares;
+		my $numsquares = 0;
+		my $temp = $magicmoves_r_mask[$i];
+		while ($temp) {
+				my $bit = $temp & -$temp;
+				$squares[$numsquares++] = $initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
+				$temp ^= $bit;
+		}
+		for ($temp = 0; $temp < 1 << $numsquares; ++$temp) {
+			my $tempocc = initmagicmoves_occ(\@squares, $temp);
+
+			my $j = (($tempocc) * $magicmoves_r_magics[$i]);
+			my $k = ($j >> MINIMAL_R_BITS_SHIFT) & $r_bits_shift_mask;
+			$magicmovesrdb[$i][$k] = initmagicmoves_Rmoves($i, $tempocc);
+		}
+}
+
+for (my $i = 0; $i < 64; ++$i) {
+	for (my $j = 0; $j < (1 << 12); ++$j) {
+		printf STDERR "magicmovesrdb[%d][%d]: 0x%016llx\n", $i, $j, $magicmovesrdb[$i][$j];
+	}
+}
 
 1;
