@@ -198,8 +198,8 @@ my @pawn_aux_data = (
 my @king_attack_masks;
 my @knight_attack_masks;
 
-# These are for pawn single steps, double steps, and captures, first for
-# white then for black.
+# These are for pawn single steps, double steps, and captures,
+# first for white then for black.
 my @pawn_masks;
 
 # Magic moves.
@@ -697,6 +697,9 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
+	my $ep_shift = cp_pos_ep_shift $self;
+	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
+
 	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
@@ -705,12 +708,12 @@ sub pseudoLegalMoves {
 
 		$base_move = $from << 6;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
-			| ($pawn_capture_masks->[$from] & $her_pieces);
+			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
 	}
 
-	# Pawn double steps and captures from the initial rank.
+	# Pawn double steps.
 	$pawn_mask = $my_pieces & $pawns & $double_mask;
 	while ($pawn_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
@@ -879,7 +882,7 @@ for my $shift (0 .. 63) {
 		push @white_pawn_double_masks, 0;
 	}
 }
-my @white_pawn_attack_masks;
+my @white_pawn_capture_masks;
 for my $shift (0 .. 63) {
 	my ($file, $rank) = shiftToCoordinates undef, $shift;
 	my $mask = 0;
@@ -889,10 +892,10 @@ for my $shift (0 .. 63) {
 	if ($file < 7) {
 		$mask |= 1 << ($shift + 7);
 	}
-	push @white_pawn_attack_masks, $mask;
+	push @white_pawn_capture_masks, $mask;
 }
 $pawn_masks[CP_WHITE] = [\@white_pawn_single_masks, \@white_pawn_double_masks,
-		\@white_pawn_attack_masks];
+		\@white_pawn_capture_masks];
 
 my @black_pawn_single_masks;
 for my $shift (0 .. 63) {
@@ -906,7 +909,7 @@ for my $shift (0 .. 63) {
 		push @black_pawn_double_masks, 0;
 	}
 }
-my @black_pawn_attack_masks;
+my @black_pawn_capture_masks;
 for my $shift (0 .. 63) {
 	my ($file, $rank) = shiftToCoordinates undef, $shift;
 	my $mask = 0;
@@ -916,10 +919,10 @@ for my $shift (0 .. 63) {
 	if ($file < 7) {
 		$mask |= 1 << ($shift - 9);
 	}
-	push @black_pawn_attack_masks, $mask;
+	push @black_pawn_capture_masks, $mask;
 }
 $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
-		\@black_pawn_attack_masks];
+		\@black_pawn_capture_masks];
 
 # Magic moves.
 sub initmagicmoves_occ {
