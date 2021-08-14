@@ -185,6 +185,16 @@ my @tests = (
 		fen => 'K7/3p4/1pPRP1p1/pBP2PBp/PP4PP/8/6pN/6Nk b - - 0 1',
 		moves => [qw(h1g1 h1h2 a5b4 b6c5 d7c6 d7e6 g6f5 h5g4)],
 	},
+	{
+		name => 'white ep captures',
+		fen => '6nK/6Pn/8/1PpP4/8/8/8/k7 w - c6 0 1',
+		moves => [qw(h8g8 h8h7 b5b6 b5c6 d5c6 d5d6)],
+	},
+	{
+		name => 'white ep captures',
+		fen => 'K7/8/8/8/1pPp4/8/6pN/6Nk b - c3 0 1',
+		moves => [qw(h1g1 h1h2 b4b3 b4c3 d4c3 d4d3)],
+	},
 );
 
 foreach my $test (@tests) {
