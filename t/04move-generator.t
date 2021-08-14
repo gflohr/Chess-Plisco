@@ -168,12 +168,22 @@ my @tests = (
 	{
 		name => 'white pawn double-steps',
 		fen => '6nK/6Pn/8/8/3p4/2p5/2PPP3/k7 w - - 0 1',
-		moves => [qw(h8g8 h8h7 d2d3 e2e3 e2e4)], # capture d2c3 still missing.
+		moves => [qw(h8g8 h8h7 d2c3 d2d3 e2e3 e2e4)],
 	},
 	{
 		name => 'black pawn double-steps',
 		fen => 'K7/2ppp3/2P5/3P4/8/8/6pN/6Nk b - - 0 1',
-		moves => [qw(h1g1 h1h2 d7d6 e7e6 e7e5)], # capture d7c6 still missing.
+		moves => [qw(h1g1 h1h2 d7c6 d7d6 e7e6 e7e5)],
+	},
+	{
+		name => 'white pawn captures',
+		fen => '6nK/6Pn/8/pp4pp/Pbp2pbP/1Pprp1P1/3P4/k7 w - - 0 1',
+		moves => [qw(h8g8 h8h7 a4b5 b3c4 d2c3 d2e3 g3f4 h4g5)],
+	},
+	{
+		name => 'black pawn captures',
+		fen => 'K7/3p4/1pPRP1p1/pBP2PBp/PP4PP/8/6pN/6Nk b - - 0 1',
+		moves => [qw(h1g1 h1h2 a5b4 b6c5 d7c6 d7e6 g6f5 h5g4)],
 	},
 );
 
