@@ -20,6 +20,85 @@ use Chess::Position::Macro;
 my ($pos, @moves, @expect);
 
 my @tests = (
+	# Castlings.
+	{
+		name => 'white castlings',
+		fen => 'r3k2r/p6p/p6p/8/8/P6P/P6P/R3K2R w KQkq - 0 1',
+		moves => [qw(e1g1 e1c1 e1d1 e1d2 e1e2 e1f2 e1f1
+			a3a4 h3h4 a1b1 a1c1 a1d1 h1g1 h1f1)],
+	},
+	{
+		name => 'black castlings',
+		fen => 'r3k2r/p6p/p6p/8/8/P6P/P6P/R3K2R b KQkq - 0 1',
+		moves => [qw(e8g8 e8c8 e8d8 e8d7 e8e7 e8f7 e8f8
+			a6a5 h6h5 a8b8 a8c8 a8d8 h8g8 h8f8)],
+	},
+	{
+		name => 'lost white king-side castling',
+		fen => 'r3k2r/p6p/p6p/8/8/P6P/P6P/R3K2R w Qkq - 0 1',
+		moves => [qw(e1c1 e1d1 e1d2 e1e2 e1f2 e1f1
+			a3a4 h3h4 a1b1 a1c1 a1d1 h1g1 h1f1)],
+	},
+	{
+		name => 'lost black king-side castling',
+		fen => 'r3k2r/p6p/p6p/8/8/P6P/P6P/R3K2R b KQq - 0 1',
+		moves => [qw(e8c8 e8d8 e8d7 e8e7 e8f7 e8f8
+			a6a5 h6h5 a8b8 a8c8 a8d8 h8g8 h8f8)],
+	},
+	{
+		name => 'lost white queen-side castling',
+		fen => 'r3k2r/p6p/p6p/8/8/P6P/P6P/R3K2R w Kkq - 0 1',
+		moves => [qw(e1g1 e1d1 e1d2 e1e2 e1f2 e1f1
+			a3a4 h3h4 a1b1 a1c1 a1d1 h1g1 h1f1)],
+	},
+	{
+		name => 'lost black queen-side castling',
+		fen => 'r3k2r/p6p/p6p/8/8/P6P/P6P/R3K2R b KQk - 0 1',
+		moves => [qw(e8g8 e8d8 e8d7 e8e7 e8f7 e8f8
+			a6a5 h6h5 a8b8 a8c8 a8d8 h8g8 h8f8)],
+	},
+	{
+		name => 'white king blocked for king-side castling',
+		fen => 'r3kn1r/p6p/p6p/8/8/P6P/P6P/R3KN1R w KQkq - 0 1',
+		moves => [qw(e1c1 e1d1 e1d2 e1e2 e1f2
+			a3a4 h3h4 a1b1 a1c1 a1d1 h1g1
+			f1d2 f1e3 f1g3)],
+	},
+	{
+		name => 'black king blocked for king-side castling',
+		fen => 'r3kn1r/p6p/p6p/8/8/P6P/P6P/R3KN1R b KQkq - 0 1',
+		moves => [qw(e8c8 e8d8 e8d7 e8e7 e8f7
+			a6a5 h6h5 a8b8 a8c8 a8d8 h8g8
+			f8d7 f8e6 f8g6)],
+	},
+	{
+		name => 'white king blocked for queen-side castling',
+		fen => 'r2nk2r/p6p/p6p/8/8/P6P/P6P/R2NK2R w KQkq - 0 1',
+		moves => [qw(e1g1 e1d2 e1e2 e1f2 e1f1
+			a3a4 h3h4 a1b1 a1c1 h1g1 h1f1
+			d1b2 d1c3 d1e3 d1f2)],
+	},
+	{
+		name => 'black king blocked for queen-side castling',
+		fen => 'r2nk2r/p6p/p6p/8/8/P6P/P6P/R2NK2R b KQkq - 0 1',
+		moves => [qw(e8g8 e8d7 e8e7 e8f7 e8f8
+			a6a5 h6h5 a8b8 a8c8 h8g8 h8f8
+			d8b7 d8c6 d8e6 d8f7)],
+	},
+	{
+		name => 'white rook blocked for queen-side castling',
+		fen => 'rn2k2r/p6p/p6p/8/8/P6P/P6P/RN2K2R w KQkq - 0 1',
+		moves => [qw(e1g1 e1d2 e1e2 e1f2 e1f1
+			a3a4 h3h4 h1g1 h1f1
+			b1c3 b1d2)],
+	},
+	{
+		name => 'black rook blocked for queen-side castling',
+		fen => 'rn2k2r/p6p/p6p/8/8/P6P/P6P/RN2K2R b KQkq - 0 1',
+		moves => [qw(e8g8 e8d7 e8e7 e8f7 e8f8
+			a6a5 h6h5 h8g8 h8f8
+			b8c6 b8d7)],
+	},
 	# King moves.
 	{
 		name => 'lone white king on e2',
@@ -191,7 +270,7 @@ my @tests = (
 		moves => [qw(h8g8 h8h7 b5b6 b5c6 d5c6 d5d6)],
 	},
 	{
-		name => 'white ep captures',
+		name => 'black ep captures',
 		fen => 'K7/8/8/8/1pPp4/8/6pN/6Nk b - c3 0 1',
 		moves => [qw(h1g1 h1h2 b4b3 b4c3 d4c3 d4d3)],
 	},
