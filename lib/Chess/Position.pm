@@ -697,23 +697,22 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	# Pawn single steps w/o promotions.
+	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
+		$DB::single = 1;
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 
-		# FIXME! The next line is not necessary if the pawn is blocked.  Rather
-		# create a distinct pawn macro or rather just an if.
 		$base_move = $from << 6;
-		$target_mask = $pawn_single_masks->[$from] & $empty;
+		$target_mask = ($pawn_single_masks->[$from] & $empty)
+			| ($pawn_capture_masks->[$from] & $her_pieces);
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
 	}
 
-	# Pawn double steps.
+	# Pawn double steps and captures from the initial rank.
 	$pawn_mask = $my_pieces & $pawns & $double_mask;
 	while ($pawn_mask) {
-		$DB::single = 1;
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 		my $cross_mask = $pawn_single_masks->[$from] & $empty;
 
@@ -885,11 +884,12 @@ for my $shift (0 .. 63) {
 	my ($file, $rank) = shiftToCoordinates undef, $shift;
 	my $mask = 0;
 	if ($file > 0) {
-		push @white_pawn_attack_masks, 1 << ($shift + 9);
+		$mask |= 1 << ($shift + 9);
 	}
 	if ($file < 7) {
-		push @white_pawn_attack_masks, 1 << ($shift + 7);
+		$mask |= 1 << ($shift + 7);
 	}
+	push @white_pawn_attack_masks, $mask;
 }
 $pawn_masks[CP_WHITE] = [\@white_pawn_single_masks, \@white_pawn_double_masks,
 		\@white_pawn_attack_masks];
@@ -911,11 +911,12 @@ for my $shift (0 .. 63) {
 	my ($file, $rank) = shiftToCoordinates undef, $shift;
 	my $mask = 0;
 	if ($file > 0) {
-		push @black_pawn_attack_masks, 1 << ($shift - 7);
+		$mask |= 1 << ($shift - 7);
 	}
 	if ($file < 7) {
-		push @black_pawn_attack_masks, 1 << ($shift - 9);
+		$mask |= 1 << ($shift - 9);
 	}
+	push @black_pawn_attack_masks, $mask;
 }
 $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 		\@black_pawn_attack_masks];
