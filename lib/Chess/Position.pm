@@ -100,8 +100,8 @@ use constant CP_POS_KNIGHTS => 5;
 use constant CP_POS_PAWNS => 6;
 use constant CP_POS_TO_MOVE => 7;
 use constant CP_POS_W_KCASTLE => 8;
-use constant CP_POS_W_QCASTLE => 9;
-use constant CP_POS_B_KCASTLE => 10;
+use constant CP_POS_B_KCASTLE => 9;
+use constant CP_POS_W_QCASTLE => 10;
 use constant CP_POS_B_QCASTLE => 11;
 use constant CP_POS_EP_SHIFT => 12;
 use constant CP_POS_HALF_MOVE_CLOCK => 13;
@@ -189,6 +189,43 @@ my @pawn_aux_data = (
 		CP_2_MASK,
 		# Single step offset.
 		-8,
+	],
+);
+
+my @castling_aux_data = (
+	# White.
+	[
+		# From shift.
+		3,
+		# From mask.
+		(CP_E_MASK & CP_1_MASK),
+		# King-side crossing square.
+		(CP_F_MASK & CP_1_MASK),
+		# King-side king's destination square.
+		1,
+		# Queen-side crossing mask.
+		(CP_D_MASK & CP_1_MASK),
+		# Queen-side king's destination square.
+		5,
+		# Queen-side rook crossing mask.
+		(CP_B_MASK & CP_1_MASK),
+	],
+	# Black.
+	[
+		# From shift.
+		59,
+		# From mask.
+		(CP_E_MASK & CP_8_MASK),
+		# King-side crossing mask.
+		(CP_F_MASK & CP_8_MASK),
+		# King-side king's destination square.
+		57,
+		# Queen-side crossing mask.
+		(CP_D_MASK & CP_8_MASK),
+		# Queen-side king's destination square.
+		61,
+		# Queen-side rook crossing mask.
+		(CP_B_MASK & CP_8_MASK),
 	],
 );
 
@@ -624,12 +661,32 @@ sub toFEN {
 sub pseudoLegalMoves {
 	my ($self) = @_;
 
-	my $my_pieces = $self->[cp_pos_to_move $self];
-	my $her_pieces = $self->[!cp_pos_to_move $self];
+	my $to_move = cp_pos_to_move $self;
+	my $my_pieces = $self->[$to_move];
+	my $her_pieces = $self->[!$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
 	my $empty = ~$occupancy;
 
 	my (@moves, $target_mask, $base_move);
+
+	# Generate castlings.
+	my $king_mask = $my_pieces & cp_pos_kings $self;
+	my ($king_from, $king_from_mask, $king_side_crossing_mask,
+			$king_side_dest_shift,
+			$queen_side_crossing_mask, $queen_side_dest_shift,
+			$queen_side_rook_crossing_mask)
+			= @{$castling_aux_data[$to_move]};
+	if ($king_mask & $king_from_mask) {
+		if ($self->[CP_POS_W_KCASTLE + $to_move]
+		    && ($king_side_crossing_mask & $empty)) {
+			push @moves, ($king_from << 6) | $king_side_dest_shift;
+		}
+		if ($self->[CP_POS_W_QCASTLE + $to_move]
+		    && (!(($queen_side_crossing_mask | $queen_side_rook_crossing_mask)
+		         & $occupancy))) {
+			push @moves, ($king_from << 6) | $queen_side_dest_shift;
+		}
+	}
 
 	# Generate knight moves.
 	my $knight_mask = $my_pieces & cp_pos_knights $self;
@@ -676,7 +733,6 @@ sub pseudoLegalMoves {
 	# Generate king moves.  We take advantage of the fact that there is always
 	# exactly one king of each color on the board.  So there is no need for a
 	# loop.
-	my $king_mask = $my_pieces & cp_pos_kings $self;
 	my $from = cp_bb_count_trailing_zbits $king_mask;
 
 	# FIXME! 6 should be a constant!
@@ -688,10 +744,10 @@ sub pseudoLegalMoves {
 
 	# Generate pawn moves.
 	my ($regular_mask, $double_mask, $promotion_mask, $offset) =
-		@{$pawn_aux_data[cp_pos_to_move $self]};
+		@{$pawn_aux_data[$to_move]};
 
 	my ($pawn_single_masks, $pawn_double_masks, $pawn_capture_masks) = 
-		@{$pawn_masks[cp_pos_to_move $self]};
+		@{$pawn_masks[$to_move]};
 
 	my $pawns = cp_pos_pawns $self;
 
@@ -703,7 +759,6 @@ sub pseudoLegalMoves {
 	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
-		$DB::single = 1;
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 
 		$base_move = $from << 6;
