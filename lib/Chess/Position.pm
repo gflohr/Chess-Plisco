@@ -697,13 +697,33 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	# Pawn single steps.
-	$pawn_mask = $my_pieces & $pawns;
+	# Pawn single steps w/o promotions.
+	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+
+		# FIXME! The next line is not necessary if the pawn is blocked.  Rather
+		# create a distinct pawn macro or rather just an if.
 		$base_move = $from << 6;
 		$target_mask = $pawn_single_masks->[$from] & $empty;
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
+		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+	}
+
+	# Pawn double steps.
+	$pawn_mask = $my_pieces & $pawns & $double_mask;
+	while ($pawn_mask) {
+		$DB::single = 1;
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $cross_mask = $pawn_single_masks->[$from] & $empty;
+
+		if ($cross_mask) {
+			$target_mask = $pawn_double_masks->[$from] & $empty;
+			if ($target_mask) {
+				my $to = $from + ($offset << 1);
+				push @moves, $from << 6 | $to;
+			}
+		}
 		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
 	}
 
