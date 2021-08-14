@@ -13,6 +13,7 @@ use strict;
 use integer;
 
 use Test::More;
+use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
@@ -164,6 +165,16 @@ my @tests = (
 		fen => 'K7/8/8/4p3/8/8/6pN/6Nk b - - 0 1',
 		moves => [qw(h1g1 h1h2 e5e4)],
 	},
+	{
+		name => 'white pawn double-steps',
+		fen => '6nK/6Pn/8/8/3p4/2p5/2PPP3/k7 w - - 0 1',
+		moves => [qw(h8g8 h8h7 d2d3 e2e3 e2e4)], # capture d2c3 still missing.
+	},
+	{
+		name => 'black pawn double-steps',
+		fen => 'K7/2ppp3/2P5/3P4/8/8/6pN/6Nk b - - 0 1',
+		moves => [qw(h1g1 h1h2 d7d6 e7e6 e7e5)], # capture d7c6 still missing.
+	},
 );
 
 foreach my $test (@tests) {
@@ -172,6 +183,9 @@ foreach my $test (@tests) {
 	my @expect = sort @{$test->{moves}};
 	is(scalar(@moves), scalar(@expect), "number of moves $test->{name}");
 	is_deeply \@moves, \@expect, $test->{name};
+	if (@moves != @expect) {
+		diag Dumper [sort @moves];
+	}
 }
 
 done_testing;
