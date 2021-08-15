@@ -103,6 +103,21 @@ is an en passant capture.
 
 Generate a string representation of B<BITBOARD> in ASCII art.
 
+=item B<update>
+
+Updates the internal state of the position.  You only have to call that if
+you modify the position yourself.
+
+The method updates in partticular:
+
+=over 4
+
+=item the in-check flag
+
+=item the checkers bitboard of the pieces that give check
+
+=back
+
 =back
 
 =head1 PROPERTIES
@@ -177,7 +192,28 @@ True if black can castle queen-side, false otherwise.
 
 =item B<cp_pos_ep_shift(POS); POS-E<gt>[CP_POS_EP_SHIFT]>
 
-True if black can castle queen-side, false otherwise.
+The bit-shift offset of an en-passant target square or 0 if en-passant is
+not possible.
+
+Note: 0 is the shift of the h1 square but en-passant on h1 is not possible.
+It is therefore safe to use it as in boolean context here.
+
+=item B<cp_pos_w_king_shift(POS); POS-E<gt>[CP_POS_W_KING_SHIFT]>
+
+The bit-shift offset to the white king square.
+
+=item B<cp_pos_b_king_shift(POS); POS-E<gt>[CP_POS_B_KING_SHIFT]>
+
+The bit-shift offset to the black king square.
+
+=item B<cp_pos_in_check(POS); POS-E<gt>[CP_POS_IN_CHECK]>
+
+Set to a truthy value, if the side to move is in check.
+
+=item B<cp_pos_checkers(POS); POS-E<gt>[CP_POS_CHECKERS]>
+
+A bitboard of all squares from where check is given. Only meaningful if
+the side to move is in check.
 
 =back
 
@@ -249,6 +285,14 @@ The index of the half-move clock.
 =head3 CP_POS_HALF_MOVES
 
 The index of the number of half-moves made.
+
+=head3 CP_POS_IN_CHECK
+
+The index of the in-check flag.
+
+=head3 CP_POS_CHECKERS
+
+The index of the checkers bitboard.
 
 =head2 Piece Constants (:pieces)
 

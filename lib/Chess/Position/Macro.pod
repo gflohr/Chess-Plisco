@@ -231,6 +231,32 @@ Get or set the number of half-moves from the L<Chess::Position> B<POS>.
 
 L-value: yes.
 
+=item B<cp_pos_w_king_shift(POS)>
+
+Get or set the bit-shift offset of the white king square of
+L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_b_king_shift(POS)>
+
+Get or set the bit-shift offset of the black king square of
+L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_in_check(POS)>
+
+Get or set the in-check flag of the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
+=item B<cp_pos_checkers(POS)>
+
+Get or set the checkers bitboard of the L<Chess::Position> B<POS>.
+
+L-value: yes.
+
 =back
 
 =head2 Move Macros
