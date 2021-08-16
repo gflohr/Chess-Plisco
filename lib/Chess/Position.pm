@@ -806,6 +806,18 @@ sub update {
 	my $bkings = cp_pos_kings($self) & cp_pos_b_pieces($self);
 	cp_pos_b_king_shift($self) = cp_bb_count_trailing_zbits($bkings);
 
+	my $checkers = 0;
+
+	my $my_color = cp_pos_to_move($self);
+	my $her_color = !$my_color;
+	my $her_pieces = $self->[CP_POS_W_PIECES + $her_color];
+	my $king_shift = $self->[CP_POS_W_KING_SHIFT + $my_color];
+	my $her_pawns = $her_pieces & cp_pos_pawns($self);
+	$checkers |= $pawn_masks[$my_color]->[2]->[$king_shift] & $her_pawns;
+
+	cp_pos_checkers($self) = $checkers;
+	cp_pos_in_check($self) = $checkers;
+
 	return $self;
 }
 
