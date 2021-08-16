@@ -16,8 +16,6 @@ use strict;
 use Filter::Util::Call;
 use PPI::Document;
 
-use Chess::Position qw(:all);
-
 sub define;
 sub preprocess;
 sub extract_arguments;
