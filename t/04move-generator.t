@@ -88,14 +88,14 @@ my @tests = (
 	{
 		name => 'white rook blocked for queen-side castling',
 		fen => 'rn2k2r/p6p/p6p/8/8/P6P/P6P/RN2K2R w KQkq - 0 1',
-		moves => [qw(e1g1 e1d2 e1e2 e1f2 e1f1
+		moves => [qw(e1g1 e1d1 e1d2 e1e2 e1f2 e1f1
 			a3a4 h3h4 h1g1 h1f1
 			b1c3 b1d2)],
 	},
 	{
 		name => 'black rook blocked for queen-side castling',
 		fen => 'rn2k2r/p6p/p6p/8/8/P6P/P6P/RN2K2R b KQkq - 0 1',
-		moves => [qw(e8g8 e8d7 e8e7 e8f7 e8f8
+		moves => [qw(e8g8 e8d8 e8d7 e8e7 e8f7 e8f8
 			a6a5 h6h5 h8g8 h8f8
 			b8c6 b8d7)],
 	},
