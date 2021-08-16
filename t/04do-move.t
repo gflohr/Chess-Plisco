@@ -16,6 +16,7 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
+use Chess::Position::Move;
 
 my ($pos, @moves, @expect);
 
@@ -31,6 +32,12 @@ my @tests = (
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
 	ok $pos, $test->{name};
+	my $move = Chess::Position::Move->new($test->{move}, $pos);
+	my $legal = $pos->doMove($move);
+	if ($test->{after}) {
+		ok $legal, "$test->{name}: move should be legal";
+		#is $pos->toFEN, $test->{after}, "$test->{name}";
+	}
 }
 
 done_testing;
