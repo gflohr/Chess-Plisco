@@ -233,25 +233,25 @@ The index of the white bitboard.
 
 The index of the black bitboard.
 
-=head3 CP_POS_KINGS
+=head3 CP_POS_PAWNS
 
-The index of the kings bitboard.
-
-=head3 CP_POS_ROOKS
-
-The index of the rooks bitboard.
-
-=head3 CP_POS_BISHOPS
-
-The index of the bishops bitboard.
+The index of the pawns bitboard.
 
 =head3 CP_POS_KNIGHTS
 
 The index of the knights bitboard.
 
-=head3 CP_POS_PAWNS
+=head3 CP_POS_BISHOPS
 
-The index of the pawns bitboard.
+The index of the bishops bitboard.
+
+=head3 CP_POS_ROOKS
+
+The index of the rooks bitboard.
+
+=head3 CP_POS_KINGS
+
+The index of the kings bitboard.
 
 =head3 CP_POS_TO_MOVE
 
