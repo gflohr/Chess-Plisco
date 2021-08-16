@@ -822,6 +822,29 @@ sub update {
 }
 
 # Class methods.
+sub parseCoordinateNotation {
+	# FIXME! This should be a constructor of Chess::Position::Move
+	my ($self, $move) = @_;
+
+	return if $move !~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/;
+
+	my ($from, $to, $promote) = ($1, $2, $3);
+
+	my $move = $self->squareToShift($from) << 6 | $self->squareToShift($to);
+
+	if ($promote) {
+		my %pieces = (
+			q => CP_QUEEN,
+			r => CP_ROOK,
+			b => CP_BISHOP,
+			n => CP_KNIGHT,
+		);
+		$move |= ($pieces{$promote} << 13);
+	}
+
+	return $move;
+}
+
 sub dumpBitboard {
 	my (undef, $bitboard) = @_;
 
