@@ -26,6 +26,11 @@ my @tests = (
 		fen => '8/8/4k3/5P2/8/8/8/4K3 b - - 0 1',
 		checkers => [(1 << (CP_F_MASK & CP_5_MASK))],
 	},
+	{
+		name => 'black pawn checks on d5',
+		fen => '8/8/3p4/2K5/8/8/6k1/8 w - - 0 1',
+		checkers => [(1 << (CP_D_MASK & CP_5_MASK))],
+	},
 );
 
 foreach my $test (@tests) {
