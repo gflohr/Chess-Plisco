@@ -322,7 +322,10 @@ The en passant flag is set, when a pawn hits (moves diagonally) but the
 target square is empty.
 
 The piece that moves, the attacker is the piece that stands on the
-starting square.
+starting square.  Note that this is never C<CP_QUEEN> even if the piece that
+moves is a queen.  It is either C<CP_BISHOP> or C<CP_ROOK> for queen moves,
+depending on how the queen moves.  This is a little bit confusing but has a
+marginal performance advantage.
 
 The piece that gets removed, the victim, is the piece that stands on the
 target square, if any.
