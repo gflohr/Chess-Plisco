@@ -31,6 +31,21 @@ my @tests = (
 		fen => '8/8/3p4/2K5/8/8/6k1/8 w - - 0 1',
 		checkers => [(1 << (CP_D_MASK & CP_5_MASK))],
 	},
+	{
+		name => 'black knight checks on e6',
+		fen => '8/8/3p4/2K5/8/8/6k1/8 w - - 0 1',
+		checkers => [(1 << (CP_E_MASK & CP_6_MASK))],
+	},
+	{
+		name => 'white bishop checks on c3',
+		fen => '8/6q1/8/4k3/8/2B5/4K3/8 b - - 0 1',
+		checkers => [(1 << (CP_C_MASK & CP_3_MASK))],
+	},
+	{
+		name => 'black queen checks on g5',
+		fen => '8/8/8/R2K2q1/8/8/5k2/8 w - - 0 1',
+		checkers => [(1 << (CP_G_MASK & CP_5_MASK))],
+	},
 );
 
 foreach my $test (@tests) {
