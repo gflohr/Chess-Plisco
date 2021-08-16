@@ -30,8 +30,7 @@ my @tests = (
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
-	ok cp_pos_in_check($pos), "$test->{name} but opponent is not in check";
-	ok cp_pos_checkers($pos), "$test->{name} but wrong checkers mask"
+	ok cp_pos_in_check($pos), "$test->{name} wrong checkers mask"
 }
 
 done_testing;

@@ -208,12 +208,7 @@ The bit-shift offset to the black king square.
 
 =item B<cp_pos_in_check(POS); POS-E<gt>[CP_POS_IN_CHECK]>
 
-Set to a truthy value, if the side to move is in check.
-
-=item B<cp_pos_checkers(POS); POS-E<gt>[CP_POS_CHECKERS]>
-
-A bitboard of all squares from where check is given. Only meaningful if
-the side to move is in check.
+Set to the bitboard of pieces giving check, if the side to move is in check.
 
 =back
 
@@ -288,11 +283,7 @@ The index of the number of half-moves made.
 
 =head3 CP_POS_IN_CHECK
 
-The index of the in-check flag.
-
-=head3 CP_POS_CHECKERS
-
-The index of the checkers bitboard.
+The index of the in-check bitboard.
 
 =head2 Piece Constants (:pieces)
 

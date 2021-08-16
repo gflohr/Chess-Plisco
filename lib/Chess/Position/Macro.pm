@@ -46,7 +46,6 @@ define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 define cp_pos_w_king_shift => '$p', '$p->[CP_POS_W_KING_SHIFT]';
 define cp_pos_b_king_shift => '$p', '$p->[CP_POS_B_KING_SHIFT]';
 define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
-define cp_pos_checkers => '$p', '$p->[CP_POS_CHECKERS]';
 
 define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';

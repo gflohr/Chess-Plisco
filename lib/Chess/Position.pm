@@ -51,7 +51,7 @@ my @export_accessors = qw(
 	CP_POS_W_KCASTLE CP_POS_W_QCASTLE CP_POS_B_KCASTLE CP_POS_B_QCASTLE
 	CP_POS_EP_SHIFT CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_W_KING_SHIFT CP_POS_B_KING_SHIFT
-	CP_POS_IN_CHECK CP_POS_CHECKERS
+	CP_POS_IN_CHECK
 );
 
 my @export_board = qw(
@@ -111,7 +111,6 @@ use constant CP_POS_HALF_MOVES => 14;
 use constant CP_POS_W_KING_SHIFT => 15;
 use constant CP_POS_B_KING_SHIFT => 16;
 use constant CP_POS_IN_CHECK => 17;
-use constant CP_POS_CHECKERS => 18;
 
 # Board.
 use constant CP_A_MASK => 0x8080808080808080;
@@ -815,7 +814,6 @@ sub update {
 	my $her_pawns = $her_pieces & cp_pos_pawns($self);
 	$checkers |= $pawn_masks[$my_color]->[2]->[$king_shift] & $her_pawns;
 
-	cp_pos_checkers($self) = $checkers;
 	cp_pos_in_check($self) = $checkers;
 
 	return $self;
