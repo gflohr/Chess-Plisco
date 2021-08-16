@@ -22,23 +22,53 @@ use Chess::Position::Macro;
 sub new {
 	my ($class, $notation, $position) = @_;
 
+	my $move;
 	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/i) {
-		return Chess::Position::Move->__newFromCoordinates(map { lc $_ } ($1, $2, $3))
+		$move = Chess::Position::Move->__parseCoordinates(map { lc $_ } ($1, $2, $3))
+	} else {
+		require Carp;
+		Carp::croak("SAN parser not yet implemented.\n");
 	}
 
-	require Carp;
-	Carp::croak("SAN parser not yet implemented.\n");
+	my $attacker;
+	my $from_mask = cp_move_from $move;
+
+	if ($from_mask & cp_pos_pawns($position)) {
+		$attacker = CP_PAWN;
+	} elsif ($from_mask & cp_pos_knights($position)) {
+		$attacker = CP_KNIGHT;
+	} elsif ($from_mask & cp_pos_bishops($position)) {
+		if ($from_mask & cp_pos_rooks($position)) {
+			$attacker = CP_QUEEN;
+		} else {
+			$attacker = CP_ROOK;
+		}
+	} elsif ($from_mask & cp_pos_rooks($position)) {
+		$attacker = CP_ROOK;
+	} elsif ($from_mask & cp_pos_kings($position)) {
+		$attacker = CP_KING;
+	} else {
+		require Carp;
+		Carp::croak(__"Illegal move: start square is empty.\n");
+	}
+
+	cp_move_set_attacker($move, $attacker);
+
+	bless {
+		__move => $move,
+		__position => $position,
+	}, $class;
 }
 
-sub __newFromCoordinates {
+sub __parseCoordinates {
 	my ($class, $from_square, $to_square, $promote) = @_;
 
-	my $self = 0;
+	my $move = 0;
 	my $from = cp_square_to_shift $from_square;
 	my $to = cp_square_to_shift $to_square;
 
-	cp_move_set_from($self, $from);
-	cp_move_set_to($self, $to);
+	cp_move_set_from($move, $from);
+	cp_move_set_to($move, $to);
 
 	if ($promote) {
 		my %pieces = (
@@ -48,40 +78,40 @@ sub __newFromCoordinates {
 			n => CP_KNIGHT,
 		);
 
-		cp_move_set_promote($self, $pieces{$promote});
+		cp_move_set_promote($move, $pieces{$promote});
 	}
 
-	bless \$self, $class;
+	return $move;
 }
 
 sub from {
 	my ($self) = @_;
 
-	return cp_move_from $$self;
+	return cp_move_from $self->{__move};
 }
 
 sub to {
 	my ($self) = @_;
 
-	return cp_move_to $$self;
+	return cp_move_to $self->{__move};
 }
 
 sub promote {
 	my ($self) = @_;
 
-	return cp_move_promote $$self;
+	return cp_move_promote $self->{__move};
 }
 
 sub toInteger {
 	my ($self) = @_;
 
-	return $$self;
+	return $self->{__move};
 }
 
 sub toString {
 	my ($self) = @_;
 
-	return cp_move_coordinate_notation $$self;
+	return cp_move_coordinate_notation $self->{__move};
 }
 
 1;

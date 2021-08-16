@@ -17,42 +17,44 @@ use Chess::Position qw(:all);
 use Chess::Position::Macro;
 use Chess::Position::Move;
 
-my ($move, $from, $to);
+my ($pos, $move, $from, $to);
+
+$pos = Chess::Position->new;
 
 $move = 0;
 $from = cp_square_to_shift 'e2';
 $to = cp_square_to_shift 'e4';
 cp_move_set_from $move, $from;
 cp_move_set_to $move, $to;
+cp_move_set_attacker $move, CP_PAWN;
 is(cp_move_from($move), $from, 'e2e4 from');
 is(cp_move_to($move), $to, 'e2e4 to');
 is(cp_move_promote($move), CP_NO_PIECE, 'e2e4 promote');
-is($move, (11 << 6) | 27, 'e2e4 as integer');
 is(cp_move_coordinate_notation($move), 'e2e4', 'e2e4');
 
-$move = Chess::Position::Move->new('e2e4');
+$move = Chess::Position::Move->new('e2e4', $pos);
 is $move->from, $from, 'e2e4 from';
 is $move->to, $to, 'e2e4 to';
 is $move->promote, CP_NO_PIECE, 'e2e4 promote';
-is $move->toInteger, (11 << 6) | 27, 'e2e4 as integer';
 is $move->toString, 'e2e4', 'e2e4';
+
+$pos = Chess::Position->new('k7/8/8/8/8/8/3p1K2/4N3 b - - 0 1');
 
 $move = 0;
 $from = cp_square_to_shift 'd2';
 $to = cp_square_to_shift 'e1';
 cp_move_set_from $move, $from;
 cp_move_set_to $move, $to;
+cp_move_set_attacker $move, CP_PAWN;
 cp_move_set_promote $move, CP_QUEEN;
 is(cp_move_from($move), $from, 'd2e1q from');
 is(cp_move_to($move), $to, 'd2e1q to');
 is(cp_move_promote($move), CP_QUEEN, 'd2e1q promote');
-is($move, (12 << 6) | 3 | (CP_QUEEN << 13), 'd2e1q as integer');
 
-$move = Chess::Position::Move->new('d2e1q');
+$move = Chess::Position::Move->new('d2e1q', $pos);
 is $move->from, $from, 'd2e1q from';
 is $move->to, $to, 'd2e1q to';
 is $move->promote, CP_QUEEN, 'd2e1q promote';
-is $move->toInteger, (12 << 6) | 3 | (CP_QUEEN << 13), 'd2e1q as integer';
 is $move->toString, 'd2e1q', 'd2e1q';
 
 done_testing;
