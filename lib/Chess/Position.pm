@@ -95,11 +95,11 @@ our %EXPORT_TAGS = (
 # Accessor indices.
 use constant CP_POS_W_PIECES => 0;
 use constant CP_POS_B_PIECES => 1;
-use constant CP_POS_KINGS => 2;
-use constant CP_POS_ROOKS => 3;
+use constant CP_POS_PAWNS => 2;
+use constant CP_POS_KNIGHTS => 3;
 use constant CP_POS_BISHOPS => 4;
-use constant CP_POS_KNIGHTS => 5;
-use constant CP_POS_PAWNS => 6;
+use constant CP_POS_ROOKS => 5;
+use constant CP_POS_KINGS => 6;
 use constant CP_POS_TO_MOVE => 7;
 use constant CP_POS_W_KCASTLE => 8;
 use constant CP_POS_B_KCASTLE => 9;

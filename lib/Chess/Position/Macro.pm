@@ -30,11 +30,11 @@ my %defines;
 
 define cp_pos_w_pieces => '$p', '$p->[CP_POS_W_PIECES]';
 define cp_pos_b_pieces => '$p', '$p->[CP_POS_B_PIECES]';
-define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
-define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
-define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
-define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
 define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
+define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
+define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
+define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
+define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
 define cp_pos_w_kcastle => '$p', '$p->[CP_POS_W_KCASTLE]';
 define cp_pos_w_qcastle => '$p', '$p->[CP_POS_W_QCASTLE]';
