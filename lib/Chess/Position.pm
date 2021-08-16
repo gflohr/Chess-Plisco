@@ -359,7 +359,7 @@ sub new {
 
 	return $class->newFromFEN($fen) if defined $fen && length $fen;
 
-	my $self = [];
+	my $self = bless [], $class;
 	cp_pos_w_pieces($self) = CP_1_MASK | CP_2_MASK;
 	cp_pos_b_pieces($self) = CP_8_MASK | CP_7_MASK,
 	cp_pos_kings($self) = (CP_1_MASK | CP_8_MASK) & CP_E_MASK;
@@ -379,7 +379,9 @@ sub new {
 	cp_pos_half_move_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
 
-	bless $self, $class;
+	$self->update;
+
+	return $self;
 }
 
 sub newFromFEN {
@@ -556,6 +558,8 @@ sub newFromFEN {
 	} else {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
 	}
+
+	$self->update;
 
 	# FIXME! Check that side not to move is not in check.
 
@@ -795,6 +799,12 @@ sub pseudoLegalMoves {
 
 sub update {
 	my ($self) = @_;
+
+	# Update king's shift.
+	my $wkings = cp_pos_kings($self) & cp_pos_w_pieces($self);
+	cp_pos_w_king_shift($self) = cp_bb_count_trailing_zbits($wkings);
+	my $bkings = cp_pos_kings($self) & cp_pos_b_pieces($self);
+	cp_pos_b_king_shift($self) = cp_bb_count_trailing_zbits($bkings);
 
 	return $self;
 }
