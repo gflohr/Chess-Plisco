@@ -69,8 +69,12 @@ define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
 define cp_move_set_from => '$m', '$v', '(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
-define cp_move_promote => '$m', '(($m >> 13) & 0x7)';
-define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 13)';
+define cp_move_promote => '$m', '(($m >> 12) & 0x7)';
+define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
+define cp_move_en_passant => '$m', '(($m) & (1 << 15))';
+define cp_move_set_en_passant => '$m', '$e', '(($m) = (($m) & ~0x8000) | ($e << 15))';
+define cp_move_attacker => '$m', '(($m >> 16) & 0x7)';
+define cp_move_set_attacker => '$m', '$a', '(($m) = (($m) & ~0x70000) | (($a) & 0x7) << 16)';
 define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 
 # Bitboard macros.

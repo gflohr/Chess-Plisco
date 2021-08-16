@@ -290,9 +290,8 @@ data values may not fit into the other structures.
 =head3 Moves
 
 A move in C<Chess::Position> is simply an integer. There is also a
-convenience class C<Chess::Position::Move> which is constructed from a
-reference to an integer but this class is not used internally for
-performance reasons. The individual bits of a move are:
+convenience class C<Chess::Position::Move> but this class is not used
+internally for performance reasons. The individual bits of a move are:
 
 =over
 
@@ -316,7 +315,7 @@ I<The numbers in parentheses are the 0-based bit numbers.>
 
 Only bits 1 to 15 are really needed to characterize a move, and the bits
 13 to 15 are only needed for pawn promotions. The other bits can be
-derived from the position that the move is applied to, and there are not
+derived from the position that the move is applied to, and they are not
 always present:
 
 The en passant flag is set, when a pawn hits (moves diagonally) but the
