@@ -247,13 +247,7 @@ L-value: yes.
 
 =item B<cp_pos_in_check(POS)>
 
-Get or set the in-check flag of the L<Chess::Position> B<POS>.
-
-L-value: yes.
-
-=item B<cp_pos_checkers(POS)>
-
-Get or set the checkers bitboard of the L<Chess::Position> B<POS>.
+Get or set the in-check bitboard of the L<Chess::Position> B<POS>.
 
 L-value: yes.
 
