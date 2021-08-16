@@ -813,9 +813,59 @@ sub update {
 sub doMove {
 	my ($self, $move) = @_;
 
-	my ($from, $to, $promote) =
-		(cp_move_from($move), cp_move_to($move), cp_move_promote($move));
+	my ($from, $to, $promote, $attacker) =
+		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
+		 cp_move_attacker($move));
 	
+	my $to_move = cp_pos_to_move $self;
+	my $my_pieces_idx = CP_POS_W_PIECES + $to_move;
+	my $my_piece_bitboard_idx = CP_POS_PAWNS - 1 + $attacker;
+	my $from_mask = 1 << $from;
+
+	if ($attacker == CP_KING) {
+		die "king move"; # TODO.
+	}
+
+	$self->[$my_pieces_idx] &= ~$from_mask;
+	$self->[$my_piece_bitboard_idx] &= ~$from_mask;
+	if (_cp_pos_checkers($self)) {
+		# Undo current changes.
+		$self->[$my_pieces_idx] |= $from_mask;
+		$self->[$my_piece_bitboard_idx] |= $from_mask;
+		return;
+	}
+
+	my $to_mask = 1 << $to;
+	my $her_pieces_idx = CP_POS_W_PIECES + !$to_move;
+	my $her_pieces = $self->[$her_pieces_idx];
+
+	# Check en passant.  A pawn capture can be detected by checking the
+	# difference between the from and to shift.  If it is odd, it is a capture.
+	if ($attacker == CP_PAWN && (($from - $to) & 1)
+	    && !($to_mask && $her_pieces)) {
+		die "TODO! Correct to mask for en passant."
+	}
+
+	my $not_to_mask = ~$to_mask;
+
+	if ($attacker == CP_PAWN
+	    || $self->[$her_pieces_idx] && $to_mask) {
+		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
+	} else {
+		++$self->[CP_POS_HALF_MOVE_CLOCK];
+	}
+
+	$self->[$her_pieces_idx] &= $not_to_mask;
+	$self->[CP_POS_PAWNS] &= $not_to_mask;
+	$self->[CP_POS_KNIGHTS] &= $not_to_mask;
+	$self->[CP_POS_BISHOPS] &= $not_to_mask;
+	$self->[CP_POS_ROOKS] &= $not_to_mask;
+ 
+	cp_pos_to_move $self = !$to_move;
+	++$self->[CP_POS_HALF_MOVES];
+
+	$self->update;
+
 	return $self;
 }
 
