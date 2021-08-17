@@ -861,7 +861,7 @@ sub doMove {
 	$self->[CP_POS_BISHOPS] &= $not_to_mask;
 	$self->[CP_POS_ROOKS] &= $not_to_mask;
  
-	cp_pos_to_move $self = !$to_move;
+	cp_pos_to_move($self) = !$to_move;
 	++$self->[CP_POS_HALF_MOVES];
 
 	$self->update;
@@ -891,7 +891,6 @@ sub dumpBitboard {
 		}
 	}
 	$output .= "  a b c d e f g h\n";
-
 
 	return $output;
 }

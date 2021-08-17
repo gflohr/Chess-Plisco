@@ -36,7 +36,7 @@ foreach my $test (@tests) {
 	my $legal = $pos->doMove($move);
 	if ($test->{after}) {
 		ok $legal, "$test->{name}: move should be legal";
-		#is $pos->toFEN, $test->{after}, "$test->{name}";
+		is $pos->toFEN, $test->{after}, "$test->{name}";
 	}
 }
 
