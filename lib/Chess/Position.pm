@@ -48,7 +48,7 @@ my @export_accessors = qw(
 	CP_POS_W_PIECES CP_POS_B_PIECES
 	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_TO_MOVE
-	CP_POS_W_KCASTLE CP_POS_W_QCASTLE CP_POS_B_KCASTLE CP_POS_B_QCASTLE
+	CP_POS_CASTLING
 	CP_POS_EP_SHIFT CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_W_KING_SHIFT CP_POS_B_KING_SHIFT
 	CP_POS_IN_CHECK
@@ -101,16 +101,13 @@ use constant CP_POS_BISHOPS => 4;
 use constant CP_POS_ROOKS => 5;
 use constant CP_POS_KINGS => 6;
 use constant CP_POS_TO_MOVE => 7;
-use constant CP_POS_W_KCASTLE => 8;
-use constant CP_POS_B_KCASTLE => 9;
-use constant CP_POS_W_QCASTLE => 10;
-use constant CP_POS_B_QCASTLE => 11;
-use constant CP_POS_EP_SHIFT => 12;
-use constant CP_POS_HALF_MOVE_CLOCK => 13;
-use constant CP_POS_HALF_MOVES => 14;
-use constant CP_POS_W_KING_SHIFT => 15;
-use constant CP_POS_B_KING_SHIFT => 16;
-use constant CP_POS_IN_CHECK => 17;
+use constant CP_POS_CASTLING => 8;
+use constant CP_POS_EP_SHIFT => 9;
+use constant CP_POS_HALF_MOVE_CLOCK => 10;
+use constant CP_POS_HALF_MOVES => 11;
+use constant CP_POS_W_KING_SHIFT => 12;
+use constant CP_POS_B_KING_SHIFT => 13;
+use constant CP_POS_IN_CHECK => 14;
 
 # Board.
 use constant CP_A_MASK => 0x8080808080808080;
@@ -370,10 +367,7 @@ sub new {
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK),
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
 	cp_pos_to_move($self) = CP_WHITE;
-	cp_pos_w_kcastle($self) = 1;
-	cp_pos_w_qcastle($self) = 1;
-	cp_pos_b_kcastle($self) = 1;
-	cp_pos_b_qcastle($self) = 1;
+	cp_pos_castling($self) = 0x1 | 0x2 | 0x4 | 0x8;
 	cp_pos_ep_shift($self) = 0;
 	cp_pos_half_move_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
@@ -501,10 +495,7 @@ sub newFromFEN {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
 
-	$self->[CP_POS_W_KCASTLE] = 0;
-	$self->[CP_POS_W_QCASTLE] = 0;
-	$self->[CP_POS_B_KCASTLE] = 0;
-	$self->[CP_POS_B_QCASTLE] = 0;
+	$self->[CP_POS_CASTLING] = 0;
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling state.\n";
 	}
@@ -514,16 +505,16 @@ sub newFromFEN {
 	}
 
 	if ($castling =~ /K/) {
-		$self->[CP_POS_W_KCASTLE] = 1;
+		$self->[CP_POS_CASTLING] |= 0x1;
 	}
 	if ($castling =~ /Q/) {
-		$self->[CP_POS_W_QCASTLE] = 1;
+		$self->[CP_POS_CASTLING] |= 0x2;
 	}
 	if ($castling =~ /k/) {
-		$self->[CP_POS_B_KCASTLE] = 1;
+		$self->[CP_POS_CASTLING] |= 0x4;
 	}
 	if ($castling =~ /q/) {
-		$self->[CP_POS_B_QCASTLE] = 1;
+		$self->[CP_POS_CASTLING] |= 0x8;
 	}
 
 	# FIXME! Correct castling state if king or rook has moved.
@@ -641,19 +632,18 @@ sub toFEN {
 
 	$fen .= (cp_pos_to_move($self) == CP_WHITE) ? ' w ' : ' b ';
 
-	my $w_kcastle = cp_pos_w_kcastle($self) || 0;
-	my $w_qcastle = cp_pos_w_kcastle($self) || 0;
-	my $b_kcastle = cp_pos_w_kcastle($self) || 0;
-	my $b_qcastle = cp_pos_w_kcastle($self) || 0;
+	my $castling = cp_pos_castling($self);
 
-	my $castle = '';
-	$castle .= 'K' if $w_kcastle;
-	$castle .= 'Q' if $w_qcastle;
-	$castle .= 'k' if $b_kcastle;
-	$castle .= 'q' if $b_qcastle;
-	$castle ||= '-';
-
-	$fen .= $castle . ' ';
+	if ($castling) {
+		my $castle = '';
+		$castle .= 'K' if $castling & 0x1;
+		$castle .= 'Q' if $castling & 0x2;
+		$castle .= 'k' if $castling & 0x3;
+		$castle .= 'q' if $castling & 0x4;
+		$fen .= "$castle ";
+	} else {
+		$fen .= '- ';
+	}
 
 	if (cp_pos_ep_shift $self) {
 		$fen .= $self->shiftToSquare(cp_pos_ep_shift $self);
@@ -680,17 +670,19 @@ sub pseudoLegalMoves {
 
 	# Generate castlings.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
+	# Mask out the castling rights for the side to move.
+	my $castling_rights = ($self->[CP_POS_CASTLING] >> ($to_move << 1)) & 0x3;
 	my ($king_from, $king_from_mask, $king_side_crossing_mask,
 			$king_side_dest_shift,
 			$queen_side_crossing_mask, $queen_side_dest_shift,
 			$queen_side_rook_crossing_mask)
 			= @{$castling_aux_data[$to_move]};
 	if ($king_mask & $king_from_mask) {
-		if ($self->[CP_POS_W_KCASTLE + $to_move]
+		if (($castling_rights & 0x1)
 		    && ($king_side_crossing_mask & $empty)) {
 			push @moves, ($king_from << 6 | CP_KING << 16) | $king_side_dest_shift;
 		}
-		if ($self->[CP_POS_W_QCASTLE + $to_move]
+		if (($castling_rights & 0x2)
 		    && (!(($queen_side_crossing_mask | $queen_side_rook_crossing_mask)
 		         & $occupancy))) {
 			push @moves, ($king_from << 6 | CP_KING << 16) | $queen_side_dest_shift;

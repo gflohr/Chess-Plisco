@@ -174,21 +174,21 @@ A bitboard of all pawns (black and white) on the board.
 
 The side to move, either 0 (aka B<CP_WHITE>) or 1 (aka B<CP_BLACK>).
 
-=item B<cp_pos_w_kcastle(POS); POS-E<gt>[CP_POS_W_KCASTLE]>
+=item B<cp_pos_w_castling(POS); POS-E<gt>[CP_POS_CASTLING]>
 
-True if white can castle king-side, false otherwise.
+Bitmask for castling rights.
 
-=item B<cp_pos_w_qcastle(POS); POS-E<gt>[CP_POS_W_QCASTLE]>
+=over 8
 
-True if white can castle queen-side, false otherwise.
+=item 1 (0x1): white king-side castling
 
-=item B<cp_pos_b_kcastle(POS); POS-E<gt>[CP_POS_B_KCASTLE]>
+=item 2 (0x2): white queen-side castling
 
-True if black can castle king-side, false otherwise.
+=item 3 (0x4): black king-side castling
 
-=item B<cp_pos_b_qcastle(POS); POS-E<gt>[CP_POS_B_QCASTLE]>
+=item 4 (0x8): black queen-side castling
 
-True if black can castle queen-side, false otherwise.
+=back
 
 =item B<cp_pos_ep_shift(POS); POS-E<gt>[CP_POS_EP_SHIFT]>
 
@@ -257,21 +257,9 @@ The index of the kings bitboard.
 
 The index of the color to move.
 
-=head3 CP_POS_W_KCASTLE
+=head3 CP_POS_CASTLING
 
-The index of the white king castling state.
-
-=head3 CP_POS_W_QCASTLE
-
-The index of the white queen castling state.
-
-=head3 CP_POS_B_KCASTLE
-
-The index of the black king castling state.
-
-=head3 CP_POS_B_QCASTLE
-
-The index of the black queen castling state.
+The index of the castling rights.
 
 =head3 CP_POS_HALF_MOVE_CLOCK
 
