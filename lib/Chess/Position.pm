@@ -48,11 +48,10 @@ my @export_accessors = qw(
 	CP_POS_W_PIECES CP_POS_B_PIECES
 	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
-	CP_POS_CASTLING
-	CP_POS_TO_MOVE
+	CP_POS_INFO
+	CP_POS_IN_CHECK
 	CP_POS_EP_SHIFT
 	CP_POS_W_KING_SHIFT CP_POS_B_KING_SHIFT
-	CP_POS_IN_CHECK
 );
 
 my @export_board = qw(
@@ -104,11 +103,10 @@ use constant CP_POS_KINGS => 6;
 use constant CP_POS_HALF_MOVE_CLOCK => 7;
 use constant CP_POS_HALF_MOVES => 8;
 use constant CP_POS_INFO => 9;
-use constant CP_POS_TO_MOVE => 10;
-use constant CP_POS_EP_SHIFT => 11;
-use constant CP_POS_W_KING_SHIFT => 12;
-use constant CP_POS_B_KING_SHIFT => 13;
-use constant CP_POS_IN_CHECK => 14;
+use constant CP_POS_EP_SHIFT => 10;
+use constant CP_POS_W_KING_SHIFT => 11;
+use constant CP_POS_B_KING_SHIFT => 12;
+use constant CP_POS_IN_CHECK => 13;
 
 # Board.
 use constant CP_A_MASK => 0x8080808080808080;
@@ -369,9 +367,12 @@ sub new {
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
 	cp_pos_half_move_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
-	my $info = 0x1 | 0x2 | 0x4 | 0x8;
-	cp_pos_info($self) = $info;
-	cp_pos_to_move($self) = CP_WHITE;
+	cp_pos_info($self) = 0;
+	cp_pos_set_w_ks_castling($self, 1);
+	cp_pos_set_w_qs_castling($self, 1);
+	cp_pos_set_b_ks_castling($self, 1);
+	cp_pos_set_b_qs_castling($self, 1);
+	cp_pos_set_to_move($self, CP_WHITE);
 	cp_pos_ep_shift($self) = 0;
 
 	$self->update;
@@ -489,15 +490,15 @@ sub newFromFEN {
 	$self->[CP_POS_KNIGHTS] = $knights;
 	$self->[CP_POS_PAWNS] = $pawns;
 
+	cp_pos_info($self) = 0;
 	if ('w' eq lc $to_move) {
-		$self->[CP_POS_TO_MOVE] = CP_WHITE;
+		cp_pos_set_to_move($self, CP_WHITE);
 	} elsif ('b' eq lc $to_move) {
-		$self->[CP_POS_TO_MOVE] = CP_BLACK;
+		cp_pos_set_to_move($self, CP_BLACK);
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
 
-	cp_pos_info($self) = 0;
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling state.\n";
 	}
@@ -523,10 +524,10 @@ sub newFromFEN {
 
 	if ('-' eq $ep_square) {
 		$self->[CP_POS_EP_SHIFT] = 0;
-	} elsif ($self->[CP_POS_TO_MOVE] == CP_WHITE
+	} elsif (cp_pos_to_move($self) == CP_WHITE
 	         && $ep_square !~ /^[a-h]6$/) {
 		die __"Illegal FEN: En passant square must be on 6th rank with white to move.\n";
-	} elsif ($self->[CP_POS_TO_MOVE] == CP_BLACK
+	} elsif (cp_pos_to_move($self) == CP_BLACK
 	         && $ep_square !~ /^[a-h]3$/) {
 		die __"Illegal FEN: En passant square must be on 3rd rank with black to move.\n";
 	} else {
@@ -545,7 +546,7 @@ sub newFromFEN {
 		die __x("Illegal FEN: Illegal move number '{num}'.\n", num => $moveno);
 	}
 
-	if ($self->[CP_POS_TO_MOVE] == CP_WHITE) {
+	if (cp_pos_to_move($self) == CP_WHITE) {
 			$self->[CP_POS_HALF_MOVES] = ($moveno - 1) << 1;
 	} else {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
@@ -870,7 +871,7 @@ sub doMove {
 	$self->[$my_pieces_idx] |= $to_mask;
 	$self->[$attacker_idx] |= $to_mask;
 
-	cp_pos_to_move($self) = !$to_move;
+	cp_pos_set_to_move($self, !$to_move);
 	++$self->[CP_POS_HALF_MOVES];
 
 	$self->update;

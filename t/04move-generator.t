@@ -277,6 +277,9 @@ my @tests = (
 );
 
 foreach my $test (@tests) {
+if ($test->{name} eq 'white ep captures') {
+$DB::single = 1;
+}
 	my $pos = Chess::Position->new($test->{fen});
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
 	my @expect = sort @{$test->{moves}};
