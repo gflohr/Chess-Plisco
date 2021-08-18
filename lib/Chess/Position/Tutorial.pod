@@ -295,13 +295,11 @@ internally for performance reasons. The individual bits of a move are:
 
 =over
 
-=item * 21-.. (20-..): raw material balance (viewed from the side to move)
+=item * 20-.. (19-..): raw material balance (viewed from the side to move)
 
-=item * 20-22 (19-21): piece that gets removed (resp. victim) if any
+=item * 19-21 (18-20): piece that gets removed (resp. victim) if any
 
-=item * 17-19 (16-18): piece that moves (resp. attacker)
-
-=item * 16 (15): en passant flag
+=item * 16-18 (15-17): piece that moves (resp. attacker)
 
 =item * 13-15 (12-14): promotion piece
 
@@ -317,9 +315,6 @@ Only bits 1 to 15 are really needed to characterize a move, and the bits
 13 to 15 are only needed for pawn promotions. The other bits can be
 derived from the position that the move is applied to, and they are not
 always present:
-
-The en passant flag is set, when a pawn hits (moves diagonally) but the
-target square is empty.
 
 The piece that moves, the attacker is the piece that stands on the
 starting square.  Note that this is never C<CP_QUEEN> even if the piece that
