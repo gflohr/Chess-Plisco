@@ -27,6 +27,18 @@ my @tests = (
 		move => 'e2e4',
 		after => 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
 	},
+	{
+		name => 'c5 Sicilian defense',
+		before => 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+		move => 'c7c5',
+		after => 'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2',
+	},
+	{
+		name => '2. Nf3 Sicilian defense',
+		before => 'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2',
+		move => 'g1f3',
+		after => 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+	},
 );
 
 foreach my $test (@tests) {
@@ -36,8 +48,9 @@ foreach my $test (@tests) {
 	my $legal = $pos->doMove($move->toInteger);
 	if ($test->{after}) {
 		ok $legal, "$test->{name}: move should be legal";
-		$DB::single = 1;
 		is $pos->toFEN, $test->{after}, "$test->{name}";
+	} else {
+		ok !$legal, "$test->{name}: move should not be legal";
 	}
 }
 
