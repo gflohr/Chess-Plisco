@@ -854,11 +854,15 @@ sub doMove {
 		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
 		if ($to - $from == $pawn_single_offset << 1) {
 			cp_pos_ep_shift($self) = $from + $pawn_single_offset;
+		} else {
+			cp_pos_ep_shift($self) = 0;
 		}
-	} elsif ($her_pieces && $to_mask) {
+	} elsif ($her_pieces & $to_mask) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
+		cp_pos_ep_shift($self) = 0;
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
+		cp_pos_ep_shift($self) = 0;
 	}
 
 	my $not_to_mask = ~$to_mask;
