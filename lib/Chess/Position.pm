@@ -104,9 +104,8 @@ use constant CP_POS_HALF_MOVE_CLOCK => 7;
 use constant CP_POS_HALF_MOVES => 8;
 use constant CP_POS_IN_CHECK => 9;
 use constant CP_POS_INFO => 10;
-use constant CP_POS_EP_SHIFT => 11;
-use constant CP_POS_W_KING_SHIFT => 12;
-use constant CP_POS_B_KING_SHIFT => 13;
+use constant CP_POS_W_KING_SHIFT => 11;
+use constant CP_POS_B_KING_SHIFT => 12;
 
 # Board.
 use constant CP_A_MASK => 0x8080808080808080;
@@ -373,7 +372,7 @@ sub new {
 	cp_pos_set_b_ks_castling($self, 1);
 	cp_pos_set_b_qs_castling($self, 1);
 	cp_pos_set_to_move($self, CP_WHITE);
-	cp_pos_ep_shift($self) = 0;
+	cp_pos_set_ep_shift($self, 0);
 
 	$self->update;
 
@@ -523,7 +522,7 @@ sub newFromFEN {
 	# FIXME! Correct castling state if king or rook has moved.
 
 	if ('-' eq $ep_square) {
-		$self->[CP_POS_EP_SHIFT] = 0;
+		cp_pos_set_ep_shift($self, 0);
 	} elsif (cp_pos_to_move($self) == CP_WHITE
 	         && $ep_square !~ /^[a-h]6$/) {
 		die __"Illegal FEN: En passant square must be on 6th rank with white to move.\n";
@@ -531,7 +530,7 @@ sub newFromFEN {
 	         && $ep_square !~ /^[a-h]3$/) {
 		die __"Illegal FEN: En passant square must be on 3rd rank with black to move.\n";
 	} else {
-		$self->[CP_POS_EP_SHIFT] = $self->squareToShift($ep_square);
+		cp_pos_set_ep_shift($self, $self->squareToShift($ep_square));
 	}
 
 	# FIXME! Check that there is a pawn of the right color on the 5th/4th
@@ -648,8 +647,8 @@ sub toFEN {
 		$fen .= '- ';
 	}
 
-	if (cp_pos_ep_shift $self) {
-		$fen .= $self->shiftToSquare(cp_pos_ep_shift $self);
+	if (cp_pos_ep_shift2 $self) {
+		$fen .= $self->shiftToSquare(cp_pos_ep_shift2 $self);
 	} else {
 		$fen .= '-';
 	}
@@ -758,7 +757,7 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_ep_shift $self;
+	my $ep_shift = cp_pos_ep_shift2 $self;
 	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
 
 	# Pawn single steps and captures w/o promotions.
@@ -849,16 +848,16 @@ sub doMove {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
 		if ($to - $from == $pawn_single_offset << 1) {
-			cp_pos_ep_shift($self) = $from + $pawn_single_offset;
+			cp_pos_set_ep_shift($self, $from + $pawn_single_offset);
 		} else {
-			cp_pos_ep_shift($self) = 0;
+			cp_pos_set_ep_shift($self, 0);
 		}
 	} elsif ($her_pieces & $to_mask) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
-		cp_pos_ep_shift($self) = 0;
+		cp_pos_set_ep_shift($self, 0);
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
-		cp_pos_ep_shift($self) = 0;
+		cp_pos_set_ep_shift($self, 0);
 	}
 
 	my $not_to_mask = ~$to_mask;

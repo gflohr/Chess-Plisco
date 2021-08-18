@@ -43,7 +43,7 @@ define cp_pos_w_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 1)';
 define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 2)';
 define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 3)';
 define cp_pos_to_move => '$p', '(($p->[CP_POS_INFO] & (1 << 4)) >> 4)';
-define cp_pos_ep_shift => '$p', '$p->[CP_POS_EP_SHIFT]';
+define cp_pos_ep_shift2 => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
 define cp_pos_w_king_shift => '$p', '$p->[CP_POS_W_KING_SHIFT]';
 define cp_pos_b_king_shift => '$p', '$p->[CP_POS_B_KING_SHIFT]';
 
@@ -59,6 +59,8 @@ define cp_pos_set_b_qs_castling => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x8) | ($c << 3))';
 define cp_pos_set_to_move => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x10) | ($c << 4))';
+define cp_pos_set_ep_shift => '$p', '$s',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7e0) | ($s << 5))';
 
 define _cp_pos_checkers => '$p', '(do {'
 	. 'my $my_color = cp_pos_to_move($p); '
