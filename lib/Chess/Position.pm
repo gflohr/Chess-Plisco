@@ -50,7 +50,6 @@ my @export_accessors = qw(
 	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_INFO
 	CP_POS_IN_CHECK
-	CP_POS_W_KING_SHIFT CP_POS_B_KING_SHIFT
 );
 
 my @export_board = qw(
@@ -794,10 +793,12 @@ sub update {
 	my ($self) = @_;
 
 	# Update king's shift.
-	my $wkings = cp_pos_kings($self) & cp_pos_w_pieces($self);
-	cp_pos_w_king_shift($self) = cp_bb_count_trailing_zbits($wkings);
-	my $bkings = cp_pos_kings($self) & cp_pos_b_pieces($self);
-	cp_pos_b_king_shift($self) = cp_bb_count_trailing_zbits($bkings);
+	my $w_kings = cp_pos_kings($self) & cp_pos_w_pieces($self);
+	my $w_king_shift = cp_bb_count_trailing_zbits($w_kings);
+	cp_pos_set_w_king_shift($self, $w_king_shift);
+	my $b_kings = cp_pos_kings($self) & cp_pos_b_pieces($self);
+	my $b_king_shift = cp_bb_count_trailing_zbits($b_kings);
+	cp_pos_set_b_king_shift($self, $b_king_shift);
 
 	cp_pos_in_check($self) = _cp_pos_checkers $self;
 
