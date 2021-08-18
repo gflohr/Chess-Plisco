@@ -31,7 +31,7 @@ sub new {
 	}
 
 	my $attacker;
-	my $from_mask = cp_move_from $move;
+	my $from_mask = 1 << (cp_move_from $move);
 
 	if ($from_mask & cp_pos_pawns($position)) {
 		$attacker = CP_PAWN;
