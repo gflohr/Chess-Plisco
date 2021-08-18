@@ -33,18 +33,25 @@ define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
 define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
 define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
 define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
-define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
-define cp_pos_castling => '$p', '$p->[CP_POS_CASTLING]';
-define cp_pos_w_ks_castle => '$p', '$p->[CP_POS_W_KCASTLE] & 0x1';
-define cp_pos_w_qs_castle => '$p', '$p->[CP_POS_W_QCASTLE] & 0x2';
-define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_B_KCASTLE] & 0x4';
-define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_B_QCASTLE] & 0x8';
-define cp_pos_ep_shift => '$p', '$p->[CP_POS_EP_SHIFT]';
 define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
 define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
+define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
+define cp_pos_castling => '$p', '$p->[CP_POS_INFO] & 0xf';
+define cp_pos_w_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 0)';
+define cp_pos_w_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 1)';
+define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 2)';
+define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 3)';
+define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
+define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
+define cp_pos_ep_shift => '$p', '$p->[CP_POS_EP_SHIFT]';
 define cp_pos_w_king_shift => '$p', '$p->[CP_POS_W_KING_SHIFT]';
 define cp_pos_b_king_shift => '$p', '$p->[CP_POS_B_KING_SHIFT]';
-define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
+
+define cp_pos_set_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7) | $c)';
+define cp_pos_set_w_ks_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x1) | ($c << 0))';
+define cp_pos_set_w_qs_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x2) | ($c << 1))';
+define cp_pos_set_b_ks_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x4) | ($c << 2))';
+define cp_pos_set_b_qs_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x8) | ($c << 3))';
 
 define _cp_pos_checkers => '$p', '(do {'
 	. 'my $my_color = cp_pos_to_move($p); '
