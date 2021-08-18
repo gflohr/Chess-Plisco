@@ -102,11 +102,11 @@ use constant CP_POS_ROOKS => 5;
 use constant CP_POS_KINGS => 6;
 use constant CP_POS_HALF_MOVE_CLOCK => 7;
 use constant CP_POS_HALF_MOVES => 8;
-use constant CP_POS_INFO => 9;
-use constant CP_POS_EP_SHIFT => 10;
-use constant CP_POS_W_KING_SHIFT => 11;
-use constant CP_POS_B_KING_SHIFT => 12;
-use constant CP_POS_IN_CHECK => 13;
+use constant CP_POS_IN_CHECK => 9;
+use constant CP_POS_INFO => 10;
+use constant CP_POS_EP_SHIFT => 11;
+use constant CP_POS_W_KING_SHIFT => 12;
+use constant CP_POS_B_KING_SHIFT => 13;
 
 # Board.
 use constant CP_A_MASK => 0x8080808080808080;
