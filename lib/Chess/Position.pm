@@ -816,7 +816,7 @@ sub doMove {
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
-	
+
 	my $to_move = cp_pos_to_move $self;
 	my $my_pieces_idx = CP_POS_W_PIECES + $to_move;
 	my $my_piece_bitboard_idx = CP_POS_PAWNS - 1 + $attacker;
@@ -838,6 +838,7 @@ sub doMove {
 	my $to_mask = 1 << $to;
 	my $her_pieces_idx = CP_POS_W_PIECES + !$to_move;
 	my $her_pieces = $self->[$her_pieces_idx];
+	my $attacker_idx = CP_POS_B_PIECES + $attacker;
 
 	# Check en passant.  A pawn capture can be detected by checking the
 	# difference between the from and to shift.  If it is odd, it is a capture.
@@ -846,21 +847,28 @@ sub doMove {
 		die "TODO! Correct to mask for en passant."
 	}
 
-	my $not_to_mask = ~$to_mask;
-
-	if ($attacker == CP_PAWN
-	    || $self->[$her_pieces_idx] && $to_mask) {
+	if ($attacker == CP_PAWN) {
+		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
+		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
+		if ($to - $from == $pawn_single_offset << 1) {
+			cp_pos_ep_shift($self) = $from + $pawn_single_offset;
+		}
+	} elsif ($her_pieces && $to_mask) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
 	}
+
+	my $not_to_mask = ~$to_mask;
 
 	$self->[$her_pieces_idx] &= $not_to_mask;
 	$self->[CP_POS_PAWNS] &= $not_to_mask;
 	$self->[CP_POS_KNIGHTS] &= $not_to_mask;
 	$self->[CP_POS_BISHOPS] &= $not_to_mask;
 	$self->[CP_POS_ROOKS] &= $not_to_mask;
- 
+	$self->[$my_pieces_idx] |= $to_mask;
+	$self->[$attacker_idx] |= $to_mask;
+
 	cp_pos_to_move($self) = !$to_move;
 	++$self->[CP_POS_HALF_MOVES];
 
@@ -916,7 +924,7 @@ sub shiftToSquare {
 	my $rank = 1 + ($shift >> 3);
 	my $file = 7 - ($shift & 0x7);
 
-	return sprintf '%c%u ', $file + ord 'a', $rank;
+	return sprintf '%c%u', $file + ord 'a', $rank;
 }
 
 sub squareToShift {
