@@ -17,12 +17,12 @@ use Chess::Position::Macro;
 
 my $pos = Chess::Position->new;
 ok $pos, 'created';
-is cp_pos_w_king_shift($pos), 3, 'initial white';
-is cp_pos_b_king_shift($pos), 59, 'initial black';
+is cp_pos_w_king_shift2($pos), 3, 'initial white';
+is cp_pos_b_king_shift2($pos), 59, 'initial black';
 
 $pos = Chess::Position->new('8/8/4k3/5P2/8/8/8/K7 b - - 0 1');
 ok $pos, 'created';
-is cp_pos_w_king_shift($pos), 7, 'white king on a1';
-is cp_pos_b_king_shift($pos), 43, 'black king on e6';
+is cp_pos_w_king_shift2($pos), 7, 'white king on a1';
+is cp_pos_b_king_shift2($pos), 43, 'black king on e6';
 
 done_testing;

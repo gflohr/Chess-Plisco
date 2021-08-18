@@ -44,8 +44,8 @@ define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 2)';
 define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 3)';
 define cp_pos_to_move => '$p', '(($p->[CP_POS_INFO] & (1 << 4)) >> 4)';
 define cp_pos_ep_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
-define cp_pos_w_king_shift => '$p', '$p->[CP_POS_W_KING_SHIFT]';
-define cp_pos_b_king_shift => '$p', '$p->[CP_POS_B_KING_SHIFT]';
+define cp_pos_w_king_shift2 => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
+define cp_pos_b_king_shift2 => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
 
 define cp_pos_set_castling => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7) | $c)';
@@ -61,6 +61,10 @@ define cp_pos_set_to_move => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 4)) | ($c << 4))';
 define cp_pos_set_ep_shift => '$p', '$s',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 5)) | ($s << 5))';
+define cp_pos_set_w_king_shift => '$p', '$s',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 11)) | ($s << 11))';
+define cp_pos_set_b_king_shift => '$p', '$s',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 17)) | ($s << 17))';
 
 define _cp_pos_checkers => '$p', '(do {'
 	. 'my $my_color = cp_pos_to_move($p); '
@@ -69,7 +73,8 @@ define _cp_pos_checkers => '$p', '(do {'
 	. 'my $her_pieces = $p->[CP_POS_W_PIECES + $her_color]; '
 	. 'my $occupancy = $my_pieces | $her_pieces; '
 	. 'my $empty = ~$occupancy; '
-	. 'my $king_shift = $p->[CP_POS_W_KING_SHIFT + $my_color]; '
+	. 'my $king_shift_offset = 11 + 6 * $my_color;'
+	. 'my $king_shift = ($p->[CP_POS_INFO] & (0x3f << $king_shift_offset)) >> $king_shift_offset;'
 	. '$her_pieces '
 	. '	& (($pawn_masks[$my_color]->[2]->[$king_shift] & cp_pos_pawns($self)) '
 	. '	| ($knight_attack_masks[$king_shift] & cp_pos_knights($self)) '
