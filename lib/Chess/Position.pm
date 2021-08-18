@@ -50,7 +50,6 @@ my @export_accessors = qw(
 	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_INFO
 	CP_POS_IN_CHECK
-	CP_POS_EP_SHIFT
 	CP_POS_W_KING_SHIFT CP_POS_B_KING_SHIFT
 );
 
@@ -647,8 +646,8 @@ sub toFEN {
 		$fen .= '- ';
 	}
 
-	if (cp_pos_ep_shift2 $self) {
-		$fen .= $self->shiftToSquare(cp_pos_ep_shift2 $self);
+	if (cp_pos_ep_shift $self) {
+		$fen .= $self->shiftToSquare(cp_pos_ep_shift $self);
 	} else {
 		$fen .= '-';
 	}
@@ -757,7 +756,7 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_ep_shift2 $self;
+	my $ep_shift = cp_pos_ep_shift $self;
 	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
 
 	# Pawn single steps and captures w/o promotions.
