@@ -33,9 +33,10 @@ foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
 	ok $pos, $test->{name};
 	my $move = Chess::Position::Move->new($test->{move}, $pos);
-	my $legal = $pos->doMove($move);
+	my $legal = $pos->doMove($move->toInteger);
 	if ($test->{after}) {
 		ok $legal, "$test->{name}: move should be legal";
+		$DB::single = 1;
 		is $pos->toFEN, $test->{after}, "$test->{name}";
 	}
 }
