@@ -47,9 +47,10 @@ use base qw(Exporter);
 my @export_accessors = qw(
 	CP_POS_W_PIECES CP_POS_B_PIECES
 	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
-	CP_POS_TO_MOVE
+	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_CASTLING
-	CP_POS_EP_SHIFT CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
+	CP_POS_TO_MOVE
+	CP_POS_EP_SHIFT
 	CP_POS_W_KING_SHIFT CP_POS_B_KING_SHIFT
 	CP_POS_IN_CHECK
 );
@@ -100,11 +101,11 @@ use constant CP_POS_KNIGHTS => 3;
 use constant CP_POS_BISHOPS => 4;
 use constant CP_POS_ROOKS => 5;
 use constant CP_POS_KINGS => 6;
-use constant CP_POS_TO_MOVE => 7;
-use constant CP_POS_CASTLING => 8;
-use constant CP_POS_EP_SHIFT => 9;
-use constant CP_POS_HALF_MOVE_CLOCK => 10;
-use constant CP_POS_HALF_MOVES => 11;
+use constant CP_POS_HALF_MOVE_CLOCK => 7;
+use constant CP_POS_HALF_MOVES => 8;
+use constant CP_POS_CASTLING => 9;
+use constant CP_POS_TO_MOVE => 10;
+use constant CP_POS_EP_SHIFT => 11;
 use constant CP_POS_W_KING_SHIFT => 12;
 use constant CP_POS_B_KING_SHIFT => 13;
 use constant CP_POS_IN_CHECK => 14;
