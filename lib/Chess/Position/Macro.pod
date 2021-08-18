@@ -195,29 +195,32 @@ Get or set the side to move from the L<Chess::Position> B<POS>.
 
 L-value: yes.
 
-=item B<cp_pos_w_kcastle(POS)>
+=item B<cp_pos_castling(POS)>
 
-Get or set the king-side castling status for white from the L<Chess::Position> B<POS>.
-
-L-value: yes.
-
-=item B<cp_pos_w_qcastle(POS)>
-
-Get or set the king-side castling status for white from the L<Chess::Position> B<POS>.
+Get or set the king-side castling rights bitmask from the L<Chess::Position> B<POS>.
 
 L-value: yes.
 
-=item B<cp_pos_b_kcastle(POS)>
+=item B<cp_pos_w_ks_castling(POS)>
 
-Get or set the king-side castling status for black from the L<Chess::Position> B<POS>.
+True if white can castle on the king-side in the L<Chess::Position> B<POS>.
 
-L-value: yes.
+L-value: no
+=item B<cp_pos_w_qs_castling(POS)>
 
-=item B<cp_pos_b_qcastle(POS)>
+True if white can castle on the queen-side in the L<Chess::Position> B<POS>.
 
-Get or set the king-side castling status for black from the L<Chess::Position> B<POS>.
+L-value: no
+=item B<cp_pos_b_ks_castling(POS)>
 
-L-value: yes.
+True if black can castle on the king-side in the L<Chess::Position> B<POS>.
+
+L-value: no
+=item B<cp_pos_b_qs_castling(POS)>
+
+True if black can castle on the queen-side in the L<Chess::Position> B<POS>.
+
+L-value: no
 
 =item B<cp_pos_half_move_clock(POS)>
 
