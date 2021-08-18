@@ -41,17 +41,24 @@ define cp_pos_w_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 0)';
 define cp_pos_w_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 1)';
 define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 2)';
 define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 3)';
-define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
+define cp_pos_to_move => '$p', '(($p->[CP_POS_INFO] & (1 << 4)) >> 4)';
 define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
 define cp_pos_ep_shift => '$p', '$p->[CP_POS_EP_SHIFT]';
 define cp_pos_w_king_shift => '$p', '$p->[CP_POS_W_KING_SHIFT]';
 define cp_pos_b_king_shift => '$p', '$p->[CP_POS_B_KING_SHIFT]';
 
-define cp_pos_set_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7) | $c)';
-define cp_pos_set_w_ks_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x1) | ($c << 0))';
-define cp_pos_set_w_qs_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x2) | ($c << 1))';
-define cp_pos_set_b_ks_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x4) | ($c << 2))';
-define cp_pos_set_b_qs_castling => '$p', '$c', '($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x8) | ($c << 3))';
+define cp_pos_set_castling => '$p', '$c',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7) | $c)';
+define cp_pos_set_w_ks_castling => '$p', '$c',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x1) | ($c << 0))';
+define cp_pos_set_w_qs_castling => '$p', '$c',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x2) | ($c << 1))';
+define cp_pos_set_b_ks_castling => '$p', '$c',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x4) | ($c << 2))';
+define cp_pos_set_b_qs_castling => '$p', '$c',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x8) | ($c << 3))';
+define cp_pos_set_to_move => '$p', '$c',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x10) | ($c << 4))';
 
 define _cp_pos_checkers => '$p', '(do {'
 	. 'my $my_color = cp_pos_to_move($p); '
@@ -163,6 +170,10 @@ sub expand {
 	my $name = $invocation->content;
 
 	my $definition = $defines{$name};
+	if (!$definition->{code}) {
+		use Data::Dumper;
+		warn "$name: ", Dumper $definition;
+	}
 	my $cdoc = $definition->{code}->clone;
 	my $cut = 0;
 	if (@{$definition->{args}} == 0) {
@@ -303,10 +314,19 @@ sub define {
 		Carp::croak("duplicate macro definition '$name'");
 	}
 
+	my $code_doc = PPI::Document->new(\$code);
+	if (!$code_doc) {
+		require Carp;
+		my $msg = $@->message;
+		Carp::croak("cannot parse code for '$name': $msg\n");
+	}
+
 	$defines{$name} = {
 		args => [@args],
-		code => PPI::Document->new(\$code),
-	}
+		code => $code_doc,
+	};
+
+	return;
 }
 
 sub extract_arguments {

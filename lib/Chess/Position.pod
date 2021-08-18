@@ -265,10 +265,6 @@ The index of the number of half-moves made.
 
 The index of the additional position info
 
-=head3 CP_POS_TO_MOVE
-
-The index of the color to move.
-
 =head3 CP_POS_IN_CHECK
 
 The index of the in-check bitboard.
