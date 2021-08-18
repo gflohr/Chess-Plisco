@@ -253,14 +253,6 @@ The index of the rooks bitboard.
 
 The index of the kings bitboard.
 
-=head3 CP_POS_TO_MOVE
-
-The index of the color to move.
-
-=head3 CP_POS_CASTLING
-
-The index of the castling rights.
-
 =head3 CP_POS_HALF_MOVE_CLOCK
 
 The index of the half-move clock.
@@ -268,6 +260,14 @@ The index of the half-move clock.
 =head3 CP_POS_HALF_MOVES
 
 The index of the number of half-moves made.
+
+=head3 CP_POS_INFO
+
+The index of the additional position info
+
+=head3 CP_POS_TO_MOVE
+
+The index of the color to move.
 
 =head3 CP_POS_IN_CHECK
 

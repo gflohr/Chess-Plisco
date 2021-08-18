@@ -103,7 +103,7 @@ use constant CP_POS_ROOKS => 5;
 use constant CP_POS_KINGS => 6;
 use constant CP_POS_HALF_MOVE_CLOCK => 7;
 use constant CP_POS_HALF_MOVES => 8;
-use constant CP_POS_CASTLING => 9;
+use constant CP_POS_INFO => 9;
 use constant CP_POS_TO_MOVE => 10;
 use constant CP_POS_EP_SHIFT => 11;
 use constant CP_POS_W_KING_SHIFT => 12;
@@ -367,11 +367,12 @@ sub new {
 	cp_pos_knights($self) = ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK),
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
-	cp_pos_to_move($self) = CP_WHITE;
-	cp_pos_castling($self) = 0x1 | 0x2 | 0x4 | 0x8;
-	cp_pos_ep_shift($self) = 0;
 	cp_pos_half_move_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
+	my $info = 0x1 | 0x2 | 0x4 | 0x8;
+	cp_pos_info($self) = $info;
+	cp_pos_to_move($self) = CP_WHITE;
+	cp_pos_ep_shift($self) = 0;
 
 	$self->update;
 
@@ -496,7 +497,7 @@ sub newFromFEN {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
 
-	$self->[CP_POS_CASTLING] = 0;
+	cp_pos_info($self) = 0;
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling state.\n";
 	}
@@ -506,16 +507,16 @@ sub newFromFEN {
 	}
 
 	if ($castling =~ /K/) {
-		$self->[CP_POS_CASTLING] |= 0x1;
+		cp_pos_set_w_ks_castling($self, 1);
 	}
 	if ($castling =~ /Q/) {
-		$self->[CP_POS_CASTLING] |= 0x2;
+		cp_pos_set_w_qs_castling($self, 1);
 	}
 	if ($castling =~ /k/) {
-		$self->[CP_POS_CASTLING] |= 0x4;
+		cp_pos_set_b_ks_castling($self, 1);
 	}
 	if ($castling =~ /q/) {
-		$self->[CP_POS_CASTLING] |= 0x8;
+		cp_pos_set_b_qs_castling($self, 1);
 	}
 
 	# FIXME! Correct castling state if king or rook has moved.
@@ -669,10 +670,11 @@ sub pseudoLegalMoves {
 
 	my (@moves, $target_mask, $base_move);
 
+	my $info = cp_pos_info $self;
 	# Generate castlings.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
 	# Mask out the castling rights for the side to move.
-	my $castling_rights = ($self->[CP_POS_CASTLING] >> ($to_move << 1)) & 0x3;
+	my $castling_rights = ($info >> ($to_move << 1)) & 0x3;
 	my ($king_from, $king_from_mask, $king_side_crossing_mask,
 			$king_side_dest_shift,
 			$queen_side_crossing_mask, $queen_side_dest_shift,
