@@ -274,12 +274,10 @@ my @tests = (
 		fen => 'K7/8/8/8/1pPp4/8/6pN/6Nk b - c3 0 1',
 		moves => [qw(h1g1 h1h2 b4b3 b4c3 d4c3 d4d3)],
 	},
+	# Pawn promotions.
 );
 
 foreach my $test (@tests) {
-if ($test->{name} eq 'white ep captures') {
-$DB::single = 1;
-}
 	my $pos = Chess::Position->new($test->{fen});
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
 	my @expect = sort @{$test->{moves}};

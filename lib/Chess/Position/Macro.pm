@@ -44,8 +44,8 @@ define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 2)';
 define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 3)';
 define cp_pos_to_move => '$p', '(($p->[CP_POS_INFO] & (1 << 4)) >> 4)';
 define cp_pos_ep_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
-define cp_pos_w_king_shift2 => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
-define cp_pos_b_king_shift2 => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
+define cp_pos_w_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 11)) >> 11)';
+define cp_pos_b_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 17)) >> 17)';
 
 define cp_pos_set_castling => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7) | $c)';
