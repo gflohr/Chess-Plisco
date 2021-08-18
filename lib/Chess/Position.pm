@@ -813,6 +813,8 @@ sub update {
 sub doMove {
 	my ($self, $move) = @_;
 
+	my $undo_state = 1;
+
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
@@ -874,7 +876,7 @@ sub doMove {
 
 	$self->update;
 
-	return $self;
+	return $undo_state;
 }
 
 # Class methods.

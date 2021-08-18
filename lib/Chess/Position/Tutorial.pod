@@ -295,10 +295,6 @@ internally for performance reasons. The individual bits of a move are:
 
 =over
 
-=item * 20-.. (19-..): raw material balance (viewed from the side to move)
-
-=item * 19-21 (18-20): piece that gets removed (resp. victim) if any
-
 =item * 16-18 (15-17): piece that moves (resp. attacker)
 
 =item * 13-15 (12-14): promotion piece
@@ -322,12 +318,6 @@ moves is a queen.  It is either C<CP_BISHOP> or C<CP_ROOK> for queen moves,
 depending on how the queen moves.  This is a little bit confusing but has a
 marginal performance advantage.
 
-The piece that gets removed, the victim, is the piece that stands on the
-target square, if any.
-
-The raw material balance is only added to a move, when moves are meant
-to be sorted.
-
 You do not have to remember the exact structure of a move but use macros
 resp. inline functions for accessing individual properties:
 
@@ -340,10 +330,6 @@ resp. inline functions for accessing individual properties:
 =item * C<cp_move_promotion($move)>: the promotion piece
 
 =item * C<cp_move_attacker($move)>: the attacking piece
-
-=item * C<cp_move_victim($move)>: the captured piece if any
-
-=item * C<cp_move_material($move)>: the raw material balance
 
 =back
 
@@ -360,16 +346,7 @@ an assignment)! For this, use other macros:
 
 =item * C<cp_move_set_attacker($move, $piece)>: the attacking piece
 
-=item * C<cp_move_set_victim($move, $piece)>: the captured piece if any
-
-=item * C<cp_move_set_material($move, $mat)>: the raw material balance
-
 =back
-
-In fact, the semantics of the raw material balance are not well-defined.
-Actually, it is just whatever is stored in the upper bits of the move.
-So, you can stuff in there whatever you want to use for sorting or
-comparing moves.
 
 =head2 Using Macros
 
