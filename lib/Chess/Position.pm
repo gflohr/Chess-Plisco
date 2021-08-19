@@ -849,7 +849,6 @@ sub doMove {
 	my $capture_mask = ~$to_mask;
 	my $her_pieces_idx = CP_POS_W_PIECES + !$to_move;
 	my $her_pieces = $self->[$her_pieces_idx];
-	my $attacker_idx = CP_POS_B_PIECES + $attacker;
 
 	if ($attacker == CP_PAWN) {
 		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
@@ -880,6 +879,8 @@ sub doMove {
 	$self->[CP_POS_BISHOPS] &= $capture_mask;
 	$self->[CP_POS_ROOKS] &= $capture_mask;
 	$self->[$my_pieces_idx] |= $to_mask;
+	
+	my $attacker_idx = CP_POS_B_PIECES + ($promote ? $promote : $attacker);
 	$self->[$attacker_idx] |= $to_mask;
 
 	cp_pos_set_to_move($self, !$to_move);

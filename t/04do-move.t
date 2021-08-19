@@ -51,6 +51,12 @@ my @tests = (
 		move => 'd5e6',
 		after => '7k/8/4P3/8/8/8/8/7K b - - 0 1',
 	},
+	{
+		name => 'promotion',
+		before => '7k/4P3/8/8/8/8/8/7K w - - 0 1',
+		move => 'e7e8r',
+		after => '4R2k/8/8/8/8/8/8/7K b - - 0 1',
+	},
 );
 
 foreach my $test (@tests) {
