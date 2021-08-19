@@ -1241,6 +1241,14 @@ for (my $from_file = 7; $from_file >= 0; --$from_file) {
 # Common ranks.
 $mask = CP_1_MASK;
 for (my $from_rank = 0; $from_rank < 8; ++$from_rank) {
+	for (my $from_file = 0; $from_file < 8; ++$from_file) {
+		my $from_shift = coordinatesToShift(undef, $from_file, $from_rank);
+
+		for (my $to_file = 0; $to_file < 8; ++$to_file) {
+			my $to_shift = coordinatesToShift(undef, $to_file, $from_rank);
+			$common_lines[$from_shift]->[$to_shift] = [1, $mask];
+		}
+	}
 	$mask <<= 8;
 }
 

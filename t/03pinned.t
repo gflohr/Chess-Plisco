@@ -22,22 +22,51 @@ my ($pos, @moves, @expect);
 
 my @tests = (
 	{
-		name => 'white knight pinned by rook',
-		move => 'e4g5',
-		fen => '8/4r2k/8/8/4N3/8/4K3/8 w - - 0 1',
+		name => 'white rook pinned by rook on same file',
+		move => 'e4g4',
+		fen => '8/4r2k/8/8/4R3/8/4K3/8 w - - 0 1',
 		pinned => 1,
+	},
+	{
+		name => 'pinned white rook capturing black rook on same file',
+		move => 'e4e7',
+		fen => '8/4r2k/8/8/4R3/8/4K3/8 w - - 0 1',
+		pinned => 0,
+	},
+	{
+		name => 'pinned white rook moving on same file',
+		move => 'e4e3',
+		fen => '8/4r2k/8/8/4R3/8/4K3/8 w - - 0 1',
+		pinned => 0,
+	},
+	{
+		name => 'black rook pinned by queen on same rank',
+		move => 'd3d6',
+		fen => '8/8/7K/8/8/1k1r2Q1/8/8 b - - 0 1',
+		pinned => 1,
+	},
+	{
+		name => 'pinned black rook capturing white queen on same rank',
+		move => 'd3g3',
+		fen => '8/8/7K/8/8/1k1r2Q1/8/8 b - - 0 1',
+		pinned => 0,
+	},
+	{
+		name => 'pinned black rook moving on same rank',
+		move => 'd3c3',
+		fen => '8/8/7K/8/8/1k1r2Q1/8/8 b - - 0 1',
+		pinned => 0,
 	},
 );
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
-	my $name = $test->{name} . " on $test->{square}";
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
 
 	if ($test->{pinned}) {
-		ok $pos->pinned($move), $name;
+		ok $pos->pinned($move), $test->{name};
 	} else {
-		not_ok $pos->pinned($move), $name;
+		ok !$pos->pinned($move), $test->{name};
 	}
 }
 
