@@ -97,10 +97,12 @@ use constant CP_POS_PAWNS => 2;
 use constant CP_POS_KNIGHTS => 3;
 use constant CP_POS_BISHOPS => 4;
 use constant CP_POS_ROOKS => 5;
-use constant CP_POS_KINGS => 6;
-use constant CP_POS_HALF_MOVE_CLOCK => 7;
-use constant CP_POS_HALF_MOVES => 8;
-use constant CP_POS_IN_CHECK => 9;
+# It is important that there is one gap between the rooks and the kings
+# bitmasks, so that the piece code can be used as an index offset.
+use constant CP_POS_IN_CHECK => 6;
+use constant CP_POS_KINGS => 7;
+use constant CP_POS_HALF_MOVE_CLOCK => 8;
+use constant CP_POS_HALF_MOVES => 9;
 use constant CP_POS_INFO => 10;
 use constant CP_POS_W_KING_SHIFT => 11;
 use constant CP_POS_B_KING_SHIFT => 12;
@@ -638,8 +640,8 @@ sub toFEN {
 		my $castle = '';
 		$castle .= 'K' if $castling & 0x1;
 		$castle .= 'Q' if $castling & 0x2;
-		$castle .= 'k' if $castling & 0x3;
-		$castle .= 'q' if $castling & 0x4;
+		$castle .= 'k' if $castling & 0x4;
+		$castle .= 'q' if $castling & 0x8;
 		$fen .= "$castle ";
 	} else {
 		$fen .= '- ';
@@ -818,30 +820,47 @@ sub update {
 	return $self;
 }
 
+sub undoMove {
+	my ($self, $undoInfo) = @_;
+
+	# $self->[$my_pieces_idx] |= $from_mask;
+	# $self->[$attacker_idx] |= $from_mask;
+	# return;
+
+	return $self;
+}
+
 sub doMove {
 	my ($self, $move) = @_;
 
-	my $undo_state = 1;
+	# Do this early, so that undoMove() will work correctly.
+	++$self->[CP_POS_HALF_MOVES];
+	my $to_move = cp_pos_to_move($self);
+	cp_pos_set_to_move($self, !$to_move);
+
+	my $undo_state = [
+		cp_pos_half_move_clock($self),
+		cp_pos_in_check($self),
+		cp_pos_info($self),
+	];
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
 
-	my $to_move = cp_pos_to_move $self;
 	my $my_pieces_idx = CP_POS_W_PIECES + $to_move;
 	my $attacker_idx = CP_POS_PAWNS - 1 + $attacker;
 	my $from_mask = 1 << $from;
 
-	if ($attacker == CP_KING) {
-		--$attacker_idx;
-	}
-
+	# Move the pieces.
 	$self->[$my_pieces_idx] &= ~$from_mask;
 	$self->[$attacker_idx] &= ~$from_mask;
+
+	# If we are checked, the move is illegal.  At this point we ignore the
+	# rook move of castlings because it can never be done to evade a check.
 	if (_cp_pos_checkers($self)) {
 		# Undo current changes.
-		$self->[$my_pieces_idx] |= $from_mask;
-		$self->[$attacker_idx] |= $from_mask;
+		$self->undoMove($undo_state);
 		return;
 	}
 
@@ -873,6 +892,69 @@ sub doMove {
 		cp_pos_set_ep_shift($self, 0);
 	}
 
+	my $castling = cp_pos_castling($self);
+	if ($castling) {
+		my $old_castling = $castling;
+		if ($attacker == CP_KING) {
+			if ($castling & (~(0x1 | 0x2))) { # White castlings.
+				if ($from == 3) {
+					# Remove all castling rights.
+					$castling &= ~(0x1 | 0x2);
+					if ($to == 1) {
+						# King-side castling.  Move the rook.
+						my $rook_remove_mask = ~(1 << 0);
+						my $rook_to_mask = (1 << 2);
+						# FIXME! This can be done faster.
+						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
+						$self->[$my_pieces_idx] &= $rook_remove_mask;
+						$self->[CP_POS_ROOKS] |= $rook_to_mask;
+						$self->[$my_pieces_idx] |= $rook_to_mask;
+					} elsif ($to == 5) {
+						# Queen-side castling.
+						my $rook_remove_mask = ~(1 << 7);
+						my $rook_to_mask = (1 << 4);
+						# FIXME! This can be done faster.
+						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
+						$self->[$my_pieces_idx] &= $rook_remove_mask;
+						$self->[CP_POS_ROOKS] |= $rook_to_mask;
+						$self->[$my_pieces_idx] |= $rook_to_mask;
+					}
+				}
+			}
+			
+			if ($castling & (~(0x4 | 0x8))) { # Black castlings.
+				if ($from == 59) {
+					# Remove all castling rights.
+					$castling &= ~(0x4 | 0x8);
+					if ($to == 57) {
+						# King-side castling.  Move the rook.
+						my $rook_remove_mask = ~(1 << 56);
+						my $rook_to_mask = (1 << 58);
+						# FIXME! This can be done faster.
+						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
+						$self->[$my_pieces_idx] &= $rook_remove_mask;
+						$self->[CP_POS_ROOKS] |= $rook_to_mask;
+						$self->[$my_pieces_idx] |= $rook_to_mask;
+					} elsif ($to == 61) {
+						# Queen-side castling.
+						my $rook_remove_mask = ~(1 << 63);
+						my $rook_to_mask = (1 << 60);
+						# FIXME! This can be done faster.
+						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
+						$self->[$my_pieces_idx] &= $rook_remove_mask;
+						$self->[CP_POS_ROOKS] |= $rook_to_mask;
+						$self->[$my_pieces_idx] |= $rook_to_mask;
+					}
+				}
+			}
+		}
+
+		if ($old_castling != $castling) {
+			cp_pos_set_castling($self, $castling);
+			cp_pos_half_move_clock($self) = 0;
+		}
+	}
+
 	$self->[$her_pieces_idx] &= $capture_mask;
 	$self->[CP_POS_PAWNS] &= $capture_mask;
 	$self->[CP_POS_KNIGHTS] &= $capture_mask;
@@ -882,9 +964,6 @@ sub doMove {
 	
 	$attacker_idx += $promote - 1 if $promote;
 	$self->[$attacker_idx] |= $to_mask;
-
-	cp_pos_set_to_move($self, !$to_move);
-	++$self->[CP_POS_HALF_MOVES];
 
 	$self->update;
 

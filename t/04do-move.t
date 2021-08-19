@@ -59,15 +59,38 @@ my @tests = (
 	},
 	{
 		name => 'regular king move',
-		before => 'r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1',
+		before => 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
 		move => 'e1d1',
-		after => 'r3k2r/8/8/8/8/8/8/R2K3R b - - 1 1',
+		after => 'r3k2r/8/8/8/8/8/8/R2K3R b kq - 0 1',
+	},
+	{
+		name => 'white king-side castling',
+		before => 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
+		move => 'e1g1',
+		after => 'r3k2r/8/8/8/8/8/8/R4RK1 b kq - 0 1',
+	},
+	{
+		name => 'white queen-side castling',
+		before => 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
+		move => 'e1c1',
+		after => 'r3k2r/8/8/8/8/8/8/2KR3R b kq - 0 1',
+	},
+	{
+		name => 'black king-side castling',
+		before => 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1',
+		move => 'e8g8',
+		after => 'r4rk1/8/8/8/8/8/8/R3K2R w KQ - 0 2',
+	},
+	{
+		name => 'black queen-side castling',
+		before => 'r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1',
+		move => 'e8c8',
+		after => '2kr3r/8/8/8/8/8/8/R3K2R w KQ - 0 2',
 	},
 );
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
-	ok $pos, $test->{name};
 	my $move = Chess::Position::Move->new($test->{move}, $pos);
 	my $undoInfo = $pos->doMove($move->toInteger);
 	if ($test->{after}) {
