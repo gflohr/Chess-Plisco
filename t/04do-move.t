@@ -39,18 +39,24 @@ my @tests = (
 		move => 'g1f3',
 		after => 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
 	},
+	{
+		name => 'pawn captures knight exd5',
+		before => '7k/8/8/3n4/4P3/8/8/7K w - - 0 1',
+		move => 'e4d5',
+		after => '7k/8/8/3P4/8/8/8/7K b - - 0 1',
+	},
 );
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
 	ok $pos, $test->{name};
 	my $move = Chess::Position::Move->new($test->{move}, $pos);
-	my $legal = $pos->doMove($move->toInteger);
+	my $undoInfo = $pos->doMove($move->toInteger);
 	if ($test->{after}) {
-		ok $legal, "$test->{name}: move should be legal";
+		ok $undoInfo, "$test->{name}: move should be legal";
 		is $pos->toFEN, $test->{after}, "$test->{name}";
 	} else {
-		ok !$legal, "$test->{name}: move should not be legal";
+		ok !$undoInfo, "$test->{name}: move should not be legal";
 	}
 }
 
