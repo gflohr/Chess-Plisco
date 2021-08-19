@@ -98,6 +98,7 @@ foreach my $test (@tests) {
 		is $pos->toFEN, $test->{after}, "$test->{name}";
 	} else {
 		ok !$undoInfo, "$test->{name}: move should not be legal";
+		is $pos->toFEN, $test->{before}, "$test->{name}: move should not modify";
 	}
 }
 
