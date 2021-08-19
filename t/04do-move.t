@@ -57,6 +57,12 @@ my @tests = (
 		move => 'e7e8r',
 		after => '4R2k/8/8/8/8/8/8/7K b - - 0 1',
 	},
+	{
+		name => 'regular king move',
+		before => 'r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1',
+		move => 'e1d1',
+		after => 'r3k2r/8/8/8/8/8/8/R2K3R b - - 1 1',
+	},
 );
 
 foreach my $test (@tests) {

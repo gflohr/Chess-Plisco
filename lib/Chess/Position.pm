@@ -829,19 +829,19 @@ sub doMove {
 
 	my $to_move = cp_pos_to_move $self;
 	my $my_pieces_idx = CP_POS_W_PIECES + $to_move;
-	my $my_piece_bitboard_idx = CP_POS_PAWNS - 1 + $attacker;
+	my $attacker_idx = CP_POS_PAWNS - 1 + $attacker;
 	my $from_mask = 1 << $from;
 
 	if ($attacker == CP_KING) {
-		die "king move"; # TODO.
+		--$attacker_idx;
 	}
 
 	$self->[$my_pieces_idx] &= ~$from_mask;
-	$self->[$my_piece_bitboard_idx] &= ~$from_mask;
+	$self->[$attacker_idx] &= ~$from_mask;
 	if (_cp_pos_checkers($self)) {
 		# Undo current changes.
 		$self->[$my_pieces_idx] |= $from_mask;
-		$self->[$my_piece_bitboard_idx] |= $from_mask;
+		$self->[$attacker_idx] |= $from_mask;
 		return;
 	}
 
@@ -880,7 +880,7 @@ sub doMove {
 	$self->[CP_POS_ROOKS] &= $capture_mask;
 	$self->[$my_pieces_idx] |= $to_mask;
 	
-	my $attacker_idx = CP_POS_B_PIECES + ($promote ? $promote : $attacker);
+	$attacker_idx += $promote - 1 if $promote;
 	$self->[$attacker_idx] |= $to_mask;
 
 	cp_pos_set_to_move($self, !$to_move);
