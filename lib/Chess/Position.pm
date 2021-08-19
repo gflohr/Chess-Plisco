@@ -846,20 +846,21 @@ sub doMove {
 	}
 
 	my $to_mask = 1 << $to;
+	my $capture_mask = ~$to_mask;
 	my $her_pieces_idx = CP_POS_W_PIECES + !$to_move;
 	my $her_pieces = $self->[$her_pieces_idx];
 	my $attacker_idx = CP_POS_B_PIECES + $attacker;
 
-	# Check en passant.  A pawn capture can be detected by checking the
-	# difference between the from and to shift.  If it is odd, it is a capture.
-	if ($attacker == CP_PAWN && (($from - $to) & 1)
-	    && !($to_mask && $her_pieces)) {
-		die "TODO! Correct to mask for en passant."
-	}
-
 	if ($attacker == CP_PAWN) {
-		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
+
+		# Check en passant.  A pawn capture can be detected by checking the
+		# difference between the from and to shift.  If it is odd, it is a
+		# capture.
+		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
+			$capture_mask = ~(1 << ($to - $pawn_single_offset));
+		}
+		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if ($to - $from == $pawn_single_offset << 1) {
 			cp_pos_set_ep_shift($self, $from + $pawn_single_offset);
 		} else {
@@ -873,13 +874,11 @@ sub doMove {
 		cp_pos_set_ep_shift($self, 0);
 	}
 
-	my $not_to_mask = ~$to_mask;
-
-	$self->[$her_pieces_idx] &= $not_to_mask;
-	$self->[CP_POS_PAWNS] &= $not_to_mask;
-	$self->[CP_POS_KNIGHTS] &= $not_to_mask;
-	$self->[CP_POS_BISHOPS] &= $not_to_mask;
-	$self->[CP_POS_ROOKS] &= $not_to_mask;
+	$self->[$her_pieces_idx] &= $capture_mask;
+	$self->[CP_POS_PAWNS] &= $capture_mask;
+	$self->[CP_POS_KNIGHTS] &= $capture_mask;
+	$self->[CP_POS_BISHOPS] &= $capture_mask;
+	$self->[CP_POS_ROOKS] &= $capture_mask;
 	$self->[$my_pieces_idx] |= $to_mask;
 	$self->[$attacker_idx] |= $to_mask;
 

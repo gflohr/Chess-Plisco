@@ -45,6 +45,12 @@ my @tests = (
 		move => 'e4d5',
 		after => '7k/8/8/3P4/8/8/8/7K b - - 0 1',
 	},
+	{
+		name => 'white captures en passant',
+		before => '7k/8/8/3Pp3/8/8/8/7K w - d6 0 1',
+		move => 'd5e6',
+		after => '7k/8/4P3/8/8/8/8/7K b - - 0 1',
+	},
 );
 
 foreach my $test (@tests) {
