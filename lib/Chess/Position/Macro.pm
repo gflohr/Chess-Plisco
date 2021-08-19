@@ -125,6 +125,16 @@ define _cp_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) {'
 		. '$target_mask = cp_bb_clear_least_set $target_mask;'
 		. '}';
 
+define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) {'
+		. 'my $base_move = $b | cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $t;'
+		. 'push @m, '
+		. '	$b | (CP_QUEEN << 12),'
+		. '	$b | (CP_ROOK << 12),'
+		. '	$b | (CP_BISHOP << 12),'
+		. '	$b | (CP_KNIGHT << 12);'
+		. '$target_mask = cp_bb_clear_least_set $target_mask;'
+		. '}';
+
 sub import {
 	my ($type) = @_;
 

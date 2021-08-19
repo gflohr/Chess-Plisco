@@ -786,6 +786,19 @@ sub pseudoLegalMoves {
 		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
 	}
 
+
+	# Pawn promotions including captures.
+	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
+	while ($pawn_mask) {
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+
+		$base_move = ($from << 6 | CP_PAWN << 16);
+		$target_mask = ($pawn_single_masks->[$from] & $empty)
+			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
+		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
+		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+	}
+
 	return @moves;
 }
 
