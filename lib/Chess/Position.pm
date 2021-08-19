@@ -239,6 +239,9 @@ my @knight_attack_masks;
 # first for white then for black.
 my @pawn_masks;
 
+# Two-dimensional array for determining common lines (diagonals or files/ranks).
+my @common_lines;
+
 # Magic moves.
 my @magicmoves_r_shift = (
 	52, 53, 53, 53, 53, 53, 53, 52,
@@ -830,13 +833,47 @@ sub undoMove {
 	return $self;
 }
 
-sub doMove {
+sub pinned {
 	my ($self, $move) = @_;
 
-	# Do this early, so that undoMove() will work correctly.
-	++$self->[CP_POS_HALF_MOVES];
-	my $to_move = cp_pos_to_move($self);
-	cp_pos_set_to_move($self, !$to_move);
+	my $to_move = cp_pos_to_move $self;
+	my $from = cp_move_from $move;
+	my $kso = 11 + 6 * $to_move;
+	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
+	my $pinned;
+
+	# If the piece to move is on a common line with the king, it may be pinned.
+	my $king_ray = $common_lines[$from]->[$king_shift];
+	if ($king_ray) {
+		my ($is_rook, $ray_mask) = @$king_ray;
+
+		my $to = cp_move_to $move;
+		my $to_mask = 1 << $to;
+
+		# If the destination square is on the same line, the piece cannot be
+		# pinned.  That also covers the case that the piece that moves captures
+		# the piece that pins.
+		if (!($to_mask & $ray_mask)) {
+			my $my_pieces = $self->[$to_move];
+			my $her_pieces = $self->[!$to_move];
+			my $occupancy = $my_pieces | $her_pieces;
+			my $empty = ~$occupancy;
+
+			if ($is_rook) {
+				$pinned = cp_mm_rmagic($from, $occupancy)
+					& $ray_mask & ($empty | $her_pieces) & cp_pos_rooks($self);
+			} else {
+				$pinned = cp_mm_bmagic($from, $occupancy)
+					& $ray_mask & ($empty | $her_pieces) & cp_pos_bishops($self);
+			}
+		}
+	}
+
+	$pinned;
+}
+
+sub doMove {
+	my ($self, $move) = @_;
 
 	my $undo_state = [
 		cp_pos_half_move_clock($self),
@@ -848,9 +885,24 @@ sub doMove {
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
 
+	my $to_move = cp_pos_to_move($self);
 	my $my_pieces_idx = CP_POS_W_PIECES + $to_move;
 	my $attacker_idx = CP_POS_PAWNS - 1 + $attacker;
 	my $from_mask = 1 << $from;
+
+	# A move can be illegal for these reasons:
+	#
+	# 1. The moving piece is blocked by a sliding piece attacking our king.
+	# 2. The king moves into check.
+	# 3. The king crosses an attacked square while castling.
+	#
+	# Checks number two and three are done below, and only for king moves.
+
+	# Is the moving piece blocked?  In order to check this, we test the
+	# attack masks of sliding pieces.  If they include both a sliding piece
+	# and our own king, and both pieces are on the same rank/file resp.
+	# diagonal, the piece is blocked and cannot move.
+	
 
 	# Move the pieces.
 	$self->[$my_pieces_idx] &= ~$from_mask;
@@ -964,6 +1016,9 @@ sub doMove {
 	
 	$attacker_idx += $promote - 1 if $promote;
 	$self->[$attacker_idx] |= $to_mask;
+
+	++$self->[CP_POS_HALF_MOVES];
+	cp_pos_set_to_move($self, !$to_move);
 
 	$self->update;
 
@@ -1160,6 +1215,34 @@ for my $shift (0 .. 63) {
 }
 $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 		\@black_pawn_capture_masks];
+
+# Common lines.
+for (my $i = 0; $i < 63; ++$i) {
+	$common_lines[$i] = [];
+}
+
+my $mask;
+
+# Rook rays.
+# Common files.
+$mask = CP_H_MASK;
+for (my $from_file = 7; $from_file >= 0; --$from_file) {
+	for (my $from_rank = 0; $from_rank < 8; ++$from_rank) {
+		my $from_shift = coordinatesToShift(undef, $from_file, $from_rank);
+
+		for (my $to_rank = 0; $to_rank < 8; ++$to_rank) {
+			my $to_shift = coordinatesToShift(undef, $from_file, $to_rank);
+			$common_lines[$from_shift]->[$to_shift] = [1, $mask];
+		}
+	}
+	$mask <<= 1;
+}
+
+# Common ranks.
+$mask = CP_1_MASK;
+for (my $from_rank = 0; $from_rank < 8; ++$from_rank) {
+	$mask <<= 8;
+}
 
 # Magic moves.
 sub initmagicmoves_occ {
