@@ -144,86 +144,98 @@ my @tests = (
 	{
 		name => 'knight on d5',
 		fen => '6nK/6PP/8/3N4/8/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 d5e7 d5f6 d5f4 d5e3 d5c3 d5b4 d5b6 d5c7)],
+		moves => [qw(h8g8 d5e7 d5f6 d5f4 d5e3 d5c3 d5b4 d5b6 d5c7
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on g4',
 		fen => '6nK/6PP/8/8/6N1/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 g4h6 g4h2 g4f2 g4e3 g4e5 g4f6)],
+		moves => [qw(h8g8 g4h6 g4h2 g4f2 g4e3 g4e5 g4f6
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on h4',
 		fen => '6nK/6PP/8/8/7N/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 h4g2 h4f3 h4f5 h4g6)],
+		moves => [qw(h8g8 h4g2 h4f3 h4f5 h4g6 h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on d2',
 		fen => '6nK/6PP/8/8/8/8/3N4/k7 w - - 0 1',
-		moves => [qw(h8g8 d2f1 d2b1 d2b3 d2c4 d2e4 d2f3)],
+		moves => [qw(h8g8 d2f1 d2b1 d2b3 d2c4 d2e4 d2f3
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on d1',
 		fen => '6nK/6PP/8/8/8/8/8/k2N4 w - - 0 1',
-		moves => [qw(h8g8 d1b2 d1c3 d1e3 d1f2)],
+		moves => [qw(h8g8 d1b2 d1c3 d1e3 d1f2 h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on b5',
 		fen => '6nK/6PP/8/1N6/8/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 b5c7 b5d6 b5d4 b5c3 b5a3 b5a7)],
+		moves => [qw(h8g8 b5c7 b5d6 b5d4 b5c3 b5a3 b5a7
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on a5',
 		fen => '6nK/6PP/8/N7/8/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 a5b7 a5c6 a5c4 a5b3)],
+		moves => [qw(h8g8 a5b7 a5c6 a5c4 a5b3
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on d7',
 		fen => '6nK/3N2PP/8/8/8/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 d7f8 d7f6 d7e5 d7c5 d7b6 d7b8)],
+		moves => [qw(h8g8 d7f8 d7f6 d7e5 d7c5 d7b6 d7b8
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on d8',
 		fen => '3N2nK/6PP/8/8/8/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 d8f7 d8e6 d8c6 d8b7)],
+		moves => [qw(h8g8 d8f7 d8e6 d8c6 d8b7
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on f6 with capture on g8',
 		fen => '6nK/6PP/5N2/8/8/8/8/k7 w - - 0 1',
-		moves => [qw(h8g8 f6g8 f6h5 f6g4 f6e4 f6d5 f6d7 f6e8)],
+		moves => [qw(h8g8 f6g8 f6h5 f6g4 f6e4 f6d5 f6d7 f6e8
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on h1',
 		fen => '6nK/6PP/8/8/8/8/8/k6N w - - 0 1',
-		moves => [qw(h8g8 h1f2 h1g3)],
+		moves => [qw(h8g8 h1f2 h1g3 h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on a1',
 		fen => '6nK/6PP/8/8/8/8/8/N6k w - - 0 1',
-		moves => [qw(h8g8 a1b3 a1c2)],
+		moves => [qw(h8g8 a1b3 a1c2 h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on a8',
 		fen => 'N5nK/6PP/8/8/8/8/8/7k w - - 0 1',
-		moves => [qw(h8g8 a8c7 a8b6)],
+		moves => [qw(h8g8 a8c7 a8b6
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	{
 		name => 'knight on h8',
 		fen => 'Kn5N/PP6/8/8/8/8/8/7k w - - 0 1',
-		moves => [qw(a8b8 h8g6 h8f7)],
+		moves => [qw(a8b8 h8g6 h8f7
+				a7b8q a7b8r a7b8b a7b8n)],
 	},
 	# Bishop moves.
 	{
 		name => 'bishop on e4',
 		fen => '4b1nK/6PP/8/6p1/4B1P1/8/2n1b3/k7 w - - 0 1',
 		moves => [qw(h8g8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4d5 e4c6
-				e4b7 e4a8)],
+				e4b7 e4a8
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	# Rook moves.
 	{
-		name => 'bishop on e4',
+		name => 'rook on e4',
 		fen => '4b1nK/6PP/8/6p1/4R1P1/8/2n1b3/k7 w - - 0 1',
 		moves => [qw(h8g8 e4f4 e4e3 e4e2 e4d4 e4c4 e4b4 e4a4 e4e5 e4e6 e4e7
-				e4e8)],
+				e4e8
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	# Queen moves.
 	{
@@ -231,7 +243,8 @@ my @tests = (
 		fen => '4b1nK/6PP/8/6p1/4Q1P1/8/2n1b3/k7 w - - 0 1',
 		moves => [qw(h8g8 e4f4 e4e3 e4e2 e4d4 e4c4 e4b4 e4a4 e4e5 e4e6 e4e7
 				e4e8 e4f5 e4g6 e4f3 e4g2 e4h1 e4d3 e4c2 e4d5 e4c6
-				e4b7 e4a8)],
+				e4b7 e4a8
+				h7g8q h7g8r h7g8b h7g8n)],
 	},
 	# Pawn moves.
 	{
@@ -275,6 +288,17 @@ my @tests = (
 		moves => [qw(h1g1 h1h2 b4b3 b4c3 d4c3 d4d3)],
 	},
 	# Pawn promotions.
+	{
+		name => 'all white pawn promotions from e7',
+		fen => '3r1r2/3PPP1k/8/8/8/8/3ppp1K/3R1R2 w - - 0 1',
+		moves => [qw(
+			h2h1 h2g1 h2g2 h2g3 h2h3
+			f1g1 f1h1 f1e1 f1f2 d1e1 d1c1 d1b1 d1a1 d1d2
+			e7d8q e7d8r e7d8b e7d8n
+			e7e8q e7e8r e7e8b e7e8n
+			e7f8q e7f8r e7f8b e7f8n
+		)],
+	}
 );
 
 foreach my $test (@tests) {
