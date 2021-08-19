@@ -48,7 +48,7 @@ define cp_pos_w_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 11)) >> 11)'
 define cp_pos_b_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 17)) >> 17)';
 
 define cp_pos_set_castling => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0x7) | $c)';
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0xf) | $c)';
 define cp_pos_set_w_ks_castling => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 0)) | ($c << 0))';
 define cp_pos_set_w_qs_castling => '$p', '$c',
