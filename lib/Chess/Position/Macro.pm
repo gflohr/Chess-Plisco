@@ -137,6 +137,7 @@ define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) 
 		. '}';
 
 define_from_file _cp_pos_pinned_move => '$self', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
+define_from_file _cp_pos_attacked => '$p', '$shift', 'attacked.pm';
 
 sub import {
 	my ($type) = @_;
