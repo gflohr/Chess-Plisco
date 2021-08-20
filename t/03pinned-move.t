@@ -100,9 +100,9 @@ foreach my $test (@tests) {
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
 
 	if ($test->{pinned}) {
-		ok $pos->pinned($move), $test->{name};
+		ok $pos->pinnedMove($move), $test->{name};
 	} else {
-		ok !$pos->pinned($move), $test->{name};
+		ok !$pos->pinnedMove($move), $test->{name};
 	}
 }
 

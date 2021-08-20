@@ -136,6 +136,8 @@ define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) 
 		. '$target_mask = cp_bb_clear_least_set $target_mask;'
 		. '}';
 
+define_from_file _cp_pinned_move => '$self', '$move', 'pinnedMove.pm';
+
 sub import {
 	my ($type) = @_;
 
@@ -352,7 +354,7 @@ sub define_from_file {
 
 	my $relname = pop @args;
 	my $filename = __FILE__;
-	$filename =~ s{\.pm$}{/$filename};
+	$filename =~ s{\.pm$}{/$relname};
 
 	open my $fh, "<$filename"
 		or die "cannot open '$filename' for reading: $!";
