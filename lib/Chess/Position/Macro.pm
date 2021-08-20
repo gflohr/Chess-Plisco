@@ -17,6 +17,7 @@ use Filter::Util::Call;
 use PPI::Document;
 
 sub define;
+sub define_from_file;
 sub preprocess;
 sub extract_arguments;
 sub split_arguments;
@@ -187,11 +188,9 @@ sub expand {
 	my $name = $invocation->content;
 
 	my $definition = $defines{$name};
-	if (!$definition->{code}) {
-		use Data::Dumper;
-		warn "$name: ", Dumper $definition;
-	}
-	my $cdoc = $definition->{code}->clone;
+	my $code = $definition->{code}->content;
+	$code =~ s/\n//g;
+	my $cdoc = PPI::Document->new(\$code);
 	my $cut = 0;
 	if (@{$definition->{args}} == 0) {
 		# Just a constant, no arguments.
@@ -338,12 +337,29 @@ sub define {
 		Carp::croak("cannot parse code for '$name': $msg\n");
 	}
 
+	$code_doc->prune('PPI::Token::Comment');
+
 	$defines{$name} = {
 		args => [@args],
 		code => $code_doc,
 	};
 
 	return;
+}
+
+sub define_from_file {
+	my ($name, @args) = @_;
+
+	my $relname = pop @args;
+	my $filename = __FILE__;
+	$filename =~ s{\.pm$}{/$filename};
+
+	open my $fh, "<$filename"
+		or die "cannot open '$filename' for reading: $!";
+	
+	my $code = join '', <$fh>;
+
+	return define $name, @args, $code;
 }
 
 sub extract_arguments {
