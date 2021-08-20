@@ -67,22 +67,6 @@ define cp_pos_set_w_king_shift => '$p', '$s',
 define cp_pos_set_b_king_shift => '$p', '$s',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 17)) | ($s << 17))';
 
-define _cp_pos_checkers => '$p', '(do {'
-	. 'my $my_color = cp_pos_to_move($p); '
-	. 'my $her_color = !$my_color; '
-	. 'my $my_pieces = $p->[CP_POS_W_PIECES + $my_color]; '
-	. 'my $her_pieces = $p->[CP_POS_W_PIECES + $her_color]; '
-	. 'my $occupancy = $my_pieces | $her_pieces; '
-	. 'my $empty = ~$occupancy; '
-	. 'my $king_shift_offset = 11 + 6 * $my_color;'
-	. 'my $king_shift = ($p->[CP_POS_INFO] & (0x3f << $king_shift_offset)) >> $king_shift_offset;'
-	. '$her_pieces '
-	. '	& (($pawn_masks[$my_color]->[2]->[$king_shift] & cp_pos_pawns($self)) '
-	. '	| ($knight_attack_masks[$king_shift] & cp_pos_knights($self)) '
-	. '	| (cp_mm_bmagic($king_shift, $occupancy) & cp_pos_bishops($self)) '
-	. '	| (cp_mm_rmagic($king_shift, $occupancy) & cp_pos_rooks($self)));'
-	. '}) ';
-
 define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
@@ -138,6 +122,12 @@ define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) 
 
 define_from_file _cp_pos_pinned_move => '$self', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
 define_from_file _cp_pos_attacked => '$p', '$shift', 'attacked.pm';
+define _cp_pos_checkers => '$p', '(do {'
+	. 'my $my_color = cp_pos_to_move($p); '
+	. 'my $king_shift_offset = 11 + 6 * $my_color;'
+	. 'my $king_shift = ($p->[CP_POS_INFO] & (0x3f << $king_shift_offset)) >> $king_shift_offset;'
+	. '_cp_pos_attacked $p, $king_shift;'
+	. '})';
 
 sub import {
 	my ($type) = @_;
