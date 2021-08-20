@@ -13,7 +13,6 @@
 
 ( do {
 	my $to_move = cp_pos_to_move $self;
-	my $from = cp_move_from $move;
 	my $kso = 11 + 6 * $to_move;
 	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
 	my $pinned;
