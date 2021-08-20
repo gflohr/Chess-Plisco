@@ -1287,6 +1287,7 @@ for (my $i = 0; $i < 63; ++$i) {
 	$common_lines[$i] = [];
 }
 
+# Mask lookup for files and ranks for rooks.
 foreach my $m1 (
 	CP_1_MASK, CP_2_MASK, CP_3_MASK, CP_4_MASK,
 	CP_5_MASK, CP_6_MASK, CP_7_MASK, CP_8_MASK,
@@ -1303,6 +1304,30 @@ foreach my $m1 (
 	foreach my $i (@shifts) {
 		foreach my $j (@shifts) {
 			$common_lines[$i]->[$j] = [1, $m1];
+		}
+	}
+}
+
+# Mask lookup for diagonals for bishops.  The short diagonals with 1 or 2
+# squares only are omitted because they cannot be used for pins.
+foreach my $m1 (
+	CP_F1H3_MASK, CP_E1H4_MASK, CP_D1H5_MASK, CP_C1H6_MASK, CP_B1H7_MASK,
+	CP_A1H8_MASK,
+	CP_A2G8_MASK, CP_A3F8_MASK, CP_A4E8_MASK, CP_A5D8_MASK, CP_A6C8_MASK,
+	CP_C1A3_MASK, CP_D1A4_MASK, CP_E1A5_MASK, CP_F1A6_MASK, CP_G1A7_MASK,
+	CP_H1A8_MASK,
+	CP_H2B8_MASK, CP_H3C8_MASK, CP_H4D8_MASK, CP_H5E8_MASK, CP_H6F8_MASK,
+) {
+	my $m2 = $m1;
+	my @shifts;
+	while ($m2) {
+		push @shifts, cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $m2;
+		$m2 = cp_bb_clear_least_set $m2;
+	}
+
+	foreach my $i (@shifts) {
+		foreach my $j (@shifts) {
+			$common_lines[$i]->[$j] = [0, $m1];
 		}
 	}
 }
