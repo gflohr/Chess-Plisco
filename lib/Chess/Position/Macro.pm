@@ -105,22 +105,12 @@ define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
 define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + 104 - ord($s)';
 define cp_shift_to_square => '$s', 'chr(97 + ((7 - $s) & 0x7)) . (1 + ($s >> 3))';
 
-define _cp_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) {'
-		. 'push @m, $b | cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $t;'
-		. '$target_mask = cp_bb_clear_least_set $target_mask;'
-		. '}';
-
-define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) {'
-		. 'my $base_move = $b | cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $t;'
-		. 'push @m, '
-		. '	$b | (CP_QUEEN << 12),'
-		. '	$b | (CP_ROOK << 12),'
-		. '	$b | (CP_BISHOP << 12),'
-		. '	$b | (CP_KNIGHT << 12);'
-		. '$target_mask = cp_bb_clear_least_set $target_mask;'
-		. '}';
-
-define_from_file _cp_pos_pinned_move => '$self', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
+define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
+	'movesFromMask.pm';
+define_from_file _cp_promotion_moves_from_mask => '$t', '@m', '$b',
+	'promotionMovesFromMask.pm';
+define_from_file _cp_pos_pinned_move =>
+	'$p', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
 define_from_file _cp_pos_attacked => '$p', '$shift', 'attacked.pm';
 define_from_file _cp_pos_checkers => '$p', 'checkers.pm';
 
