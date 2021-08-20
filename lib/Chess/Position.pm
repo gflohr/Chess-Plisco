@@ -1287,35 +1287,24 @@ for (my $i = 0; $i < 63; ++$i) {
 	$common_lines[$i] = [];
 }
 
-my $mask;
+foreach my $m1 (
+	CP_1_MASK, CP_2_MASK, CP_3_MASK, CP_4_MASK,
+	CP_5_MASK, CP_6_MASK, CP_7_MASK, CP_8_MASK,
+	CP_A_MASK, CP_B_MASK, CP_C_MASK, CP_D_MASK,
+	CP_E_MASK, CP_F_MASK, CP_G_MASK, CP_H_MASK,
+) {
+	my $m2 = $m1;
+	my @shifts;
+	while ($m2) {
+		push @shifts, cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $m2;
+		$m2 = cp_bb_clear_least_set $m2;
+	}
 
-# Rook rays.
-# Common files.
-$mask = CP_H_MASK;
-for (my $from_file = 7; $from_file >= 0; --$from_file) {
-	for (my $from_rank = 0; $from_rank < 8; ++$from_rank) {
-		my $from_shift = coordinatesToShift(undef, $from_file, $from_rank);
-
-		for (my $to_rank = 0; $to_rank < 8; ++$to_rank) {
-			my $to_shift = coordinatesToShift(undef, $from_file, $to_rank);
-			$common_lines[$from_shift]->[$to_shift] = [1, $mask];
+	foreach my $i (@shifts) {
+		foreach my $j (@shifts) {
+			$common_lines[$i]->[$j] = [1, $m1];
 		}
 	}
-	$mask <<= 1;
-}
-
-# Common ranks.
-$mask = CP_1_MASK;
-for (my $from_rank = 0; $from_rank < 8; ++$from_rank) {
-	for (my $from_file = 0; $from_file < 8; ++$from_file) {
-		my $from_shift = coordinatesToShift(undef, $from_file, $from_rank);
-
-		for (my $to_file = 0; $to_file < 8; ++$to_file) {
-			my $to_shift = coordinatesToShift(undef, $to_file, $from_rank);
-			$common_lines[$from_shift]->[$to_shift] = [1, $mask];
-		}
-	}
-	$mask <<= 8;
 }
 
 # Magic moves.
