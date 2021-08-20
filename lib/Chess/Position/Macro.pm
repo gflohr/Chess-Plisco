@@ -136,7 +136,7 @@ define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) 
 		. '$target_mask = cp_bb_clear_least_set $target_mask;'
 		. '}';
 
-define_from_file _cp_pinned_move => '$self', '$from', '$to', 'pinnedMove.pm';
+define_from_file _cp_pinned_move => '$self', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
 
 sub import {
 	my ($type) = @_;

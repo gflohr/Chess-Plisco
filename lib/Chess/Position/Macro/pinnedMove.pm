@@ -12,17 +12,13 @@
 # This is a macro that is not intended to run standalone.
 
 ( do {
-	my $to_move = cp_pos_to_move $self;
-	my $kso = 11 + 6 * $to_move;
-	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
 	my $pinned;
 
 	# If the piece to move is on a common line with the king, it may be pinned.
-	my $king_ray = $common_lines[$from]->[$king_shift];
+	my $king_ray = $common_lines[$from]->[$ks];
 	if ($king_ray) {
 		my ($is_rook, $ray_mask) = @$king_ray;
 
-		my $to = cp_move_to $move;
 		my $to_mask = 1 << $to;
 
 		# If the destination square is on the same line, the piece cannot be
