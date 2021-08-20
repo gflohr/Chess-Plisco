@@ -122,12 +122,7 @@ define _cp_promotion_moves_from_mask => '$t', '@m', '$b', 'while ($target_mask) 
 
 define_from_file _cp_pos_pinned_move => '$self', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
 define_from_file _cp_pos_attacked => '$p', '$shift', 'attacked.pm';
-define _cp_pos_checkers => '$p', '(do {'
-	. 'my $my_color = cp_pos_to_move($p); '
-	. 'my $king_shift_offset = 11 + 6 * $my_color;'
-	. 'my $king_shift = ($p->[CP_POS_INFO] & (0x3f << $king_shift_offset)) >> $king_shift_offset;'
-	. '_cp_pos_attacked $p, $king_shift;'
-	. '})';
+define_from_file _cp_pos_checkers => '$p', 'checkers.pm';
 
 sub import {
 	my ($type) = @_;
