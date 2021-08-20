@@ -45,6 +45,72 @@ my @tests = (
 		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
 		attacked => 0,
 	},
+	{
+		name => 'attacked by white bishop',
+		square => 'd5',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 b - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'captured by white bishop',
+		square => 'c6',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 b - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'not attacked by white bishop',
+		square => 'b7',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 b - - 0 1',
+		attacked => 0,
+	},
+	{
+		name => 'attacked by black knight',
+		square => 'd5',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'captured by black knight',
+		square => 'e6',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'attacked by white rook',
+		square => 'd6',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 b - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'captured by white rook',
+		square => 'c6',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 b - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'not attacked by white rook',
+		square => 'b6',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 b - - 0 1',
+		attacked => 0,
+	},
+	{
+		name => 'attacked by black queen',
+		square => 'h3',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'captured by black queen',
+		square => 'f3',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
+		attacked => 1,
+	},
+	{
+		name => 'not attacked by black queen',
+		square => 'e3',
+		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
+		attacked => 0,
+	},
 );
 
 foreach my $test (@tests) {
