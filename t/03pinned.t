@@ -57,6 +57,42 @@ my @tests = (
 		fen => '8/8/7K/8/8/1k1r2Q1/8/8 b - - 0 1',
 		pinned => 0,
 	},
+	{
+		name => 'white bishop pinned by bishop on same diagonal',
+		move => 'd4f6',
+		fen => '8/7k/1b6/8/3B4/8/5K2/8 w - - 0 1',
+		pinned => 1,
+	},
+	{
+		name => 'pinned white bishop capturing black bishop on same diagonal',
+		move => 'd4b6',
+		fen => '8/7k/1b6/8/3B4/8/5K2/8 w - - 0 1',
+		pinned => 0,
+	},
+	{
+		name => 'pinned white bishop moving on same diagonal',
+		move => 'd4e3',
+		fen => '8/7k/1b6/8/3B4/8/5K2/8 w - - 0 1',
+		pinned => 0,
+	},
+	{
+		name => 'black queen pinned by bishop on same diagonal',
+		move => 'c5g5',
+		fen => '8/4k3/8/2q5/8/B7/8/6K1 b - - 0 1',
+		pinned => 1,
+	},
+	{
+		name => 'pinned black queen capturing bishop on same diagonal',
+		move => 'c5a3',
+		fen => '8/4k3/8/2q5/8/B7/8/6K1 b - - 0 1',
+		pinned => 0,
+	},
+	{
+		name => 'pinned black queen moving on same diagonal',
+		move => 'c5d6',
+		fen => '8/4k3/8/2q5/8/B7/8/6K1 b - - 0 1',
+		pinned => 0,
+	},
 );
 
 foreach my $test (@tests) {
