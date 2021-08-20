@@ -107,7 +107,8 @@ use constant CP_POS_INFO => 10;
 use constant CP_POS_W_KING_SHIFT => 11;
 use constant CP_POS_B_KING_SHIFT => 12;
 
-# Board.
+# Board masks.
+# Files.
 use constant CP_A_MASK => 0x8080808080808080;
 use constant CP_B_MASK => 0x4040404040404040;
 use constant CP_C_MASK => 0x2020202020202020;
@@ -117,6 +118,7 @@ use constant CP_F_MASK => 0x0404040404040404;
 use constant CP_G_MASK => 0x0202020202020202;
 use constant CP_H_MASK => 0x0101010101010101;
 
+# Ranks.
 use constant CP_1_MASK => 0x00000000000000ff;
 use constant CP_2_MASK => 0x000000000000ff00;
 use constant CP_3_MASK => 0x0000000000ff0000;
@@ -125,6 +127,70 @@ use constant CP_5_MASK => 0x000000ff00000000;
 use constant CP_6_MASK => 0x0000ff0000000000;
 use constant CP_7_MASK => 0x00ff000000000000;
 use constant CP_8_MASK => 0xff00000000000000;
+
+# Diagonals parallel to a1-h8.
+use constant CP_H1H1_MASK => 0x0000000000000001;
+use constant CP_G1H2_MASK => 0x0000000000000102;
+use constant CP_F1H3_MASK => 0x0000000000010204;
+use constant CP_E1H4_MASK => 0x0000000001020408;
+use constant CP_D1H5_MASK => 0x0000000102040810;
+use constant CP_C1H6_MASK => 0x0000010204081020;
+use constant CP_B1H7_MASK => 0x0001020408102040;
+use constant CP_A1H8_MASK => 0x0102040810204080;
+use constant CP_A2G8_MASK => 0x0204081020408000;
+use constant CP_A3F8_MASK => 0x0408102040800000;
+use constant CP_A4E8_MASK => 0x0810204080000000;
+use constant CP_A5D8_MASK => 0x1020408000000000;
+use constant CP_A6C8_MASK => 0x2040800000000000;
+use constant CP_A7B8_MASK => 0x4080000000000000;
+use constant CP_A8A8_MASK => 0x8000000000000000;
+
+# Diagonals parallel to h1-a8
+use constant CP_A1A1_MASK => 0x0000000000000080;
+use constant CP_A2B1_MASK => 0x0000000000008040;
+use constant CP_A3C1_MASK => 0x0000000000804020;
+use constant CP_A4D1_MASK => 0x0000000080402010;
+use constant CP_A5E1_MASK => 0x0000008040201008;
+use constant CP_A6F1_MASK => 0x0000804020100804;
+use constant CP_A7G1_MASK => 0x0080402010080402;
+use constant CP_A8H1_MASK => 0x8040201008040201;
+use constant CP_B8H2_MASK => 0x4020100804020100;
+use constant CP_C8H3_MASK => 0x2010080402010000;
+use constant CP_D8H4_MASK => 0x1008040201000000;
+use constant CP_E8H5_MASK => 0x0804020100000000;
+use constant CP_F8H6_MASK => 0x0402010000000000;
+use constant CP_G8H7_MASK => 0x0201000000000000;
+use constant CP_H8H8_MASK => 0x0100000000000000;
+
+# Diagonals parallel to a1-h8, the other way round.
+use constant CP_H2G1_MASK => 0x0000000000000102;
+use constant CP_H3F1_MASK => 0x0000000000010204;
+use constant CP_H4E1_MASK => 0x0000000001020408;
+use constant CP_H5D1_MASK => 0x0000000102040810;
+use constant CP_H6C1_MASK => 0x0000010204081020;
+use constant CP_H7B1_MASK => 0x0001020408102040;
+use constant CP_H8A1_MASK => 0x0102040810204080;
+use constant CP_G8A2_MASK => 0x0204081020408000;
+use constant CP_F8A3_MASK => 0x0408102040800000;
+use constant CP_E8A4_MASK => 0x0810204080000000;
+use constant CP_D8A5_MASK => 0x1020408000000000;
+use constant CP_C8A6_MASK => 0x2040800000000000;
+use constant CP_B8A7_MASK => 0x4080000000000000;
+
+# Diagonals parallel to h1-a8, the other way round.
+use constant CP_B1A2_MASK => 0x0000000000008040;
+use constant CP_C1A3_MASK => 0x0000000000804020;
+use constant CP_D1A4_MASK => 0x0000000080402010;
+use constant CP_E1A5_MASK => 0x0000008040201008;
+use constant CP_F1A6_MASK => 0x0000804020100804;
+use constant CP_G1A7_MASK => 0x0080402010080402;
+use constant CP_H1A8_MASK => 0x8040201008040201;
+use constant CP_H2B8_MASK => 0x4020100804020100;
+use constant CP_H3C8_MASK => 0x2010080402010000;
+use constant CP_H4D8_MASK => 0x1008040201000000;
+use constant CP_H5E8_MASK => 0x0804020100000000;
+use constant CP_H6F8_MASK => 0x0402010000000000;
+use constant CP_H7G8_MASK => 0x0201000000000000;
 
 use constant CP_FILE_A => (0);
 use constant CP_FILE_B => (1);
