@@ -907,7 +907,7 @@ sub pinnedMove {
 	my $kso = 11 + 6 * $to_move;
 	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
 
-	return _cp_pinned_move $self, $from, $to, $to_move, $king_shift;
+	return _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
 }
 
 sub doMove {
@@ -934,7 +934,7 @@ sub doMove {
 	# 3. The king crosses an attacked square while castling.
 	#
 	# Checks number two and three are done below, and only for king moves.
-	return if _cp_pinned_move $self, $from, $to, $to_move, $king_shift;
+	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
 
 	my $castling = cp_pos_castling($self);
 	my $irreversible;
