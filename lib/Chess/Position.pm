@@ -902,7 +902,9 @@ sub undoMove {
 sub pinnedMove {
 	my ($self, $move) = @_;
 
-	return _cp_pinned_move $self, $move;
+	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
+
+	return _cp_pinned_move $self, $from, $to;
 }
 
 sub doMove {
@@ -925,7 +927,8 @@ sub doMove {
 
 	# A move can be illegal for these reasons:
 	#
-	# 1. The moving piece is blocked by a sliding piece attacking our king.
+	# 1. The moving piece is pinned by a sliding piece and would expose our
+	#    king to check.
 	# 2. The king moves into check.
 	# 3. The king crosses an attacked square while castling.
 	#
