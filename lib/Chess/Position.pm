@@ -976,6 +976,7 @@ sub doMove {
 	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
 
 	my $victim = CP_NO_PIECE;
+	my $victim_mask = 0;
 	if ($to_mask & $her_pieces) {
 		if ($to_mask & cp_pos_pawns($self)) {
 			$victim = CP_PAWN;
@@ -990,13 +991,14 @@ sub doMove {
 		} else {
 			$victim = CP_QUEEN;
 		}
+		$victim_mask = 1 << $to;
 	}
 
 	my @undo_info = (
 		$self->[CP_POS_IN_CHECK],
 		$self->[CP_POS_HALF_MOVE_CLOCK],
 		$self->[CP_POS_INFO],
-		$victim,
+		$victim, $victim_mask,
 	);
 
 	if ($attacker == CP_PAWN) {
@@ -1006,7 +1008,10 @@ sub doMove {
 		# difference between the from and to shift.  If it is odd, it is a
 		# capture.
 		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
-			$remove_mask ^= (1 << ($to - $pawn_single_offset));
+			my $victim_mask = (1 << ($to - $pawn_single_offset));
+			$remove_mask ^= $victim_mask;
+			$undo_info[-2] = CP_PAWN;
+			$undo_info[-1] = $victim_mask;
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if ($to - $from == $pawn_single_offset << 1) {
@@ -1055,7 +1060,7 @@ sub doMove {
 sub undoMove {
 	my ($self, $move, $undoInfo) = @_;
 
-	my ($in_check, $half_move_clock, $info, $victim) = @$undoInfo;
+	my ($in_check, $half_move_clock, $info, $victim, $victim_mask) = @$undoInfo;
 
 	my ($from, $to, $attacker) = (cp_move_from($move), cp_move_to($move),
 			cp_move_attacker($move));
@@ -1076,12 +1081,12 @@ sub undoMove {
 	$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
 
 	if ($victim) {
-		$self->[CP_POS_W_PIECES + !$to_move] |= ~$remove_mask;
+		$self->[CP_POS_W_PIECES + !$to_move] |= $victim_mask;
 		if ($victim != CP_QUEEN) {
-			$self->[CP_POS_PAWNS - 1 + $victim] |= ~$remove_mask;
+			$self->[CP_POS_PAWNS - 1 + $victim] |= $victim_mask;
 		} else {
-			$self->[CP_POS_BISHOPS] |= ~$remove_mask;
-			$self->[CP_POS_ROOKS] |= ~$remove_mask;
+			$self->[CP_POS_BISHOPS] |= $victim_mask;
+			$self->[CP_POS_ROOKS] |= $victim_mask;
 		}
 	}
 
