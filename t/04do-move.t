@@ -91,11 +91,14 @@ my @tests = (
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
-	my $move = Chess::Position::Move->new($test->{move}, $pos);
-	my $undoInfo = $pos->doMove($move->toInteger);
+	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
+	my $undoInfo = $pos->doMove($move);
 	if ($test->{after}) {
 		ok $undoInfo, "$test->{name}: move should be legal";
 		is $pos->toFEN, $test->{after}, "$test->{name}";
+
+		$pos->undoMove($move, $undoInfo);
+		is $pos->toFEN, $test->{before}, "$test->{name}: undo $test->{move}";
 	} else {
 		ok !$undoInfo, "$test->{name}: move should not be legal";
 		is $pos->toFEN, $test->{before}, "$test->{name}: move should not modify";

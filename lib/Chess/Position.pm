@@ -897,16 +897,6 @@ sub update {
 	return $self;
 }
 
-sub undoMove {
-	my ($self, $undoInfo) = @_;
-
-	# $self->[$my_pieces_idx] |= $from_mask;
-	# $self->[$attacker_idx] |= $from_mask;
-	# return;
-
-	return $self;
-}
-
 sub attacked {
 	my ($self, $shift) = @_;
 
@@ -926,8 +916,6 @@ sub pinnedMove {
 
 sub doMove {
 	my ($self, $move) = @_;
-
-	my $undo_state = [];
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -949,8 +937,8 @@ sub doMove {
 	# Checks number two and three are done below, and only for king moves.
 	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
 
-	# The mask to apply to all bitboards.  We define that early, so that the
-	# castling logic can extend it for the rook move.
+	# We define that early, so that it can be extended for castling and for
+	# en passant captures.
 	my $remove_mask = ~($from_mask | $to_mask);
 	my $add_mask = $to_mask;
 
@@ -985,7 +973,31 @@ sub doMove {
 	$new_castling &= ~$castling_rook_masks[$from];
 	$new_castling &= ~$castling_rook_masks[$to];
 
-	my $her_pieces = $self->[CP_POS_W_PIECES + $to_move];
+	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
+
+	my $victim = CP_NO_PIECE;
+	if ($to_mask & $her_pieces) {
+		if ($to_mask & cp_pos_pawns($self)) {
+			$victim = CP_PAWN;
+		} elsif ($to_mask & cp_pos_knights($self)) {
+			$victim = CP_KNIGHT;
+		} elsif ($to_mask & cp_pos_bishops($self)) {
+			if ($to_mask & cp_pos_rooks($self)) {
+				$victim = CP_QUEEN;
+			} else {
+				$victim = CP_BISHOP;
+			}
+		} else {
+			$victim = CP_QUEEN;
+		}
+	}
+
+	my @undo_info = (
+		$self->[CP_POS_IN_CHECK],
+		$self->[CP_POS_HALF_MOVE_CLOCK],
+		$self->[CP_POS_INFO],
+		$victim,
+	);
 
 	if ($attacker == CP_PAWN) {
 		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
@@ -1037,7 +1049,48 @@ sub doMove {
 
 	$self->update;
 
-	return $undo_state;
+	return \@undo_info;
+}
+
+sub undoMove {
+	my ($self, $move, $undoInfo) = @_;
+
+	my ($in_check, $half_move_clock, $info, $victim) = @$undoInfo;
+
+	my ($from, $to, $attacker) = (cp_move_from($move), cp_move_to($move),
+			cp_move_attacker($move));
+
+	my $remove_mask = ~(1 << $to);
+	my $add_mask = (1 << $from);
+
+	$self->[CP_POS_W_PIECES] &= $remove_mask;
+	$self->[CP_POS_B_PIECES] &= $remove_mask;
+	$self->[CP_POS_PAWNS] &= $remove_mask;
+	$self->[CP_POS_KNIGHTS] &= $remove_mask;
+	$self->[CP_POS_BISHOPS] &= $remove_mask;
+	$self->[CP_POS_ROOKS] &= $remove_mask;
+
+	my $to_move = !cp_pos_to_move $self;
+
+	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
+	$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
+
+	if ($victim) {
+		$self->[CP_POS_W_PIECES + !$to_move] |= ~$remove_mask;
+		if ($victim != CP_QUEEN) {
+			$self->[CP_POS_PAWNS - 1 + $victim] |= ~$remove_mask;
+		} else {
+			$self->[CP_POS_BISHOPS] |= ~$remove_mask;
+			$self->[CP_POS_ROOKS] |= ~$remove_mask;
+		}
+	}
+
+	cp_pos_in_check($self) = $half_move_clock;
+	cp_pos_half_move_clock($self) = $half_move_clock;
+	cp_pos_info($self) = $info;
+	--(cp_pos_half_moves($self));
+
+	return $self;
 }
 
 # Class methods.
