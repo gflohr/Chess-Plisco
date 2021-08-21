@@ -308,6 +308,14 @@ my @pawn_masks;
 # Two-dimensional array for determining common lines (diagonals or files/ranks).
 my @common_lines;
 
+# Information for castlings, part 1. Lookup by target square of the king, the
+# move mask of the rook and the negative mask for the castling rights.
+my @castling_rook_move_masks;
+
+# Information for castlings, part 1. For a1, h1, a8, and h8 remove these
+# castling rights.
+my @castling_rook_masks;
+
 # Magic moves.
 my @magicmoves_r_shift = (
 	52, 53, 53, 53, 53, 53, 53, 52,
@@ -926,9 +934,8 @@ sub doMove {
 		 cp_move_attacker($move));
 
 	my $to_move = cp_pos_to_move($self);
-	my $my_pieces_idx = CP_POS_W_PIECES + $to_move;
-	my $attacker_idx = CP_POS_PAWNS - 1 + $attacker;
 	my $from_mask = 1 << $from;
+	my $to_mask = 1 << $to;
 	my $kso = 11 + 6 * $to_move;
 	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
 
@@ -942,95 +949,43 @@ sub doMove {
 	# Checks number two and three are done below, and only for king moves.
 	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
 
-	my $castling = cp_pos_castling($self);
-	my $irreversible;
-	if ($castling) {
-		my $old_castling = $castling;
-		if ($attacker == CP_KING) {
-			if ($castling & (~(0x1 | 0x2))) { # White castlings.
-				if ($from == 3) {
-					# Remove all castling rights.
-					$castling &= ~(0x1 | 0x2);
-					if ($to == 1) {
-						# King-side castling. Check legality.
-						return if _cp_pos_checkers $self;
+	# The mask to apply to all bitboards.  We define that early, so that the
+	# castling logic can extend it for the rook move.
+	my $remove_mask = ~($from_mask | $to_mask);
+	my $add_mask = $to_mask;
 
-						# Now move the rook.
-						my $rook_remove_mask = ~(1 << 0);
-						my $rook_to_mask = (1 << 2);
-						# FIXME! This can be done faster.
-						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
-						$self->[$my_pieces_idx] &= $rook_remove_mask;
-						$self->[CP_POS_ROOKS] |= $rook_to_mask;
-						$self->[$my_pieces_idx] |= $rook_to_mask;
-					} elsif ($to == 5) {
-						# Queen-side castling. Check legality.
-						return if _cp_pos_checkers $self;
+	my $old_castling = my $new_castling = cp_pos_castling $self;
 
-						my $rook_remove_mask = ~(1 << 7);
-						my $rook_to_mask = (1 << 4);
-						# FIXME! This can be done faster.
-						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
-						$self->[$my_pieces_idx] &= $rook_remove_mask;
-						$self->[CP_POS_ROOKS] |= $rook_to_mask;
-						$self->[$my_pieces_idx] |= $rook_to_mask;
-					}
-				}
-			}
-			
-			if ($castling & (~(0x4 | 0x8))) { # Black castlings.
-				if ($from == 59) {
-					# Remove all castling rights.
-					$castling &= ~(0x4 | 0x8);
-					if ($to == 57) {
-						# King-side castling.
-						return if _cp_pos_checkers $self;
+	if ($attacker == CP_KING) {
+		# Does the king move into check?
+		return if _cp_pos_attacked $self, $to;
 
-						my $rook_remove_mask = ~(1 << 56);
-						my $rook_to_mask = (1 << 58);
-						# FIXME! This can be done faster.
-						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
-						$self->[$my_pieces_idx] &= $rook_remove_mask;
-						$self->[CP_POS_ROOKS] |= $rook_to_mask;
-						$self->[$my_pieces_idx] |= $rook_to_mask;
-					} elsif ($to == 61) {
-						# Queen-side castling. Check legality.
-						return if _cp_pos_checkers $self;
+		# Castling?
+		if ((($from - $to) & 0x3) == 0x2) {
+			# Are we checked?
+			return if cp_pos_in_check $self;
 
-						my $rook_remove_mask = ~(1 << 63);
-						my $rook_to_mask = (1 << 60);
-						# FIXME! This can be done faster.
-						$self->[CP_POS_ROOKS] &= $rook_remove_mask;
-						$self->[$my_pieces_idx] &= $rook_remove_mask;
-						$self->[CP_POS_ROOKS] |= $rook_to_mask;
-						$self->[$my_pieces_idx] |= $rook_to_mask;
-					}
-				}
-			}
+			# Is the field that the king has to cross attacked?
+			return if _cp_pos_attacked $self, ($from + $to) >> 1;
+
+			# The move is legal.  Move the rook.
+			my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
+			$remove_mask ^= $rook_from_mask;
+			$self->[CP_POS_ROOKS] |= $rook_to_mask;
+			$self->[CP_POS_W_PIECES + $to_move] |= $rook_to_mask;
 		}
 
-		if ($old_castling != $castling) {
-			cp_pos_set_castling($self, $castling);
-			$irreversible = 1;
-		}
+		# Remove the castling rights.
+		$new_castling &= ~(0x3 << ($to_move << 1));
 	}
 
-	# Move the pieces.
-	$self->[$my_pieces_idx] &= ~$from_mask;
-	$self->[$attacker_idx] &= ~$from_mask;
+	# Remove castling rights if a rook moves from its original square or it
+	# gets captured.  We simplify that by simply checking whether either the
+	# start or the destination square is a1, h1, a8, or h8.
+	$new_castling &= ~$castling_rook_masks[$from];
+	$new_castling &= ~$castling_rook_masks[$to];
 
-	# If we are checked, the move is illegal.  At this point we ignore the
-	# rook move of castlings because it can never be done to evade a check.
-	if (_cp_pos_checkers($self)) {
-		# Undo current changes.
-		$self->undoMove($undo_state);
-		return;
-	}
-
-	my $to_mask = 1 << $to;
-	my $capture_mask = ~$to_mask;
-	my $her_pieces_idx = CP_POS_W_PIECES + !$to_move;
-	my $her_pieces = $self->[$her_pieces_idx];
+	my $her_pieces = $self->[CP_POS_W_PIECES + $to_move];
 
 	if ($attacker == CP_PAWN) {
 		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
@@ -1039,7 +994,7 @@ sub doMove {
 		# difference between the from and to shift.  If it is odd, it is a
 		# capture.
 		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
-			$capture_mask = ~(1 << ($to - $pawn_single_offset));
+			$remove_mask ^= (1 << ($to - $pawn_single_offset));
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if ($to - $from == $pawn_single_offset << 1) {
@@ -1047,7 +1002,7 @@ sub doMove {
 		} else {
 			cp_pos_set_ep_shift($self, 0);
 		}
-	} elsif ($irreversible || ($her_pieces & $to_mask)) {
+	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		cp_pos_set_ep_shift($self, 0);
 	} else {
@@ -1055,15 +1010,27 @@ sub doMove {
 		cp_pos_set_ep_shift($self, 0);
 	}
 
-	$self->[$her_pieces_idx] &= $capture_mask;
-	$self->[CP_POS_PAWNS] &= $capture_mask;
-	$self->[CP_POS_KNIGHTS] &= $capture_mask;
-	$self->[CP_POS_BISHOPS] &= $capture_mask;
-	$self->[CP_POS_ROOKS] &= $capture_mask;
-	$self->[$my_pieces_idx] |= $to_mask;
-	
-	$attacker_idx += $promote - 1 if $promote;
-	$self->[$attacker_idx] |= $to_mask;
+	# Move all pieces involved.
+	$self->[CP_POS_W_PIECES] &= $remove_mask;
+	$self->[CP_POS_B_PIECES] &= $remove_mask;
+	$self->[CP_POS_PAWNS] &= $remove_mask;
+	$self->[CP_POS_KNIGHTS] &= $remove_mask;
+	$self->[CP_POS_BISHOPS] &= $remove_mask;
+	$self->[CP_POS_ROOKS] &= $remove_mask;
+
+	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
+
+	# It is better to overwrite the castling rights unconditionally because
+	# it safes branches.  There is one edge case, where a pawn captures a
+	# rook that is on its initial position.  In that case, the castling
+	# rights may have to be updated.
+	cp_pos_set_castling $self, $new_castling;
+
+	if ($promote) {
+		$self->[CP_POS_PAWNS - 1 + $promote] |= $to_mask;
+	} else {
+		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
+	}
 
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_set_to_move($self, !$to_move);
@@ -1313,6 +1280,17 @@ foreach my $m1 (
 		}
 	}
 }
+
+$castling_rook_move_masks[1] = [(1 << 0), (1 << 2), ~0x3];
+$castling_rook_move_masks[5] = [(1 << 7), (1 << 4), ~0x3];
+$castling_rook_move_masks[57] = [(1 << 56), (1 << 58), ~0xc];
+$castling_rook_move_masks[61] = [(1 << 63), (1 << 60), ~0xc];
+
+@castling_rook_masks = (0) x 64;
+$castling_rook_masks[0] = 0x3;
+$castling_rook_masks[7] = 0x3;
+$castling_rook_masks[56] = 0xc;
+$castling_rook_masks[63] = 0xc;
 
 # Magic moves.
 sub initmagicmoves_occ {
