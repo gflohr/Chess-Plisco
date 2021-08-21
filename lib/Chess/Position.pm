@@ -1067,6 +1067,19 @@ sub undoMove {
 
 	my $remove_mask = ~(1 << $to);
 	my $add_mask = (1 << $from);
+	my $to_move = !cp_pos_to_move $self;
+
+	# Castling?
+	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+		# Restore the rook.
+		my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
+		$self->[CP_POS_W_PIECES + $to_move] &= ~$rook_to_mask;
+		$self->[CP_POS_ROOKS] &= ~$rook_to_mask;
+
+		$self->[CP_POS_W_PIECES + $to_move] |= $rook_from_mask;
+		$self->[CP_POS_ROOKS] |= $rook_from_mask;
+
+	}
 
 	$self->[CP_POS_W_PIECES] &= $remove_mask;
 	$self->[CP_POS_B_PIECES] &= $remove_mask;
@@ -1074,8 +1087,6 @@ sub undoMove {
 	$self->[CP_POS_KNIGHTS] &= $remove_mask;
 	$self->[CP_POS_BISHOPS] &= $remove_mask;
 	$self->[CP_POS_ROOKS] &= $remove_mask;
-
-	my $to_move = !cp_pos_to_move $self;
 
 	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
 	$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
@@ -1089,6 +1100,8 @@ sub undoMove {
 			$self->[CP_POS_ROOKS] |= $victim_mask;
 		}
 	}
+
+	# FIXME! Promotion!
 
 	cp_pos_in_check($self) = $half_move_clock;
 	cp_pos_half_move_clock($self) = $half_move_clock;
