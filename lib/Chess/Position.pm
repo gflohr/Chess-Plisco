@@ -1073,12 +1073,11 @@ sub undoMove {
 	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
 		# Restore the rook.
 		my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
-		$self->[CP_POS_W_PIECES + $to_move] &= ~$rook_to_mask;
-		$self->[CP_POS_ROOKS] &= ~$rook_to_mask;
 
 		$self->[CP_POS_W_PIECES + $to_move] |= $rook_from_mask;
 		$self->[CP_POS_ROOKS] |= $rook_from_mask;
 
+		$remove_mask ^= $rook_to_mask;
 	}
 
 	$self->[CP_POS_W_PIECES] &= $remove_mask;
