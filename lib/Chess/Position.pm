@@ -1062,8 +1062,9 @@ sub undoMove {
 
 	my ($in_check, $half_move_clock, $info, $victim, $victim_mask) = @$undoInfo;
 
-	my ($from, $to, $attacker) = (cp_move_from($move), cp_move_to($move),
-			cp_move_attacker($move));
+	my ($from, $to, $promote, $attacker) =
+		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
+		 cp_move_attacker($move));
 
 	my $remove_mask = ~(1 << $to);
 	my $add_mask = (1 << $from);
@@ -1100,7 +1101,14 @@ sub undoMove {
 		}
 	}
 
-	# FIXME! Promotion!
+	if ($promote) {
+		if ($promote == CP_QUEEN) {
+			$self->[CP_POS_ROOKS] &= $remove_mask;
+			$self->[CP_POS_BISHOPS] &= $remove_mask;
+		} else {
+			$self->[CP_POS_PAWNS - 1 + $promote] &= $remove_mask;
+		}
+	}
 
 	cp_pos_in_check($self) = $half_move_clock;
 	cp_pos_half_move_clock($self) = $half_move_clock;
