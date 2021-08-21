@@ -92,6 +92,7 @@ my @tests = (
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
+	my $copy = $pos->copy;
 	my $undoInfo = $pos->doMove($move);
 	if ($test->{after}) {
 		ok $undoInfo, "$test->{name}: move should be legal";
@@ -99,6 +100,8 @@ foreach my $test (@tests) {
 
 		$pos->undoMove($move, $undoInfo);
 		is $pos->toFEN, $test->{before}, "$test->{name}: undo $test->{move}";
+		is_deeply $pos, $copy,
+			"$test->{name}: undo $test->{move}, structures should not differ";
 	} else {
 		ok !$undoInfo, "$test->{name}: move should not be legal";
 		is $pos->toFEN, $test->{before}, "$test->{name}: move should not modify";

@@ -635,6 +635,12 @@ sub newFromFEN {
 	return $self;
 }
 
+sub copy {
+	my ($self) = @_;
+
+	bless [@$self], ref $self;
+}
+
 sub toFEN {
 	my ($self) = @_;
 
