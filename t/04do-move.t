@@ -17,6 +17,7 @@ use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 use Chess::Position::Move;
+use Time::HiRes qw(gettimeofday);
 
 my ($pos, @moves, @expect);
 

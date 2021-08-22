@@ -298,11 +298,26 @@ my @tests = (
 			e7e8q e7e8r e7e8b e7e8n
 			e7f8q e7f8r e7f8b e7f8n
 		)],
+	},
+	# Bugs.
+	{
+		name => 'after initial 1. Nf3',
+		fen => 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+		premoves => [qw(g1f3)],
+		moves => [qw(
+			b8a6 b8c6 g8f6 g8h6
+			a7a6 b7b6 c7c6 d7d6 e7e6 f7f6 g7g6 h7h6
+			a7a5 b7b5 c7c5 d7d5 e7e5 f7f5 g7g5 h7h5
+		)],
 	}
 );
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
+	foreach my $move (@{$test->{premoves} || []}) {
+		my $movestr = cp_move_coordinate_notation $move;
+		ok $pos->doMove($move), "$test->{name}: premove $movestr should be legal";
+	}
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
 	my @expect = sort @{$test->{moves}};
 	is(scalar(@moves), scalar(@expect), "number of moves $test->{name}");
