@@ -1194,6 +1194,101 @@ sub perftWithOutput {
 	return $nodes;
 }
 
+sub consistent {
+	my ($self) = @_;
+
+	my $consistent = 1;
+
+	my $w_pieces = $self->[CP_POS_W_PIECES];
+	my $b_pieces = $self->[CP_POS_B_PIECES];
+
+	if ($w_pieces & $b_pieces) {
+		warn "White and black pieces overlap.\n";
+		undef $consistent;
+	}
+
+	my $occupied = $w_pieces | $b_pieces;
+	my $empty = ~$occupied;	
+
+	my $pawns = $self->[CP_POS_PAWNS];
+	my $knights = $self->[CP_POS_KNIGHTS];
+	my $bishops = $self->[CP_POS_BISHOPS];
+	my $rooks = $self->[CP_POS_ROOKS];
+	my $kings = $self->[CP_POS_KINGS];
+
+	my $occupied_by_pieces = $pawns | $knights | $bishops | $rooks | $kings;
+	if ($occupied_by_pieces & $empty) {
+		if ($pawns & $empty) {
+			warn "Orphaned pawn(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($knights & $empty) {
+			warn "Orphaned knight(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($bishops & $empty) {
+			warn "Orphaned bishop(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($rooks & $empty) {
+			warn "Orphaned rooks(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($kings & $empty) {
+			warn "Orphaned king(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+	}
+
+	my $not_occupied_by_pieces = ~$occupied_by_pieces;
+	if ($not_occupied_by_pieces & $b_pieces) {
+		warn "Square occupied by black without a piece.\n";
+		undef $consistent;
+	} elsif ($not_occupied_by_pieces & $w_pieces) {
+		warn "Square occupied by white without a piece.\n";
+		undef $consistent;
+	}
+
+	if ($pawns & $knights) {
+		warn "Pawns and knights overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $bishops) {
+		warn "Pawns and bishops overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $rooks) {
+		warn "Pawns and rooks overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $kings) {
+		warn "Pawns and kings overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $bishops) {
+		warn "Knights and bishops overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $rooks) {
+		warn "Knights and rooks overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $kings) {
+		warn "Knights and kings overlap.\n";
+		undef $consistent;
+	}
+	# Bishops and rooks overlap on purpose.  The intersection is occupied by
+	# queens.
+	if ($bishops & $kings) {
+		warn "Bishops and kings overlap.\n";
+		undef $consistent;
+	}
+
+	return $self if $consistent;
+
+	return;
+}
+
 # Class methods.
 sub dumpBitboard {
 	my (undef, $bitboard) = @_;
