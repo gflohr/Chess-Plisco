@@ -325,6 +325,41 @@ foreach my $test (@tests) {
 	if (@moves != @expect) {
 		diag Dumper [sort @moves];
 	}
+
+	foreach my $move ($pos->pseudoLegalMoves) {
+		# Check the correct attacker.
+		my $from_mask = 1 << (cp_move_from $move);
+		my $got_attacker = cp_move_attacker $move;
+		my $attacker;
+		if ($from_mask & cp_pos_pawns($pos)) {
+			$attacker = CP_PAWN;
+		} elsif ($from_mask & cp_pos_knights($pos)) {
+			$attacker = CP_KNIGHT;
+		} elsif ($from_mask & cp_pos_bishops($pos)) {
+			if ($from_mask & cp_pos_rooks($pos)) {
+				# Did it move like a bishop or like a queen?
+				my ($from, $to) = (cp_move_from($move), cp_move_to($move));
+				my ($from_file, $from_rank) = $pos->shiftToCoordinates($from);
+				my ($to_file, $to_rank) = $pos->shiftToCoordinates($to);
+				if (($from_file != $to_file) && ($from_rank != $to_rank)) {
+					$attacker = CP_BISHOP;
+				} else {
+					$attacker = CP_ROOK;
+				}
+			} else {
+				$attacker = CP_BISHOP;
+			}
+		} elsif ($from_mask & cp_pos_rooks($pos)) {
+			$attacker = CP_ROOK;
+		} elsif ($from_mask & cp_pos_kings($pos)) {
+			$attacker = CP_KING;
+		} else {
+			die "Move $move attacker is $got_attacker, but no match with bitboards\n";
+		}
+
+		my $movestr = cp_move_coordinate_notation $move;
+		is(cp_move_attacker($move), $attacker, "correct attacker for $movestr");
+	}
 }
 
 done_testing;

@@ -766,12 +766,12 @@ sub pseudoLegalMoves {
 	if ($king_mask & $king_from_mask) {
 		if (($castling_rights & 0x1)
 		    && ($king_side_crossing_mask & $empty)) {
-			push @moves, ($king_from << 6 | CP_KING << 16) | $king_side_dest_shift;
+			push @moves, ($king_from << 6 | CP_KING << 15) | $king_side_dest_shift;
 		}
 		if (($castling_rights & 0x2)
 		    && (!(($queen_side_crossing_mask | $queen_side_rook_crossing_mask)
 		         & $occupancy))) {
-			push @moves, ($king_from << 6 | CP_KING << 16) | $queen_side_dest_shift;
+			push @moves, ($king_from << 6 | CP_KING << 15) | $queen_side_dest_shift;
 		}
 	}
 
@@ -780,7 +780,7 @@ sub pseudoLegalMoves {
 	while ($knight_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $knight_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 16);
+		$base_move = ($from << 6 | CP_KNIGHT << 15);
 	
 		$target_mask = ~$my_pieces & $knight_attack_masks[$from];
 
@@ -794,7 +794,7 @@ sub pseudoLegalMoves {
 	while ($bishop_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $bishop_mask;
 
-		$base_move = ($from << 6 | CP_BISHOP << 16);
+		$base_move = ($from << 6 | CP_BISHOP << 15);
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -808,7 +808,7 @@ sub pseudoLegalMoves {
 	while ($rook_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $rook_mask;
 
-		$base_move = ($from << 6 | CP_ROOK << 16);
+		$base_move = ($from << 6 | CP_ROOK << 15);
 	
 		$target_mask = cp_mm_rmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -823,7 +823,7 @@ sub pseudoLegalMoves {
 	my $from = cp_bb_count_trailing_zbits $king_mask;
 
 	# FIXME! 6 should be a constant!
-	$base_move = ($from << 6 | CP_KING << 16);
+	$base_move = ($from << 6 | CP_KING << 15);
 
 	$target_mask = ~$my_pieces & $king_attack_masks[$from];
 
@@ -848,7 +848,7 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 16);
+		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
@@ -865,7 +865,7 @@ sub pseudoLegalMoves {
 			$target_mask = $pawn_double_masks->[$from] & $empty;
 			if ($target_mask) {
 				my $to = $from + ($offset << 1);
-				push @moves, ($from << 6) | $to | CP_PAWN << 16;
+				push @moves, ($from << 6) | $to | CP_PAWN << 15;
 			}
 		}
 		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
@@ -877,7 +877,7 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 16);
+		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
