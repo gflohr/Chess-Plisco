@@ -1124,6 +1124,76 @@ sub undoMove {
 	return $self;
 }
 
+sub perft {
+	my ($self, $depth) = @_;
+
+	my $nodes = 0;
+	my @moves = $self->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $undo_info = $self->doMove($move) or next;
+
+		my $movestr = cp_move_coordinate_notation $move;
+
+		if ($depth > 1) {
+			$nodes += $self->perft($depth - 1);
+		} else {
+			++$nodes;
+		}
+
+		print "\t$movestr\n";
+
+		$self->undoMove($move, $undo_info);
+	}
+
+	return $nodes;
+}
+
+sub perftWithOutput {
+	my ($self, $depth, $fh) = @_;
+
+	return if $depth <= 0;
+
+	require Time::HiRes;
+	my $started = [Time::HiRes::gettimeofday()];
+
+	my $nodes = 0;
+
+	my @moves = $self->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $undo_info = $self->doMove($move) or next;
+
+		my $movestr = cp_move_coordinate_notation $move;
+
+		$fh->print("$movestr: ");
+
+		my $subnodes;
+
+		if ($depth > 1) {
+			$subnodes = $self->perft($depth - 1);
+		} else {
+			$subnodes = 1;
+		}
+
+		$nodes += $subnodes;
+
+		$fh->print("$subnodes\n");
+
+		$self->undoMove($move, $undo_info);
+	}
+
+	no integer;
+
+	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
+
+	my $nps = '+INF';
+	if ($elapsed) {
+		$nps = int (0.5 + $nodes / $elapsed);
+	}
+	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
+
+	return $nodes;
+}
+
 # Class methods.
 sub dumpBitboard {
 	my (undef, $bitboard) = @_;
