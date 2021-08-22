@@ -1286,7 +1286,57 @@ sub consistent {
 
 	return $self if $consistent;
 
+	warn $self->dumpAll;
+
 	return;
+}
+
+sub dumpAll {
+	my ($self) = @_;
+
+	my $pad19 = sub {
+		my $str = $_;
+		while (19 > length $str) {
+			$str .= ' ';
+		}
+
+		return $str;
+	};
+
+	my $output = '';
+
+	my $w_pieces = $self->dumpBitboard($self->[CP_POS_W_PIECES]);
+	my $b_pieces = $self->dumpBitboard($self->[CP_POS_B_PIECES]);
+	my @w_pieces = map { $pad19->() } split /\n/, $w_pieces;
+	my @b_pieces = map { $pad19->() } split /\n/, $b_pieces;
+	$output .= "  White               Black\n";
+	for (my $i = 0; $i < @w_pieces; ++$i) {
+		$output .= "$w_pieces[$i]   $b_pieces[$i]\n";
+	}
+
+	my $pawns = $self->dumpBitboard($self->[CP_POS_PAWNS]);
+	my @pawns = map { $pad19->() } split /\n/, $pawns;
+	my $knights = $self->dumpBitboard($self->[CP_POS_KNIGHTS]);
+	my @knights = map { $pad19->() } split /\n/, $knights;
+	$output .= "\n  Pawns               Knights\n";
+	for (my $i = 0; $i < @pawns; ++$i) {
+		$output .= "$pawns[$i]   $knights[$i]\n";
+	}
+
+	my $bishops = $self->dumpBitboard($self->[CP_POS_BISHOPS]);
+	my @bishops = split /\n/, $bishops;
+	my $rooks = $self->dumpBitboard($self->[CP_POS_ROOKS]);
+	my @rooks = map { $pad19->() } split /\n/, $rooks;
+	$output .= "\n  Bishops             Rooks\n";
+	for (my $i = 0; $i < @bishops; ++$i) {
+		$output .= "$bishops[$i]   $rooks[$i]\n";
+	}
+
+	my $kings = $self->dumpBitboard($self->[CP_POS_KINGS]);
+	$output .= "\n  Kings\n";
+	$output .= $kings;
+
+	return $output;
 }
 
 # Class methods.
