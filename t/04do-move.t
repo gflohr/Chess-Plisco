@@ -95,17 +95,20 @@ foreach my $test (@tests) {
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
 	my $copy = $pos->copy;
 	my $undoInfo = $pos->doMove($move);
+	ok $pos->consistent, "$test->{name}: position should be consistent after $test->{move}";
 	if ($test->{after}) {
 		ok $undoInfo, "$test->{name}: move should be legal";
-		is $pos->toFEN, $test->{after}, "$test->{name}";
+		is $pos->toFEN, $test->{after}, "$test->{name}: FEN should equal expected.";
 
 		$pos->undoMove($move, $undoInfo);
 		is $pos->toFEN, $test->{before}, "$test->{name}: undo $test->{move}";
 		is_deeply $pos, $copy,
 			"$test->{name}: undo $test->{move}, structures should not differ";
+		ok $pos->consistent, "$test->{name}: position should be consistent after undo $test->{move}";
 	} else {
 		ok !$undoInfo, "$test->{name}: move should not be legal";
 		is $pos->toFEN, $test->{before}, "$test->{name}: move should not modify";
+		ok $pos->consistent, "$test->{name}: position should be consistent after illegal $test->{move}";
 	}
 }
 
