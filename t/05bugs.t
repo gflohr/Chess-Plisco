@@ -18,24 +18,18 @@ use Chess::Position qw(:all);
 use Chess::Position::Macro;
 use Chess::Position::Move;
 
-my ($pos, $move, $undo_info, @moves);
+my ($pos, $move, $undo_info);
 
 $pos = Chess::Position->new;
 $move = Chess::Position::Move->new('g1h3', $pos)->toInteger;
 ok $pos->doMove($move), '1. Nh3';
-my @plm = $pos->pseudoLegalMoves;
 $move = Chess::Position::Move->new('h7h6', $pos)->toInteger;
-die $move;
 $undo_info = $pos->doMove($move), '1. ...h6';
 ok $undo_info, '1. ...h6';
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_6_MASK),
 	'1. ...h6, pawn should be on h6';
-diag $pos->dumpBitboard($pos->[CP_POS_PAWNS]);
-diag $pos->dumpBitboard($pos->[CP_POS_KNIGHTS]);
 ok $pos->undoMove($move, $undo_info);
-ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_6_MASK),
+ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 	'undo 1. ...h6, pawn should be back on h7';
-diag $pos->dumpBitboard($pos->[CP_POS_PAWNS]);
-diag $pos->dumpBitboard($pos->[CP_POS_KNIGHTS]);
 
 done_testing;
