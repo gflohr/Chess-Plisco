@@ -32,4 +32,6 @@ ok $pos->undoMove($move, $undo_info);
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 	'undo 1. ...h6, pawn should be back on h7';
 
+# Wrong perft:
+# After start position, e2e3, the move g8f6 returns only 25 instead of 30 moves.
 done_testing;
