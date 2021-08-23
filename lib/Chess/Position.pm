@@ -996,6 +996,8 @@ sub doMove {
 			} else {
 				$victim = CP_BISHOP;
 			}
+		} elsif ($to_mask & cp_pos_rooks($self)) {
+			$victim = CP_ROOK;
 		} else {
 			$victim = CP_QUEEN;
 		}

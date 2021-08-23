@@ -16,6 +16,7 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
+use Chess::Position::Move;
 
 my ($pos, @moves, @expect);
 
@@ -309,13 +310,25 @@ my @tests = (
 			a7a6 b7b6 c7c6 d7d6 e7e6 f7f6 g7g6 h7h6
 			a7a5 b7b5 c7c5 d7d5 e7e5 f7f5 g7g5 h7h5
 		)],
-	}
+	},
+	{
+		name => 'attacker must be bishop after 1. h4 d6 2. Rh3 Bxh3',
+		fen => 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+		premoves => [qw(h2h4 d7d6 h1h3)],
+		moves => [qw(
+			a7a5 a7a6 b7b5 b7b6 c7c5 c7c6 e7e5 e7e6 f7f5 f7f6 g7g5 g7g6 h7h5 h7h6
+			d6d5
+			b8a6 b8c6 b8d7 g8f6 g8h6
+			c8d7 c8e6 c8f5 c8g4 c8h3
+			d8d7 e8d7
+		)],
+	},
 );
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
-	foreach my $move (@{$test->{premoves} || []}) {
-		my $movestr = cp_move_coordinate_notation $move;
+	foreach my $movestr (@{$test->{premoves} || []}) {
+		my $move = Chess::Position::Move->new($movestr, $pos)->toInteger;
 		ok $pos->doMove($move), "$test->{name}: premove $movestr should be legal";
 	}
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->pseudoLegalMoves;
