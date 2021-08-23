@@ -1040,6 +1040,7 @@ sub doMove {
 	$self->[CP_POS_KNIGHTS] &= $remove_mask;
 	$self->[CP_POS_BISHOPS] &= $remove_mask;
 	$self->[CP_POS_ROOKS] &= $remove_mask;
+	$self->[CP_POS_KINGS] &= $remove_mask;
 
 	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
 
@@ -1093,6 +1094,7 @@ sub undoMove {
 	$self->[CP_POS_KNIGHTS] &= $remove_mask;
 	$self->[CP_POS_BISHOPS] &= $remove_mask;
 	$self->[CP_POS_ROOKS] &= $remove_mask;
+	$self->[CP_POS_KINGS] &= $remove_mask;
 
 	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
 	$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
