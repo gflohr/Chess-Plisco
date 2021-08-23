@@ -44,6 +44,8 @@ use Chess::Position::Macro;
 
 use base qw(Exporter);
 
+use constant DEBUG_PERFT => 1;
+
 my @export_accessors = qw(
 	CP_POS_W_PIECES CP_POS_B_PIECES
 	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
@@ -1127,24 +1129,38 @@ sub undoMove {
 }
 
 sub perft {
-	my ($self, $depth) = @_;
+	my ($self, $depth, $indent) = @_;
 
 	my $nodes = 0;
 	my @moves = $self->pseudoLegalMoves;
+	if (DEBUG_PERFT) {
+		print "\n";
+		++$indent;
+	}
 	foreach my $move (@moves) {
+		my ($before, $movestr);
+		if (DEBUG_PERFT) {
+			$before = $self->copy;
+			$movestr = cp_move_coordinate_notation $move;
+		}
 		my $undo_info = $self->doMove($move) or next;
 
-		my $movestr = cp_move_coordinate_notation $move;
-
 		if ($depth > 1) {
-			$nodes += $self->perft($depth - 1);
+			$nodes += $self->perft($depth - 1, $indent);
 		} else {
 			++$nodes;
 		}
 
-		print "\t$movestr\n";
-
 		$self->undoMove($move, $undo_info);
+
+		if (DEBUG_PERFT) {
+			print '  ' x $indent;
+			print "$movestr\n";
+			if (!$self->equals($before)) {
+				warn "Undo $movestr did not restore.\n";
+				die "FEN: $self\n";
+			}
+		}
 	}
 
 	return $nodes;
@@ -1162,6 +1178,12 @@ sub perftWithOutput {
 
 	my @moves = $self->pseudoLegalMoves;
 	foreach my $move (@moves) {
+		my ($before, $movestr) = @_;
+
+		if (DEBUG_PERFT) {
+			$before = $self->copy;
+		}
+
 		my $undo_info = $self->doMove($move) or next;
 
 		my $movestr = cp_move_coordinate_notation $move;
@@ -1181,6 +1203,13 @@ sub perftWithOutput {
 		$fh->print("$subnodes\n");
 
 		$self->undoMove($move, $undo_info);
+
+		if (DEBUG_PERFT) {
+			if (!$self->equals($before)) {
+				warn "Undo $movestr did not restore.\n";
+				die "FEN: $self.\n";
+			}
+		}
 	}
 
 	no integer;
@@ -1365,6 +1394,28 @@ sub dumpBitboard {
 	$output .= "  a b c d e f g h\n";
 
 	return $output;
+}
+
+sub movesInCoordinateNotation {
+	my (undef, @moves) = @_;
+
+	foreach my $move (@moves) {
+		$move = cp_move_coordinate_notation $move;
+	}
+
+	return @moves;
+}
+
+sub equals {
+	my ($self, $other) = @_;
+
+	return if @$self != @$other;
+
+	for (my $i = 0; $i < @$self; ++$i) {
+		return if $self->[$i] != $other->[$i];
+	}
+
+	return $self;
 }
 
 sub coordinatesToShift {
