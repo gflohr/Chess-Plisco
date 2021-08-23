@@ -50,4 +50,13 @@ ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
 ok $pos->equals($before);
 
+# 2. ...Bxh3 is not undone correctly.
+$pos = Chess::Position->new('rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2');
+$before = $pos->copy;
+$move = Chess::Position::Move->new('c8h3', $pos)->toInteger;
+$undo_info = $pos->doMove($move);
+ok $undo_info;
+ok $pos->undoMove($move, $undo_info);
+ok $pos->equals($before);
+
 done_testing;
