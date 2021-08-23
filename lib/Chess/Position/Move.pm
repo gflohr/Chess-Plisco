@@ -41,7 +41,7 @@ sub new {
 		if ($from_mask & cp_pos_rooks($position)) {
 			$attacker = CP_QUEEN;
 		} else {
-			$attacker = CP_ROOK;
+			$attacker = CP_BISHOP;
 		}
 	} elsif ($from_mask & cp_pos_rooks($position)) {
 		$attacker = CP_ROOK;

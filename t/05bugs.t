@@ -54,6 +54,7 @@ ok $pos->equals($before);
 $pos = Chess::Position->new('rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2');
 $before = $pos->copy;
 $move = Chess::Position::Move->new('c8h3', $pos)->toInteger;
+is(cp_move_attacker($move), CP_BISHOP);
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
