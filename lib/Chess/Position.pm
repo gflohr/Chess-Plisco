@@ -615,7 +615,7 @@ sub newFromFEN {
 	# FIXME! Check that there is a pawn of the right color on the 5th/4th
 	# rank of the EP square!
 
-	if ($hmc !~ /^0|[1-9][0-9]+$/) {
+	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		die __x("Illegal FEN: Illegal half-move clock '{hmc}'.\n", hmc => $hmc);
 	}
 	$self->[CP_POS_HALF_MOVE_CLOCK] = $hmc;
@@ -1120,7 +1120,7 @@ sub undoMove {
 		}
 	}
 
-	cp_pos_in_check($self) = $half_move_clock;
+	cp_pos_in_check($self) = $in_check;
 	cp_pos_half_move_clock($self) = $half_move_clock;
 	cp_pos_info($self) = $info;
 	--(cp_pos_half_moves($self));
@@ -1129,14 +1129,10 @@ sub undoMove {
 }
 
 sub perft {
-	my ($self, $depth, $indent) = @_;
+	my ($self, $depth) = @_;
 
 	my $nodes = 0;
 	my @moves = $self->pseudoLegalMoves;
-	if (DEBUG_PERFT) {
-		print "\n";
-		++$indent;
-	}
 	foreach my $move (@moves) {
 		my ($before, $movestr);
 		if (DEBUG_PERFT) {
@@ -1146,7 +1142,7 @@ sub perft {
 		my $undo_info = $self->doMove($move) or next;
 
 		if ($depth > 1) {
-			$nodes += $self->perft($depth - 1, $indent);
+			$nodes += $self->perft($depth - 1);
 		} else {
 			++$nodes;
 		}
@@ -1154,11 +1150,9 @@ sub perft {
 		$self->undoMove($move, $undo_info);
 
 		if (DEBUG_PERFT) {
-			print '  ' x $indent;
-			print "$movestr\n";
 			if (!$self->equals($before)) {
 				warn "Undo $movestr did not restore.\n";
-				die "FEN: $self\n";
+				die "FEN: $before\n";
 			}
 		}
 	}
@@ -1207,7 +1201,7 @@ sub perftWithOutput {
 		if (DEBUG_PERFT) {
 			if (!$self->equals($before)) {
 				warn "Undo $movestr did not restore.\n";
-				die "FEN: $self.\n";
+				die "FEN: $before.\n";
 			}
 		}
 	}

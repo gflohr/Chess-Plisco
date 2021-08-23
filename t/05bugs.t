@@ -18,7 +18,7 @@ use Chess::Position qw(:all);
 use Chess::Position::Macro;
 use Chess::Position::Move;
 
-my ($pos, $move, $undo_info);
+my ($pos, $move, $undo_info, $before);
 
 $pos = Chess::Position->new;
 $move = Chess::Position::Move->new('g1h3', $pos)->toInteger;
@@ -32,6 +32,12 @@ ok $pos->undoMove($move, $undo_info);
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 	'undo 1. ...h6, pawn should be back on h7';
 
-# Wrong perft:
-# After start position, e2e3, the move g8f6 returns only 25 instead of 30 moves.
+$pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/7N/PPPPPPPP/RNBQKB1R w KQkq - 2 2');
+$before = $pos->copy;
+$move = Chess::Position::Move->new('b1c3', $pos)->toInteger;
+$undo_info = $pos->doMove($move);
+ok $undo_info;
+ok $pos->undoMove($move, $undo_info);
+ok $pos->equals($before);
+
 done_testing;
