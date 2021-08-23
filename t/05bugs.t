@@ -32,9 +32,19 @@ ok $pos->undoMove($move, $undo_info);
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 	'undo 1. ...h6, pawn should be back on h7';
 
+# Typo. In-check was not undone correctly.
 $pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/7N/PPPPPPPP/RNBQKB1R w KQkq - 2 2');
 $before = $pos->copy;
 $move = Chess::Position::Move->new('b1c3', $pos)->toInteger;
+$undo_info = $pos->doMove($move);
+ok $undo_info;
+ok $pos->undoMove($move, $undo_info);
+ok $pos->equals($before);
+
+# Queen moves were not undone correctly.
+$pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 1 2');
+$before = $pos->copy;
+$move = Chess::Position::Move->new('d1e2', $pos)->toInteger;
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);

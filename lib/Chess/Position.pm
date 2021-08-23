@@ -1007,6 +1007,7 @@ sub doMove {
 		$self->[CP_POS_HALF_MOVE_CLOCK],
 		$self->[CP_POS_INFO],
 		$victim, $victim_mask,
+		$from_mask & $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS]
 	);
 
 	if ($attacker == CP_PAWN) {
@@ -1069,7 +1070,8 @@ sub doMove {
 sub undoMove {
 	my ($self, $move, $undoInfo) = @_;
 
-	my ($in_check, $half_move_clock, $info, $victim, $victim_mask) = @$undoInfo;
+	my ($in_check, $half_move_clock, $info, $victim, $victim_mask,
+		$is_queen_move) = @$undoInfo;
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1099,7 +1101,12 @@ sub undoMove {
 	$self->[CP_POS_KINGS] &= $remove_mask;
 
 	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
-	$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
+	if ($is_queen_move) {
+		$self->[CP_POS_BISHOPS] |= $add_mask;
+		$self->[CP_POS_ROOKS] |= $add_mask;
+	} else {
+		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
+	}
 
 	if ($victim) {
 		$self->[CP_POS_W_PIECES + !$to_move] |= $victim_mask;
