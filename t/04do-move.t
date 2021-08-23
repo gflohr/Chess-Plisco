@@ -88,6 +88,13 @@ my @tests = (
 		move => 'e8c8',
 		after => '2kr3r/8/8/8/8/8/8/R3K2R w KQ - 0 2',
 	},
+	# Bugs.
+	{
+		name => 'Rook move should not prevent castling on other side',
+		before => 'rnbqkbnr/ppp1pppp/3p4/8/7P/8/PPPPPPP1/RNBQKBNR b KQkq - 0 2',
+		move => 'h1h3',
+		after => 'rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2',
+	}
 );
 
 foreach my $test (@tests) {
