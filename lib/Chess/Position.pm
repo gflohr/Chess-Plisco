@@ -44,7 +44,7 @@ use Chess::Position::Macro;
 
 use base qw(Exporter);
 
-use constant DEBUG_PERFT => 1;
+use constant DEBUG_PERFT => 0;
 
 my @export_accessors = qw(
 	CP_POS_W_PIECES CP_POS_B_PIECES
@@ -1642,10 +1642,10 @@ $castling_rook_move_masks[57] = [(1 << 56), (1 << 58), ~0xc];
 $castling_rook_move_masks[61] = [(1 << 63), (1 << 60), ~0xc];
 
 @castling_rook_masks = (0) x 64;
-$castling_rook_masks[0] = 0x3;
-$castling_rook_masks[7] = 0x3;
-$castling_rook_masks[56] = 0xc;
-$castling_rook_masks[63] = 0xc;
+$castling_rook_masks[0] = 0x1;
+$castling_rook_masks[7] = 0x2;
+$castling_rook_masks[56] = 0x4;
+$castling_rook_masks[63] = 0x8;
 
 # Magic moves.
 sub initmagicmoves_occ {
