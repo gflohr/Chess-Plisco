@@ -53,6 +53,12 @@ my @tests = (
 		after => '7k/8/4P3/8/8/8/8/7K b - - 0 1',
 	},
 	{
+		name => 'black captures en passant',
+		before => '7k/8/8/8/3pP3/8/8/7K b - e3 0 1',
+		move => 'd4e3',
+		after => '7k/8/8/8/8/4p3/8/7K w - - 0 2',
+	},
+	{
 		name => 'promotion',
 		before => '7k/4P3/8/8/8/8/8/7K w - - 0 1',
 		move => 'e7e8r',
@@ -91,9 +97,9 @@ my @tests = (
 	# Bugs.
 	{
 		name => 'Rook move should not prevent castling on other side',
-		before => 'rnbqkbnr/ppp1pppp/3p4/8/7P/8/PPPPPPP1/RNBQKBNR b KQkq - 0 2',
+		before => 'rnbqkbnr/ppp1pppp/3p4/8/7P/8/PPPPPPP1/RNBQKBNR w KQkq - 0 2',
 		move => 'h1h3',
-		after => 'rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2',
+		after => 'rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b Qkq - 0 2',
 	}
 );
 
