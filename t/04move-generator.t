@@ -323,6 +323,15 @@ my @tests = (
 			d8d7 e8d7
 		)],
 	},
+	{
+		name => 'perft 4 bug 1',
+		fen => 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+		premoves => [qw(e2e3 b8c6 f1b5)],
+		moves => [qw(
+			h7h5 g7g5 f7f5 e7e5 d7d5 a7a5 h7h6 g7g6 f7f6 e7e6 d7d6 b7b6 a7a6
+			c6d4 c6b4 c6e5 c6a5 c6b8 g8h6 g8f6 a8b8
+		)],
+	},
 );
 
 foreach my $test (@tests) {

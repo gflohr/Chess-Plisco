@@ -29,13 +29,16 @@
 			my $her_pieces = $p->[!$to_move];
 			my $occupancy = $my_pieces | $her_pieces;
 			my $empty = ~$occupancy;
+			my $my_king_mask = 1 << $ks;
 
 			if ($is_rook) {
-				$pinned = cp_mm_rmagic($from, $occupancy)
-					& $ray_mask & ($empty | $her_pieces) & cp_pos_rooks($p);
+				my $rmagic = cp_mm_rmagic($from, $occupancy) & $ray_mask;
+				$pinned = ($rmagic & $my_king_mask)
+						&& ($rmagic & cp_pos_rooks($p));
 			} else {
-				$pinned = cp_mm_bmagic($from, $occupancy)
-					& $ray_mask & ($empty | $her_pieces) & cp_pos_bishops($p);
+				my $bmagic = cp_mm_bmagic($from, $occupancy) & $ray_mask;
+				$pinned = ($bmagic & $my_king_mask)
+						&& ($bmagic & cp_pos_bishops($p));
 			}
 		}
 	}
