@@ -1021,8 +1021,8 @@ sub doMove {
 		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
 			my $victim_mask = (1 << ($to - $pawn_single_offset));
 			$remove_mask ^= $victim_mask;
-			$undo_info[-2] = CP_PAWN;
-			$undo_info[-1] = $victim_mask;
+			$undo_info[-3] = CP_PAWN;
+			$undo_info[-2] = $victim_mask;
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if ($to - $from == $pawn_single_offset << 1) {
