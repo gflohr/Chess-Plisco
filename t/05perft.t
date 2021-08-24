@@ -28,7 +28,7 @@ foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	my @perfts = @{$test->{perft}};
 
-	for (my $depth = 1; $depth <= $#perfts; ++$depth) {
+	for (my $depth = 1; $depth <= @perfts; ++$depth) {
 		my $expect = $perfts[$depth - 1];
 		my $got = $pos->perft($depth);
 		is $got, $expect, "perft depth $depth ($test->{name})";

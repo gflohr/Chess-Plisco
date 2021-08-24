@@ -100,6 +100,12 @@ my @tests = (
 		before => 'rnbqkbnr/ppp1pppp/3p4/8/7P/8/PPPPPPP1/RNBQKBNR w KQkq - 0 2',
 		move => 'h1h3',
 		after => 'rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b Qkq - 0 2',
+	},
+	{
+		name => 'perft 4 bug 1',
+		before => 'r1bqkbnr/pppppppp/2n5/1B6/8/4P3/PPPP1PPP/RNBQK1NR b KQkq - 2 2',
+		move => 'c6d4',
+		after => 'r1bqkbnr/pppppppp/8/1B6/3n4/4P3/PPPP1PPP/RNBQK1NR w KQkq - 3 3',
 	}
 );
 
@@ -107,12 +113,14 @@ foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
 	my $copy = $pos->copy;
+if ($test->{name} =~ /^perft 4 bug 1$/) {
+	$DB::single = 1;
+}
 	my $undoInfo = $pos->doMove($move);
 	ok $pos->consistent, "$test->{name}: position should be consistent after $test->{move}";
 	if ($test->{after}) {
-		ok $undoInfo, "$test->{name}: move should be legal";
+		ok $undoInfo, "$test->{name}: move should be legal" or next;
 		is $pos->toFEN, $test->{after}, "$test->{name}: FEN should equal expected.";
-
 		$pos->undoMove($move, $undoInfo);
 		is $pos->toFEN, $test->{before}, "$test->{name}: undo $test->{move}";
 		is_deeply $pos, $copy,
