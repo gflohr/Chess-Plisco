@@ -759,9 +759,25 @@ sub pseudoLegalMoves {
 
 	my (@moves, $target_mask, $base_move);
 
-	my $info = cp_pos_info $self;
-	# Generate castlings.
+	# Generate king moves.  We take advantage of the fact that there is always
+	# exactly one king of each color on the board.  So there is no need for a
+	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
+
+	my $from = cp_bb_count_trailing_zbits $king_mask;
+
+	# FIXME! 6 should be a constant!
+	$base_move = ($from << 6 | CP_KING << 15);
+
+	$target_mask = ~$my_pieces & $king_attack_masks[$from];
+
+	_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+	my $info = cp_pos_info $self;
+
+	last if cp_pos_in_check($self) && (($info & 0x3) >> 23) == CP_EVASION_KING_MOVE;
+
+	# Generate castlings.
 	# Mask out the castling rights for the side to move.
 	my $castling_rights = ($info >> ($to_move << 1)) & 0x3;
 	my ($king_from, $king_from_mask, $king_side_crossing_mask,
@@ -822,18 +838,6 @@ sub pseudoLegalMoves {
 
 		$rook_mask = cp_bb_clear_least_set $rook_mask;
 	}
-
-	# Generate king moves.  We take advantage of the fact that there is always
-	# exactly one king of each color on the board.  So there is no need for a
-	# loop.
-	my $from = cp_bb_count_trailing_zbits $king_mask;
-
-	# FIXME! 6 should be a constant!
-	$base_move = ($from << 6 | CP_KING << 15);
-
-	$target_mask = ~$my_pieces & $king_attack_masks[$from];
-
-	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 	# Generate pawn moves.
 	my ($regular_mask, $double_mask, $promotion_mask, $offset) =
