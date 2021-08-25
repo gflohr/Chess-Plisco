@@ -106,8 +106,12 @@ use constant CP_POS_KINGS => 7;
 use constant CP_POS_HALF_MOVE_CLOCK => 8;
 use constant CP_POS_HALF_MOVES => 9;
 use constant CP_POS_INFO => 10;
-use constant CP_POS_W_KING_SHIFT => 11;
-use constant CP_POS_B_KING_SHIFT => 12;
+use constant CP_POS_EVASION_SQUARES => 11;
+
+# How to evade a check?
+use constant CP_EVASION_ALL => 0;
+use constant CP_EVASION_CAPTURE => 1;
+use constant CP_EVASION_KING_MOVE => 2;
 
 # Board masks.
 # Files.
@@ -900,7 +904,57 @@ sub update {
 	my $b_king_shift = cp_bb_count_trailing_zbits($b_kings);
 	cp_pos_set_b_king_shift($self, $b_king_shift);
 
-	cp_pos_in_check($self) = _cp_pos_checkers $self;
+	my $checkers = cp_pos_in_check($self) = _cp_pos_checkers $self;
+
+	if ($checkers) {
+		# Check evasion strategy.  If in-check, the options are:
+		#
+		# 1. Move the king.
+		# 2. Hit the piece that gives check unless multiple pieces give check.
+		# 3. Move a piece in front of the king for protection unless a knight
+		#    gives check or two pieces give check simultaneously.
+		#
+		# That leads to 3 different levels for the evasion strategy.  Option 1
+		# is always valid. Option 2 only if only one piece gives check.  Option
+		# 3 if only one piece gives check and the piece is bishop or rook.
+		#
+		# Pawn checks can be treated like knight checks because the pawn
+		# always has direct contact with the king.
+		#
+		# For both options 2 and 3 we define an evasion bitboard of valid
+		# target squares.  This information is then used in the legality check
+		# for non-king moves to see whether the move prevents a check.  There
+		# is no need to distinguish between the two cases in the legality check.
+		# The difference is just the popcount of the evasion bitboard.
+
+		if ($checkers & ($checkers - 1)) {
+			cp_pos_set_evasion($self, CP_EVASION_KING_MOVE);
+		} elsif ($checkers & (cp_pos_knights($self) | (cp_pos_pawns($self)))) {
+			cp_pos_set_evasion($self, CP_EVASION_CAPTURE);
+			cp_pos_evasion_squares($self) = $checkers;
+		} else {
+			# No need to set the evasion strategy because CP_EVASION_ALL is the
+			# default.
+			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
+			my $kso = cp_pos_to_move($self) ? 17 : 11;
+			my $king_shift = cp_pos_info($self) & (((0x3f << $kso)) >> $kso);
+			my ($attack_type, $attack_ray) = $common_lines[$king_shift]->[$attacker_shift];
+			my $occupancy = $self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES];
+			if ($attack_type) {
+				# Bishop attack.
+				cp_pos_evasion_squares($self) = $attack_ray
+					& cp_mm_bmagic($king_shift, $occupancy)
+					& cp_pos_bishops($self);
+			} else {
+				# Rook attack.
+				cp_pos_evasion_squares($self) = $attack_ray
+					& cp_mm_rmagic($king_shift, $occupancy)
+					& cp_pos_rooks($self);
+			}
+		}
+	}
+	my $multi_attack = $checkers & ($checkers - 1);
+	my $knight_attack = $checkers & cp_pos_knights $self;
 
 	return $self;
 }
@@ -1008,6 +1062,7 @@ sub doMove {
 		$self->[CP_POS_IN_CHECK],
 		$self->[CP_POS_HALF_MOVE_CLOCK],
 		$self->[CP_POS_INFO],
+		$self->[CP_POS_EVASION_SQUARES],
 		$victim, $victim_mask,
 		$from_mask & $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS]
 	);
@@ -1072,8 +1127,8 @@ sub doMove {
 sub undoMove {
 	my ($self, $move, $undoInfo) = @_;
 
-	my ($in_check, $half_move_clock, $info, $victim, $victim_mask,
-		$is_queen_move) = @$undoInfo;
+	my ($in_check, $half_move_clock, $info, $evasion_squares,
+		$victim, $victim_mask, $is_queen_move) = @$undoInfo;
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
