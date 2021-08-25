@@ -941,24 +941,23 @@ sub update {
 			# default.
 			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
 			my $kso = cp_pos_to_move($self) ? 17 : 11;
-			my $king_shift = cp_pos_info($self) & (((0x3f << $kso)) >> $kso);
-			my ($attack_type, $attack_ray) = $common_lines[$king_shift]->[$attacker_shift];
+			my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
+			my ($attack_type, $attack_ray) = @{$common_lines[$king_shift]->[$attacker_shift]};
 			my $occupancy = $self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES];
+			my $empty = ~$occupancy;
 			if ($attack_type) {
-				# Bishop attack.
-				cp_pos_evasion_squares($self) = $attack_ray
-					& cp_mm_bmagic($king_shift, $occupancy)
-					& cp_pos_bishops($self);
-			} else {
 				# Rook attack.
 				cp_pos_evasion_squares($self) = $attack_ray
 					& cp_mm_rmagic($king_shift, $occupancy)
-					& cp_pos_rooks($self);
+					& ($empty | cp_pos_rooks($self));
+			} else {
+				# Bishop attack.
+				cp_pos_evasion_squares($self) = $attack_ray
+					& cp_mm_bmagic($king_shift, $occupancy)
+					& ($empty | cp_pos_bishops($self));
 			}
 		}
 	}
-	my $multi_attack = $checkers & ($checkers - 1);
-	my $knight_attack = $checkers & cp_pos_knights $self;
 
 	return $self;
 }
