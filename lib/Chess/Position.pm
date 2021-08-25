@@ -774,8 +774,8 @@ sub pseudoLegalMoves {
 	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 	my $info = cp_pos_info $self;
-
-	last if cp_pos_in_check($self) && (($info & 0x3) >> 23) == CP_EVASION_KING_MOVE;
+	my $in_check = cp_pos_in_check $self;
+	last if $in_check && (($info & 0x3) >> 23) == CP_EVASION_KING_MOVE;
 
 	# Generate castlings.
 	# Mask out the castling rights for the side to move.
@@ -1009,6 +1009,7 @@ sub doMove {
 	my $add_mask = $to_mask;
 
 	my $old_castling = my $new_castling = cp_pos_castling $self;
+	my $in_check = cp_pos_in_check $self;
 
 	if ($attacker == CP_KING) {
 		# Does the king move into check?
@@ -1017,7 +1018,7 @@ sub doMove {
 		# Castling?
 		if ((($from - $to) & 0x3) == 0x2) {
 			# Are we checked?
-			return if cp_pos_in_check $self;
+			return if $in_check;
 
 			# Is the field that the king has to cross attacked?
 			return if _cp_pos_attacked $self, ($from + $to) >> 1;
@@ -1032,6 +1033,9 @@ sub doMove {
 		# Remove the castling rights.
 		$new_castling &= ~(0x3 << ($to_move << 1));
 	}
+
+	# Early exit for check.
+	return if $in_check && !(cp_pos_evasion_squares($self) & $to_mask);
 
 	# Remove castling rights if a rook moves from its original square or it
 	# gets captured.  We simplify that by simply checking whether either the
