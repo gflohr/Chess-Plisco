@@ -47,6 +47,8 @@ define cp_pos_to_move => '$p', '(($p->[CP_POS_INFO] & (1 << 4)) >> 4)';
 define cp_pos_ep_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
 define cp_pos_w_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 11)) >> 11)';
 define cp_pos_b_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 17)) >> 17)';
+define cp_pos_evasion => '$p', '(($p->[CP_POS_INFO] & (0x3 << 23)) >> 23)';
+define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
 
 define cp_pos_set_castling => '$p', '$c',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0xf) | $c)';
@@ -66,6 +68,8 @@ define cp_pos_set_w_king_shift => '$p', '$s',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 11)) | ($s << 11))';
 define cp_pos_set_b_king_shift => '$p', '$s',
 	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 17)) | ($s << 17))';
+define cp_pos_set_evasion => '$p', '$e',
+	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 23)) | ($e << 23))';
 
 define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
