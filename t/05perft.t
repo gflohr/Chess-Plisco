@@ -70,7 +70,7 @@ foreach my $test (@tests) {
 		no integer;
 		SKIP: {
 			my $elapsed = tv_interval($started);
-			if ($elapsed > 1) {
+			if (!$ENV{CP_STRESS_TEST} && $elapsed > 1) {
 				my $skipped = @perfts - $depth;
 				skip "set environment variable CP_STRESS_TEST to a truthy value to run all tests",
 					$skipped;
