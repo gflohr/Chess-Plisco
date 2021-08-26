@@ -895,7 +895,6 @@ sub pseudoLegalMoves {
 		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
 	}
 
-
 	# Pawn promotions including captures.
 	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
 	while ($pawn_mask) {
@@ -1050,10 +1049,10 @@ sub doMove {
 
 		# Remove the castling rights.
 		$new_castling &= ~(0x3 << ($to_move << 1));
+	} else {
+		# Early exit for check.
+		return if $in_check && !(cp_pos_evasion_squares($self) & $to_mask);
 	}
-
-	# Early exit for check.
-	return if $in_check && !(cp_pos_evasion_squares($self) & $to_mask);
 
 	# Remove castling rights if a rook moves from its original square or it
 	# gets captured.  We simplify that by simply checking whether either the
