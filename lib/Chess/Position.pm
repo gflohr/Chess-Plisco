@@ -942,19 +942,24 @@ sub update {
 			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
 			my $kso = cp_pos_to_move($self) ? 17 : 11;
 			my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
-			my ($attack_type, $attack_ray) = @{$common_lines[$king_shift]->[$attacker_shift]};
-			my $occupancy = $self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES];
-			my $empty = ~$occupancy;
-			if ($attack_type) {
+			my ($attack_type, $attack_ray) =
+				@{$common_lines[$king_shift]->[$attacker_shift]};
+			if ($attack_type == 1) {
 				# Rook attack.
+				my $occupancy = $self->[CP_POS_W_PIECES]
+						| $self->[CP_POS_B_PIECES];
 				cp_pos_evasion_squares($self) = $attack_ray
 					& cp_mm_rmagic($king_shift, $occupancy)
-					& ($empty | cp_pos_rooks($self));
-			} else {
+					& (~$occupancy | cp_pos_rooks($self));
+			} elsif ($attack_type == 0) {
 				# Bishop attack.
+				my $occupancy = $self->[CP_POS_W_PIECES]
+						| $self->[CP_POS_B_PIECES];
 				cp_pos_evasion_squares($self) = $attack_ray
 					& cp_mm_bmagic($king_shift, $occupancy)
-					& ($empty | cp_pos_bishops($self));
+					& (~$occupancy | cp_pos_bishops($self));
+			} else {
+				cp_pos_evasion_squares($self) = $checkers;
 			}
 		}
 	}
@@ -1651,6 +1656,9 @@ $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 # Common lines.
 for (my $i = 0; $i < 63; ++$i) {
 	$common_lines[$i] = [];
+	for (my $j = 0; $j < 63; ++$j) {
+		$common_lines[$i]->[$j] = [];
+	}
 }
 
 # Mask lookup for files and ranks for rooks.
