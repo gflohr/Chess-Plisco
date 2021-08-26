@@ -748,6 +748,20 @@ sub toFEN {
 	return $fen;
 }
 
+sub legalMoves {
+	my ($self) = @_;
+
+	my @legal;
+
+	foreach my $move ($self->pseudoLegalMoves) {
+		my $undo_info = $self->doMove($move) or next;
+		push @legal, $move;
+		$self->undoMove($move, $undo_info);
+	}
+
+	return @legal;
+}
+
 sub pseudoLegalMoves {
 	my ($self) = @_;
 

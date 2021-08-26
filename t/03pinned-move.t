@@ -93,6 +93,12 @@ my @tests = (
 		fen => '8/4k3/8/2q5/8/B7/8/6K1 b - - 0 1',
 		pinned => 0,
 	},
+	{
+		name => 'knight not pinned by own bishop',
+		move => 'd6e5',
+		fen => '1B3b1R/2q4b/2nn1Kp1/3p2p1/r7/k6r/p1p1p1p1/2RN1B1N b - - 0 1',
+		pinned => 0,
+	},
 );
 
 foreach my $test (@tests) {
