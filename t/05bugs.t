@@ -39,6 +39,7 @@ $move = Chess::Position::Move->new('b1c3', $pos)->toInteger;
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
+is "$pos", "$before";
 ok $pos->equals($before);
 
 # Queen moves were not undone correctly.
@@ -48,6 +49,7 @@ $move = Chess::Position::Move->new('d1e2', $pos)->toInteger;
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
+is "$pos", "$before";
 ok $pos->equals($before);
 
 # 2. ...Bxh3 is not undone correctly.
@@ -58,6 +60,7 @@ is(cp_move_attacker($move), CP_BISHOP);
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
+is "$pos", "$before";
 ok $pos->equals($before);
 
 done_testing;

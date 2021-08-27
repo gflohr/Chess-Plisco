@@ -99,6 +99,12 @@ my @tests = (
 		fen => '1B3b1R/2q4b/2nn1Kp1/3p2p1/r7/k6r/p1p1p1p1/2RN1B1N b - - 0 1',
 		pinned => 0,
 	},
+	{
+		name => 'black bishop pinned by queen',
+		move => 'e7f6',
+		fen => 'rnbq1k1r/pp1Pbppp/2pQ4/8/2B5/8/PPP1NnPP/RNB1K2R b KQ - 1 8',
+		pinned => 1,
+	}
 );
 
 foreach my $test (@tests) {
