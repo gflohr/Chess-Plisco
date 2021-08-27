@@ -106,6 +106,12 @@ my @tests = (
 		before => 'r1bqkbnr/pppppppp/2n5/1B6/8/4P3/PPPP1PPP/RNBQK1NR b KQkq - 2 2',
 		move => 'c6d4',
 		after => 'r1bqkbnr/pppppppp/8/1B6/3n4/4P3/PPPP1PPP/RNBQK1NR w KQkq - 3 3',
+	},
+	{
+		name => 'queen move bug',
+		before => 'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8',
+		move => 'd1d6',
+		after => 'rnbq1k1r/pp1Pbppp/2pQ4/8/2B5/8/PPP1NnPP/RNB1K2R b KQ - 2 8',
 	}
 );
 
@@ -113,7 +119,7 @@ foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
 	my $copy = $pos->copy;
-if ($test->{name} =~ /^perft 4 bug 1$/) {
+if ($test->{name} eq 'queen move bug') { 
 	$DB::single = 1;
 }
 	my $undoInfo = $pos->doMove($move);

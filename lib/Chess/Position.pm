@@ -456,6 +456,8 @@ sub new {
 	cp_pos_set_b_qs_castling($self, 1);
 	cp_pos_set_to_move($self, CP_WHITE);
 	cp_pos_set_ep_shift($self, 0);
+	cp_pos_in_check($self) = 0;
+	cp_pos_evasion_squares($self) = 0;
 
 	$self->update;
 
@@ -633,6 +635,9 @@ sub newFromFEN {
 	} else {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
 	}
+
+	cp_pos_in_check($self) = 0;
+	cp_pos_evasion_squares($self) = 0;
 
 	$self->update;
 
@@ -1023,6 +1028,7 @@ sub doMove {
 	# We define that early, so that it can be extended for castling and for
 	# en passant captures.
 	my $remove_mask = ~($from_mask | $to_mask);
+	# FIXME! This is not needed.
 	my $add_mask = $to_mask;
 
 	my $old_castling = my $new_castling = cp_pos_castling $self;
@@ -1083,13 +1089,14 @@ sub doMove {
 		$victim_mask = 1 << $to;
 	}
 
+	my $is_queen_move = $from_mask
+			& $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS];
 	my @undo_info = (
 		$self->[CP_POS_IN_CHECK],
 		$self->[CP_POS_HALF_MOVE_CLOCK],
 		$self->[CP_POS_INFO],
 		$self->[CP_POS_EVASION_SQUARES],
-		$victim, $victim_mask,
-		$from_mask & $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS]
+		$victim, $victim_mask, $is_queen_move,
 	);
 
 	if ($attacker == CP_PAWN) {
@@ -1136,7 +1143,15 @@ sub doMove {
 	cp_pos_set_castling $self, $new_castling;
 
 	if ($promote) {
-		$self->[CP_POS_PAWNS - 1 + $promote] |= $to_mask;
+		if ($promote == CP_QUEEN) {
+			$self->[CP_POS_BISHOPS] |= $to_mask;
+			$self->[CP_POS_ROOKS] |= $to_mask;
+		} else {
+			$self->[CP_POS_PAWNS - 1 + $promote] |= $to_mask;
+		}
+	} elsif ($is_queen_move) {
+		$self->[CP_POS_BISHOPS] |= $add_mask;
+		$self->[CP_POS_ROOKS] |= $add_mask;
 	} else {
 		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
 	}
@@ -1190,6 +1205,15 @@ sub undoMove {
 		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
 	}
 
+	if ($promote) {
+		if ($promote == CP_QUEEN) {
+			$self->[CP_POS_ROOKS] &= $remove_mask;
+			$self->[CP_POS_BISHOPS] &= $remove_mask;
+		} else {
+			$self->[CP_POS_PAWNS - 1 + $promote] &= $remove_mask;
+		}
+	}
+
 	if ($victim) {
 		$self->[CP_POS_W_PIECES + !$to_move] |= $victim_mask;
 		if ($victim != CP_QUEEN) {
@@ -1200,16 +1224,8 @@ sub undoMove {
 		}
 	}
 
-	if ($promote) {
-		if ($promote == CP_QUEEN) {
-			$self->[CP_POS_ROOKS] &= $remove_mask;
-			$self->[CP_POS_BISHOPS] &= $remove_mask;
-		} else {
-			$self->[CP_POS_PAWNS - 1 + $promote] &= $remove_mask;
-		}
-	}
-
 	cp_pos_in_check($self) = $in_check;
+	cp_pos_evasion_squares($self) = $evasion_squares;
 	cp_pos_half_move_clock($self) = $half_move_clock;
 	cp_pos_info($self) = $info;
 	--(cp_pos_half_moves($self));
@@ -1241,7 +1257,14 @@ sub perft {
 		if (DEBUG_PERFT) {
 			if (!$self->equals($before)) {
 				warn "Undo $movestr did not restore.\n";
-				die "FEN: $before\n";
+				if ("$self" ne "$before") {
+					warn "wanted: $before\n";
+					die  "   got: $self\n";
+				} else {
+					require Data::Dumper;
+					warn Data::Dumper::Dumper($before);
+					die Data::Dumper::Dumper($self);
+				}
 			}
 		}
 	}
@@ -1290,7 +1313,14 @@ sub perftWithOutput {
 		if (DEBUG_PERFT) {
 			if (!$self->equals($before)) {
 				warn "Undo $movestr did not restore.\n";
-				die "FEN: $before.\n";
+				if ("$self" ne "$before") {
+					warn "wanted: $before\n";
+					die  "   got: $self\n";
+				} else {
+					require Data::Dumper;
+					warn Data::Dumper::Dumper($before);
+					die Data::Dumper::Dumper($self);
+				}
 			}
 		}
 	}
@@ -1495,6 +1525,7 @@ sub equals {
 	return if @$self != @$other;
 
 	for (my $i = 0; $i < @$self; ++$i) {
+		next if $i == CP_POS_EVASION_SQUARES && !$self->[CP_POS_IN_CHECK];
 		return if $self->[$i] != $other->[$i];
 	}
 

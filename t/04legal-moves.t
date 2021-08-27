@@ -46,7 +46,17 @@ my @tests = (
 		name => 'allow king to evade check',
 		fen => 'r3k2r/p1ppqpb1/1n2pnp1/3PN3/1p2P3/2N2Q1p/PPPBbPPP/R4K1R w KQkq - 0 1',
 		moves => [qw(c3e2 f1e1 f1g1 f3e2 f1e2)],
-	}
+	},
+	{
+		name => 'perft bug chessprogramming.org position 5',
+		fen => 'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8',
+		premoves => [qw(d1d6)],
+		moves => [qw(
+			c6c5 a7a6 b7b6 f7f6 g7g6 h7h6 a7a5 b7b5 f7f5 g7g5 h7h5 f2d1 f2h1
+			f2d3 f2h3 f2e4 f2g4 b8a6 b8d7 f8g8 d8e8 e7d6 d8d7 c8d7 h8g8 d8a5
+			d8b6 d8c7
+		)],
+	},
 );
 
 foreach my $test (@tests) {
