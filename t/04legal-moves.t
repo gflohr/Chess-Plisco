@@ -57,6 +57,28 @@ my @tests = (
 			d8b6 d8c7
 		)],
 	},
+	{
+		name => 'discovered rook check through en passant',
+		fen => '8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 1',
+		# Capturing en passant f4g3 exposes the own king to check by a rook
+		# FIXME! Create a simplified version of the test and one that
+		# does the same for a bishop attack.
+		moves => [qw(
+			f4f3 d6d5 c7c6 c7c5 h5b5 h5c5 h5d5 h5e5 h5f5 h5g5 h5h6 h5h7 h5h8
+			h4g3 h4h3 h4g4 h4g5
+		)],
+	},
+	{
+		name => 'discovered rook check through en passant simplified',
+		fen => '8/8/8/K7/1R3p1k/8/6P1/8 w - - 0 1',
+		premoves => [qw(g2g4)],
+		moves => [qw(h4g5 h4g4 h4g3 h4h3 f4f3)],
+	},
+	{
+		name => 'discovered bishop check through en passant simplified',
+		fen => '8/8/7k/K7/4pP2/8/8/2B5 b - g3 0 1',
+		moves => [qw(h6h7 h6g7 h6g6 h6h5 e4e3)],
+	},
 );
 
 foreach my $test (@tests) {

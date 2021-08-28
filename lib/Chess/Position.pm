@@ -1028,8 +1028,6 @@ sub doMove {
 	# We define that early, so that it can be extended for castling and for
 	# en passant captures.
 	my $remove_mask = ~($from_mask | $to_mask);
-	# FIXME! This is not needed.
-	my $add_mask = $to_mask;
 
 	my $old_castling = my $new_castling = cp_pos_castling $self;
 	my $in_check = cp_pos_in_check $self;
@@ -1108,8 +1106,28 @@ sub doMove {
 		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
 			my $victim_mask = (1 << ($to - $pawn_single_offset));
 			$remove_mask ^= $victim_mask;
+
+			# Removing the pawn may discover a check.
+			my $occupancy = (cp_pos_w_pieces($self) | cp_pos_b_pieces($self))
+					& $remove_mask;
+			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
+				& cp_pos_bishops($self)) {
+				return;
+			} elsif (cp_mm_rmagic($king_shift, $occupancy) & $her_pieces
+				& cp_pos_rooks($self)) {
+				return;
+			}
+			
 			$undo_info[-3] = CP_PAWN;
 			$undo_info[-2] = $victim_mask;
+
+			# FIXME! Check that removing the captured pawn does not expose
+			# the king to check.  This should be possible by checking that
+			# they are on the same bmagic/rmagic attack ray.  This can be
+			# done by setting the squares they occupy to empty.
+			# FIXME! The above has to be done differently for bishop and rook
+			# attacks! For rook attacks, both pawns block the king.  For
+			# bishop attacks it it just the pawn that gets captured.
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if ($to - $from == $pawn_single_offset << 1) {
@@ -1134,7 +1152,7 @@ sub doMove {
 	$self->[CP_POS_ROOKS] &= $remove_mask;
 	$self->[CP_POS_KINGS] &= $remove_mask;
 
-	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
+	$self->[CP_POS_W_PIECES + $to_move] |= $to_mask;
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -1150,10 +1168,10 @@ sub doMove {
 			$self->[CP_POS_PAWNS - 1 + $promote] |= $to_mask;
 		}
 	} elsif ($is_queen_move) {
-		$self->[CP_POS_BISHOPS] |= $add_mask;
-		$self->[CP_POS_ROOKS] |= $add_mask;
+		$self->[CP_POS_BISHOPS] |= $to_mask;
+		$self->[CP_POS_ROOKS] |= $to_mask;
 	} else {
-		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
+		$self->[CP_POS_PAWNS - 1 + $attacker] |= $to_mask;
 	}
 
 	++$self->[CP_POS_HALF_MOVES];
