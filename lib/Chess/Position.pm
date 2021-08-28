@@ -805,13 +805,18 @@ sub pseudoLegalMoves {
 			$queen_side_rook_crossing_mask)
 			= @{$castling_aux_data[$to_move]};
 	if ($king_mask & $king_from_mask) {
+		# FIXME! Generate one single mask of squares that have to be empty!
+		my $king_side_dest_mask = 1 << $king_side_dest_shift;
+		my $queen_side_dest_mask = 1 << $queen_side_dest_shift;
 		if (($castling_rights & 0x1)
-		    && ($king_side_crossing_mask & $empty)) {
+		    && ($king_side_crossing_mask & $empty)
+		    && ($king_side_dest_mask & $empty)) {
 			push @moves, ($king_from << 6 | CP_KING << 15) | $king_side_dest_shift;
 		}
 		if (($castling_rights & 0x2)
 		    && (!(($queen_side_crossing_mask | $queen_side_rook_crossing_mask)
-		         & $occupancy))) {
+		         & $occupancy))
+		    && ($queen_side_dest_mask & $empty)) {
 			push @moves, ($king_from << 6 | CP_KING << 15) | $queen_side_dest_shift;
 		}
 	}
@@ -1021,8 +1026,10 @@ sub doMove {
 	#    king to check.
 	# 2. The king moves into check.
 	# 3. The king crosses an attacked square while castling.
+	# 4. A pawn captured en passant discovers a check.
 	#
 	# Checks number two and three are done below, and only for king moves.
+	# Check number 4 is done below for en passant moves.
 	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
 
 	# We define that early, so that it can be extended for castling and for

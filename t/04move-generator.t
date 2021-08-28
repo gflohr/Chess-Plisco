@@ -87,6 +87,34 @@ my @tests = (
 			d8b7 d8c6 d8e6 d8f7)],
 	},
 	{
+		name => 'white king target blocked for king-side castling',
+		fen => 'r3k1nr/p6p/p6p/8/8/P6P/P6P/R3K1NR w KQkq - 0 1',
+		moves => [qw(e1c1 e1d1 e1d2 e1e2 e1f2 e1f1
+			a3a4 h3h4 a1b1 a1c1 a1d1
+			g1e2 g1f3)],
+	},
+	{
+		name => 'black king target blocked for king-side castling',
+		fen => 'r3k1nr/p6p/p6p/8/8/P6P/P6P/R3K1NR b KQkq - 0 1',
+		moves => [qw(e8c8 e8d8 e8d7 e8e7 e8f7 e8f8
+			a6a5 h6h5 a8b8 a8c8 a8d8
+			g8e7 g8f6)],
+	},
+	{
+		name => 'white king target blocked for queen-side castling',
+		fen => 'r1b1k2r/p6p/p6p/8/8/P6P/P6P/R1B1K2R w KQkq - 0 1',
+		moves => [qw(e1d1 e1d2 e1e2 e1f2 e1f1 e1g1
+			a3a4 h3h4 a1b1 h1g1 h1f1
+			c1b2 c1d2 c1e3 c1f4 c1g5 c1h6)],
+	},
+	{
+		name => 'black king target blocked for queen-side castling',
+		fen => 'r1b1k2r/p6p/p6p/8/8/P6P/P6P/R1B1K2R b KQkq - 0 1',
+		moves => [qw(e8d8 e8d7 e8e7 e8f7 e8f8 e8g8
+			a6a5 h6h5 a8b8 h8g8 h8f8
+			c8b7 c8d7 c8e6 c8f5 c8g4 c8h3)],
+	},
+	{
 		name => 'white rook blocked for queen-side castling',
 		fen => 'rn2k2r/p6p/p6p/8/8/P6P/P6P/RN2K2R w KQkq - 0 1',
 		moves => [qw(e1g1 e1d1 e1d2 e1e2 e1f2 e1f1
