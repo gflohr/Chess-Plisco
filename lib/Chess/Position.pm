@@ -996,6 +996,12 @@ sub attacked {
 	return _cp_pos_attacked $self, $shift;
 }
 
+sub attackedMove {
+	my ($self, $from, $to) = @_;
+
+	return _cp_pos_attacked_move $self, $from, $to;
+}
+
 sub pinnedMove {
 	my ($self, $move) = @_;
 
@@ -1041,7 +1047,7 @@ sub doMove {
 
 	if ($attacker == CP_KING) {
 		# Does the king move into check?
-		return if _cp_pos_attacked $self, $to;
+		return if _cp_pos_attacked_move $self, $from, $to;
 
 		# Castling?
 		if ((($from - $to) & 0x3) == 0x2) {
