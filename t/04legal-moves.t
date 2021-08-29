@@ -79,6 +79,11 @@ my @tests = (
 		fen => '8/8/7k/K7/4pP2/8/8/2B5 b - g3 0 1',
 		moves => [qw(h6h7 h6g7 h6g6 h6h5 e4e3)],
 	},
+	{
+		name => 'queen check must be blocked',
+		fen => 'r3k2Q/p1ppqp2/bn2p1pb/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQq - 0 2',
+		moves => [qw(h6f8 e7f8)],
+	},
 );
 
 foreach my $test (@tests) {
