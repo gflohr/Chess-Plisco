@@ -24,6 +24,8 @@
 		# If the destination square is on the same line, the piece cannot be
 		# pinned.  That also covers the case that the piece that moves captures
 		# the piece that pins.
+		#
+		# FIXME! Do we really need rmagic/bmagic here?
 		if (!($to_mask & $ray_mask)) {
 			my $my_pieces = $p->[$to_move];
 			my $her_pieces = $p->[!$to_move];

@@ -112,16 +112,22 @@ my @tests = (
 		before => 'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8',
 		move => 'd1d6',
 		after => 'rnbq1k1r/pp1Pbppp/2pQ4/8/2B5/8/PPP1NnPP/RNB1K2R b KQ - 2 8',
-	}
+	},
+	{
+		name => 'capture queen giving check',
+		before => 'r4rk1/p1ppqpbQ/bn2pnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 1 2',
+		move => 'f6h7',
+		after => 'r4rk1/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R w KQ - 0 3',
+	},
 );
 
 foreach my $test (@tests) {
+if ($test->{name} eq 'capture queen giving check') {
+	$DB::single = 1;
+}
 	my $pos = Chess::Position->new($test->{before});
 	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
 	my $copy = $pos->copy;
-if ($test->{name} eq 'queen move bug') { 
-	$DB::single = 1;
-}
 	my $undoInfo = $pos->doMove($move);
 	ok $pos->consistent, "$test->{name}: position should be consistent after $test->{move}";
 	if ($test->{after}) {
