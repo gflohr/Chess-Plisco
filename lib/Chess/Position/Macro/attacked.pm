@@ -21,8 +21,8 @@
 	my $king_shift_offset = 11 + 6 * $my_color;
 	my $king_shift = ($p->[CP_POS_INFO] & (0x3f << $king_shift_offset)) >> $king_shift_offset;
 	$her_pieces
-		& (($pawn_masks[$my_color]->[2]->[$shift] & cp_pos_pawns($self))
-			| ($knight_attack_masks[$shift] & cp_pos_knights($self))
-			| (cp_mm_bmagic($shift, $occupancy) & cp_pos_bishops($self))
-			| (cp_mm_rmagic($shift, $occupancy) & cp_pos_rooks($self)));
+		& (($pawn_masks[$my_color]->[2]->[$shift] & cp_pos_pawns($p))
+			| ($knight_attack_masks[$shift] & cp_pos_knights($p))
+			| (cp_mm_bmagic($shift, $occupancy) & cp_pos_bishops($p))
+			| (cp_mm_rmagic($shift, $occupancy) & cp_pos_rooks($p)));
 });
