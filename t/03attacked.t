@@ -111,25 +111,12 @@ my @tests = (
 		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
 		attacked => 0,
 	},
-	{
-		name => 'black king on f8 attacked by white queen on h8',
-		square => 'f8',
-		fen => 'r3k2Q/p1ppqp2/bn2p1pb/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQq - 0 2',
-		attacked => 1,
-	},
-	{
-		name => 'black king on d8 attacked by white queen on h8',
-		square => 'd8',
-		fen => 'r3k2Q/p1ppqp2/bn2p1pb/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQq - 0 2',
-		attacked => 1,
-	},
 );
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	my $shift = $pos->squareToShift($test->{square});
 
-$DB::single = 1;
 	if ($test->{attacked}) {
 		ok $pos->attacked($shift), $test->{name};
 	} else {

@@ -965,7 +965,7 @@ sub update {
 			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
 			my $kso = cp_pos_to_move($self) ? 17 : 11;
 			my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
-			my ($attack_type, $attack_ray) =
+			my ($attack_type, undef, $attack_ray) =
 				@{$common_lines[$king_shift]->[$attacker_shift]};
 			if ($attack_type == 1) {
 				# Rook attack.
@@ -1752,7 +1752,17 @@ foreach my $m1 (
 
 	foreach my $i (@shifts) {
 		foreach my $j (@shifts) {
-			$common_lines[$i]->[$j] = [1, $m1];
+			my $mask = $m1;
+			# Clear all bits that are not between i and j.
+			for my $k (0 .. 63) {
+				my $d1 = $i - $k;
+				my $d2 = $j - $k;
+				if ($d1 * $d2 > 0) {
+					$mask &= ~(1 << $k);
+				}
+
+			}
+			$common_lines[$i]->[$j] = [1, $m1, $mask];
 		}
 	}
 }
@@ -1776,7 +1786,17 @@ foreach my $m1 (
 
 	foreach my $i (@shifts) {
 		foreach my $j (@shifts) {
-			$common_lines[$i]->[$j] = [0, $m1];
+			my $mask = $m1;
+			# Clear all bits that are not between i and j.
+			for my $k (0 .. 63) {
+				my $d1 = $i - $k;
+				my $d2 = $j - $k;
+				if ($d1 * $d2 > 0) {
+					$mask &= ~(1 << $k);
+				}
+
+			}
+			$common_lines[$i]->[$j] = [0, $m1, $mask];
 		}
 	}
 }
