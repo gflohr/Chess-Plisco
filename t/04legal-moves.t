@@ -84,6 +84,11 @@ my @tests = (
 		fen => 'r3k2Q/p1ppqp2/bn2p1pb/3PN3/1p2P3/2N4p/PPPBBPPP/R3K2R b KQq - 0 2',
 		moves => [qw(h6f8 e7f8)],
 	},
+	{
+		name => 'capture queen giving check',
+		fen => 'r4rk1/p1ppqpbQ/bn2pnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 1 2',
+		moves => [qw(g8h7 f6h7)],
+	},
 );
 
 foreach my $test (@tests) {
@@ -92,7 +97,6 @@ foreach my $test (@tests) {
 		my $move = Chess::Position::Move->new($movestr, $pos)->toInteger;
 		ok $pos->doMove($move), "$test->{name}: premove $movestr should be legal";
 	}
-
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->legalMoves;
 	my @expect = sort @{$test->{moves}};
 	is(scalar(@moves), scalar(@expect), "number of moves $test->{name}");

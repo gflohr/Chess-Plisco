@@ -51,7 +51,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_INFO
-	CP_POS_IN_CHECK
+	CP_POS_IN_CHECK CP_POS_EVASION_SQUARES
 );
 
 my @export_board = qw(
@@ -967,20 +967,8 @@ sub update {
 			my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
 			my ($attack_type, undef, $attack_ray) =
 				@{$common_lines[$king_shift]->[$attacker_shift]};
-			if ($attack_type == 1) {
-				# Rook attack.
-				my $occupancy = $self->[CP_POS_W_PIECES]
-						| $self->[CP_POS_B_PIECES];
-				cp_pos_evasion_squares($self) = $attack_ray
-					& cp_mm_rmagic($king_shift, $occupancy)
-					& (~$occupancy | cp_pos_rooks($self));
-			} elsif ($attack_type == 0) {
-				# Bishop attack.
-				my $occupancy = $self->[CP_POS_W_PIECES]
-						| $self->[CP_POS_B_PIECES];
-				cp_pos_evasion_squares($self) = $attack_ray
-					& cp_mm_bmagic($king_shift, $occupancy)
-					& (~$occupancy | cp_pos_bishops($self));
+			if ($attack_ray) {
+				cp_pos_evasion_squares($self) = $attack_ray;
 			} else {
 				cp_pos_evasion_squares($self) = $checkers;
 			}
