@@ -18,8 +18,6 @@
 	my $her_pieces = $p->[CP_POS_W_PIECES + $her_color];
 	my $occupancy = $my_pieces | $her_pieces;
 	my $empty = ~$occupancy;
-	my $king_shift_offset = 11 + 6 * $my_color;
-	my $king_shift = ($p->[CP_POS_INFO] & (0x3f << $king_shift_offset)) >> $king_shift_offset;
 	$her_pieces
 		& (($pawn_masks[$my_color]->[2]->[$shift] & cp_pos_pawns($p))
 			| ($knight_attack_masks[$shift] & cp_pos_knights($p))
