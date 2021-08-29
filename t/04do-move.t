@@ -119,10 +119,16 @@ my @tests = (
 		move => 'f6h7',
 		after => 'r4rk1/p1ppqpbn/bn2p1p1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R w KQ - 0 3',
 	},
+	{
+		name => 'capture pawn giving check en passant',
+		before => '8/8/3p4/1Pp4r/1K3p2/6k1/4P1P1/1R6 w - c6 0 3',
+		move => 'b5c6',
+		after => '8/8/2Pp4/7r/1K3p2/6k1/4P1P1/1R6 b - - 0 3',
+	},
 );
 
 foreach my $test (@tests) {
-if ($test->{name} eq 'capture queen giving check') {
+if ($test->{name} eq 'capture pawn giving check en passant') {
 	$DB::single = 1;
 }
 	my $pos = Chess::Position->new($test->{before});

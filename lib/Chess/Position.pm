@@ -1032,6 +1032,8 @@ sub doMove {
 
 	my $old_castling = my $new_castling = cp_pos_castling $self;
 	my $in_check = cp_pos_in_check $self;
+	my $ep_shift = cp_pos_ep_shift $self;
+	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
 
 	if ($attacker == CP_KING) {
 		# Does the king move into check?
@@ -1054,9 +1056,19 @@ sub doMove {
 
 		# Remove the castling rights.
 		$new_castling &= ~(0x3 << ($to_move << 1));
-	} else {
-		# Early exit for check.
-		return if $in_check && !(cp_pos_evasion_squares($self) & $to_mask);
+	} elsif ($in_check) {
+		# Early exits for check.  First handle the case that the attacker is
+		# a pawn that gets captured en passant.
+		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
+			# Exception: En passant capture if the capture pawn is the one
+			# that gives check.
+			# FIXME! The pawn to be removed can be looked up!
+			my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
+			if (!($attacker == CP_PAWN && $to == $ep_shift
+			      && ((1 << ($ep_shift - $pawn_single_offset)) & $in_check))) {
+				return;
+			}
+		}
 	}
 
 	# Remove castling rights if a rook moves from its original square or it
@@ -1064,8 +1076,6 @@ sub doMove {
 	# start or the destination square is a1, h1, a8, or h8.
 	$new_castling &= ~$castling_rook_masks[$from];
 	$new_castling &= ~$castling_rook_masks[$to];
-
-	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
 
 	my $victim = CP_NO_PIECE;
 	my $victim_mask = 0;
@@ -1104,6 +1114,10 @@ sub doMove {
 		# Check en passant.  A pawn capture can be detected by checking the
 		# difference between the from and to shift.  If it is odd, it is a
 		# capture.
+		#
+		# FIXME! This can be simplified.  It is an en passant capture, if the
+		# destination square is the ep square, and the attacker is a pawn
+		# because there are no other pawn moves with that destination square.
 		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
 			my $victim_mask = (1 << ($to - $pawn_single_offset));
 			$remove_mask ^= $victim_mask;
