@@ -48,7 +48,7 @@ my @tests = (
 	},
 	{
 		name => 'white captures en passant',
-		before => '7k/8/8/3Pp3/8/8/8/7K w - d6 0 1',
+		before => '7k/8/8/3Pp3/8/8/8/7K w - e6 0 1',
 		move => 'd5e6',
 		after => '7k/8/4P3/8/8/8/8/7K b - - 0 1',
 	},
@@ -128,7 +128,7 @@ my @tests = (
 );
 
 foreach my $test (@tests) {
-if ($test->{name} eq 'capture pawn giving check en passant') {
+if ($test->{name} eq 'white captures en passant') {
 	$DB::single = 1;
 }
 	my $pos = Chess::Position->new($test->{before});
