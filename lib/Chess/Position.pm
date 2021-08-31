@@ -1211,20 +1211,17 @@ sub undoMove {
 	if ($is_queen_move) {
 		$self->[CP_POS_BISHOPS] ^= $move_mask;
 		$self->[CP_POS_ROOKS] ^= $move_mask;
+	} elsif ($promote) {
+		my $remove_mask = 1 << $to;
+		$self->[CP_POS_PAWNS] |= 1 << $from;
+		if ($promote == CP_QUEEN) {
+			$self->[CP_POS_ROOKS] ^= $remove_mask;
+			$self->[CP_POS_BISHOPS] ^= $remove_mask;
+		} else {
+			$self->[CP_POS_B_PIECES + $promote] ^= $remove_mask;
+		}
 	} else {
 		$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
-	}
-
-	if ($promote) {
-		# FIXME! Do not negate and use xor instead.
-		my $remove_mask = ~(1 << $to);
-		$self->[CP_POS_PAWNS] &= $remove_mask;
-		if ($promote == CP_QUEEN) {
-			$self->[CP_POS_ROOKS] &= $remove_mask;
-			$self->[CP_POS_BISHOPS] &= $remove_mask;
-		} else {
-			$self->[CP_POS_B_PIECES + $promote] &= $remove_mask;
-		}
 	}
 
 	if ($victim) {
