@@ -758,9 +758,11 @@ sub toFEN {
 		}
 	}
 
-	$fen .= (cp_pos_to_move($self) == CP_WHITE) ? ' w ' : ' b ';
+	my $pos_info = cp_pos_info($self);
 
-	my $castling = cp_pos_castling($self);
+	$fen .= (cp_pos_info_to_move($pos_info) == CP_WHITE) ? ' w ' : ' b ';
+
+	my $castling = cp_pos_info_castling($pos_info);
 
 	if ($castling) {
 		my $castle = '';
