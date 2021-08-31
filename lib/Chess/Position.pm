@@ -452,13 +452,16 @@ sub new {
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
 	cp_pos_half_move_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
-	cp_pos_info($self) = 0;
-	cp_pos_set_w_ks_castling($self, 1);
-	cp_pos_set_w_qs_castling($self, 1);
-	cp_pos_set_b_ks_castling($self, 1);
-	cp_pos_set_b_qs_castling($self, 1);
-	cp_pos_set_to_move($self, CP_WHITE);
-	cp_pos_set_ep_shift($self, 0);
+
+	my $info = 0;
+	cp_pos_info_set_w_ks_castling($info, 1);
+	cp_pos_info_set_w_qs_castling($info, 1);
+	cp_pos_info_set_b_ks_castling($info, 1);
+	cp_pos_info_set_b_qs_castling($info, 1);
+	cp_pos_info_set_to_move($info, CP_WHITE);
+	cp_pos_info_set_ep_shift($info, 0);
+	cp_pos_info($self) = $info;
+
 	cp_pos_in_check($self) = 0;
 	cp_pos_evasion_squares($self) = 0;
 
@@ -577,11 +580,11 @@ sub newFromFEN {
 	$self->[CP_POS_KNIGHTS] = $knights;
 	$self->[CP_POS_PAWNS] = $pawns;
 
-	cp_pos_info($self) = 0;
+	my $pos_info = 0;
 	if ('w' eq lc $to_move) {
-		cp_pos_set_to_move($self, CP_WHITE);
+		cp_pos_info_set_to_move($pos_info, CP_WHITE);
 	} elsif ('b' eq lc $to_move) {
-		cp_pos_set_to_move($self, CP_BLACK);
+		cp_pos_info_set_to_move($pos_info, CP_BLACK);
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
@@ -607,48 +610,50 @@ sub newFromFEN {
 		if ($self->[CP_POS_W_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_1_MASK & CP_H_MASK) {
-			cp_pos_set_w_ks_castling($self, 1);
+			cp_pos_info_set_w_ks_castling($pos_info, 1);
 		}
 	}
 	if ($castling =~ /Q/) {
 		if ($self->[CP_POS_W_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_1_MASK & CP_A_MASK) {
-			cp_pos_set_w_qs_castling($self, 1);
+			cp_pos_info_set_w_qs_castling($pos_info, 1);
 		}
 	}
 	if ($castling =~ /k/) {
 		if ($self->[CP_POS_B_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_8_MASK & CP_H_MASK) {
-			cp_pos_set_b_ks_castling($self, 1);
+			cp_pos_info_set_b_ks_castling($pos_info, 1);
 		}
 	}
 	if ($castling =~ /q/) {
 		if ($self->[CP_POS_B_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_8_MASK & CP_A_MASK) {
-			cp_pos_set_b_qs_castling($self, 1);
+			cp_pos_info_set_b_qs_castling($pos_info, 1);
 		}
 	}
 
 	if ('-' eq $ep_square) {
-		cp_pos_set_ep_shift($self, 0);
-	} elsif (cp_pos_to_move($self) == CP_WHITE
+		cp_pos_info_set_ep_shift($pos_info, 0);
+	} elsif (cp_pos_info_to_move($pos_info) == CP_WHITE
 	         && $ep_square =~ /^[a-h]6$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_B_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			cp_pos_set_ep_shift($self, $self->squareToShift($ep_square));
+			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
-	} elsif (cp_pos_to_move($self) == CP_BLACK
+	} elsif (cp_pos_info_to_move($pos_info) == CP_BLACK
 	         && $ep_square =~ /^[a-h]3$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_W_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			cp_pos_set_ep_shift($self, $self->squareToShift($ep_square));
+			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	}
+
+	cp_pos_info($self) = $pos_info;
 
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
