@@ -38,41 +38,73 @@ define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
 define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
 define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 
-# FIXME! All this should have a variant that operates on an info variable
-# so that they can be used without dereferencing the array again.
 define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
-define cp_pos_castling => '$p', '$p->[CP_POS_INFO] & 0xf';
-define cp_pos_w_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 0)';
-define cp_pos_w_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 1)';
-define cp_pos_b_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 2)';
-define cp_pos_b_qs_castle => '$p', '$p->[CP_POS_INFO] & (1 << 3)';
-define cp_pos_to_move => '$p', '(($p->[CP_POS_INFO] & (1 << 4)) >> 4)';
-define cp_pos_ep_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 5)) >> 5)';
-define cp_pos_w_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 11)) >> 11)';
-define cp_pos_b_king_shift => '$p', '(($p->[CP_POS_INFO] & (0x3f << 17)) >> 17)';
-define cp_pos_evasion => '$p', '(($p->[CP_POS_INFO] & (0x3 << 23)) >> 23)';
-define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
+
+define cp_pos_info_castling => '$i', '$i & 0xf';
+define cp_pos_info_w_ks_castle => '$i', '$i & (1 << 0)';
+define cp_pos_info_w_qs_castle => '$i', '$i & (1 << 1)';
+define cp_pos_info_b_ks_castle => '$i', '$i & (1 << 2)';
+define cp_pos_info_b_qs_castle => '$i', '$i & (1 << 3)';
+define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
+define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
+define cp_pos_info_w_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
+define cp_pos_info_b_king_shift => '$i', '(($i & (0x3f << 17)) >> 17)';
+define cp_pos_info_evasion => '$i', '(($i & (0x3 << 23)) >> 23)';
+
+define cp_pos_info_set_castling => '$i', '$c',
+	'($i = ($i & ~0xf) | $c)';
+define cp_pos_info_set_w_ks_castling => '$i', '$c',
+	'($i = ($i & ~(1 << 0)) | ($c << 0))';
+define cp_pos_info_set_w_qs_castling => '$i', '$c',
+	'($i = ($i & ~(1 << 1)) | ($c << 1))';
+define cp_pos_info_set_b_ks_castling => '$i', '$c',
+	'($i = ($i & ~(1 << 2)) | ($c << 2))';
+define cp_pos_info_set_b_qs_castling => '$i', '$c',
+	'($i = ($i & ~(1 << 3)) | ($c << 3))';
+define cp_pos_info_set_to_move => '$i', '$c',
+	'($i = ($i & ~(1 << 4)) | ($c << 4))';
+define cp_pos_info_set_ep_shift => '$i', '$s',
+	'($i = ($i & ~(0x3f << 5)) | ($s << 5))';
+define cp_pos_info_set_w_king_shift => '$i', '$s',
+	'($i = ($i & ~(0x3f << 11)) | ($s << 11))';
+define cp_pos_info_set_b_king_shift => '$i', '$s',
+	'($i = ($i & ~(0x3f << 17)) | ($s << 17))';
+define cp_pos_info_set_evasion => '$i', '$e',
+	'($i = ($i & ~(0x3f << 23)) | ($e << 23))';
+
+define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
+define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
+define cp_pos_w_qs_castle => '$p', '(cp_pos_info_w_qs_castle(cp_pos_info($p)))';
+define cp_pos_b_ks_castle => '$p', '(cp_pos_info_b_ks_castle(cp_pos_info($p)))';
+define cp_pos_b_qs_castle => '$p', '(cp_pos_info_b_qs_castle(cp_pos_info($p)))';
+define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
+define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
+define cp_pos_w_king_shift => '$p', '(cp_pos_info_w_king_shift(cp_pos_info($p)))';
+define cp_pos_b_king_shift => '$p', '(cp_pos_info_b_king_shift(cp_pos_info($p)))';
+define cp_pos_evasion => '$p', '(cp_pos_infoevasion(cp_pos_info($p)))';
 
 define cp_pos_set_castling => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~0xf) | $c)';
+	'(cp_pos_info_set_castling(cp_pos_info($p), $c))';
 define cp_pos_set_w_ks_castling => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 0)) | ($c << 0))';
+	'(cp_pos_info_set_w_ks_castling(cp_pos_info($p), $c))';
 define cp_pos_set_w_qs_castling => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 1)) | ($c << 1))';
+	'(cp_pos_info_set_w_qs_castling(cp_pos_info($p), $c))';
 define cp_pos_set_b_ks_castling => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 2)) | ($c << 2))';
+	'(cp_pos_info_set_b_ks_castling(cp_pos_info($p), $c))';
 define cp_pos_set_b_qs_castling => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 3)) | ($c << 3))';
+	'(cp_pos_info_set_b_qs_castling(cp_pos_info($p), $c))';
 define cp_pos_set_to_move => '$p', '$c',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(1 << 4)) | ($c << 4))';
+	'(cp_pos_info_set_to_move(cp_pos_info($p), $c))';
 define cp_pos_set_ep_shift => '$p', '$s',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 5)) | ($s << 5))';
+	'(cp_pos_info_set_ep_shift(cp_pos_info($p), $s))';
 define cp_pos_set_w_king_shift => '$p', '$s',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 11)) | ($s << 11))';
+	'(cp_pos_info_set_w_king_shift(cp_pos_info($p), $s))';
 define cp_pos_set_b_king_shift => '$p', '$s',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 17)) | ($s << 17))';
+	'(cp_pos_info_set_b_king_shift(cp_pos_info($p), $s))';
 define cp_pos_set_evasion => '$p', '$e',
-	'($p->[CP_POS_INFO] = ($p->[CP_POS_INFO] & ~(0x3f << 23)) | ($e << 23))';
+	'(cp_pos_info_set_evasion(cp_pos_info($p), $e))';
+
+define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
 
 define cp_move_to => '$m', '(($m) & 0x3f)';
 define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
