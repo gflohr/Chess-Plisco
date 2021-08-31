@@ -635,25 +635,28 @@ sub newFromFEN {
 	if ('-' eq $ep_square) {
 		cp_pos_set_ep_shift($self, 0);
 	} elsif (cp_pos_to_move($self) == CP_WHITE
-	         && $ep_square !~ /^[a-h]6$/) {
-		die __"Illegal FEN: En passant square must be on 6th rank with white to move.\n";
+	         && $ep_square =~ /^[a-h]6$/) {
+		my $ep_shift = $self->squareToShift($ep_square);
+		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_B_PIECES]
+		    & $self->[CP_POS_PAWNS]) {
+			cp_pos_set_ep_shift($self, $self->squareToShift($ep_square));
+		}
 	} elsif (cp_pos_to_move($self) == CP_BLACK
-	         && $ep_square !~ /^[a-h]3$/) {
-		die __"Illegal FEN: En passant square must be on 3rd rank with black to move.\n";
-	} else {
-		cp_pos_set_ep_shift($self, $self->squareToShift($ep_square));
+	         && $ep_square =~ /^[a-h]3$/) {
+		my $ep_shift = $self->squareToShift($ep_square);
+		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_W_PIECES]
+		    & $self->[CP_POS_PAWNS]) {
+			cp_pos_set_ep_shift($self, $self->squareToShift($ep_square));
+		}
 	}
 
-	# FIXME! Check that there is a pawn of the right color on the 5th/4th
-	# rank of the EP square!
-
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
-		die __x("Illegal FEN: Illegal half-move clock '{hmc}'.\n", hmc => $hmc);
+		$hmc = 0;
 	}
 	$self->[CP_POS_HALF_MOVE_CLOCK] = $hmc;
 
 	if ($moveno !~ /^[1-9][0-9]*$/) {
-		die __x("Illegal FEN: Illegal move number '{num}'.\n", num => $moveno);
+		$moveno = 1;
 	}
 
 	if (cp_pos_to_move($self) == CP_WHITE) {
@@ -666,8 +669,6 @@ sub newFromFEN {
 	cp_pos_evasion_squares($self) = 0;
 
 	$self->update;
-
-	# FIXME! Check that side not to move is not in check.
 
 	return $self;
 }
