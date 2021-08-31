@@ -37,6 +37,9 @@ define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
 define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
 define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
+
+# FIXME! All this should have a variant that operates on an info variable
+# so that they can be used without dereferencing the array again.
 define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 define cp_pos_castling => '$p', '$p->[CP_POS_INFO] & 0xf';
 define cp_pos_w_ks_castle => '$p', '$p->[CP_POS_INFO] & (1 << 0)';
@@ -118,6 +121,7 @@ define_from_file _cp_pos_pinned_move =>
 define_from_file _cp_pos_attacked => '$p', '$shift', 'attacked.pm';
 define_from_file _cp_pos_attacked_move => '$p', '$from', '$to', 'attackedMove.pm';
 define_from_file _cp_pos_checkers => '$p', 'checkers.pm';
+define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
 
 sub import {
 	my ($type) = @_;
