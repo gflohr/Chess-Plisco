@@ -1051,10 +1051,9 @@ sub doMove {
 			return if _cp_pos_attacked $self, ($from + $to) >> 1;
 
 			# The move is legal.  Move the rook.
-			my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
-			$remove_mask ^= $rook_from_mask;
-			$self->[CP_POS_ROOKS] |= $rook_to_mask;
-			$self->[CP_POS_W_PIECES + $to_move] |= $rook_to_mask;
+			my $rook_move_mask = $castling_rook_move_masks[$to];
+			$self->[CP_POS_ROOKS] ^= $rook_move_mask;
+			$self->[CP_POS_W_PIECES + $to_move] ^= $rook_move_mask;
 		}
 
 		# Remove the castling rights.
@@ -1198,9 +1197,7 @@ sub undoMove {
 	# Castling?
 	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
 		# Restore the rook.
-		my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
-		# FIXME! We can probably just store the ORed mask instead.
-		my $rook_move_mask = $rook_from_mask | $rook_to_mask;
+		my $rook_move_mask = $castling_rook_move_masks[$to];
 
 		$self->[CP_POS_W_PIECES + $to_move] ^= $rook_move_mask;
 		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
@@ -1788,10 +1785,10 @@ foreach my $m1 (
 	}
 }
 
-$castling_rook_move_masks[1] = [(1 << 0), (1 << 2), ~0x3];
-$castling_rook_move_masks[5] = [(1 << 7), (1 << 4), ~0x3];
-$castling_rook_move_masks[57] = [(1 << 56), (1 << 58), ~0xc];
-$castling_rook_move_masks[61] = [(1 << 63), (1 << 60), ~0xc];
+$castling_rook_move_masks[1] = CP_1_MASK & (CP_H_MASK | CP_F_MASK);
+$castling_rook_move_masks[5] = CP_1_MASK & (CP_A_MASK | CP_D_MASK);
+$castling_rook_move_masks[57] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
+$castling_rook_move_masks[61] = CP_8_MASK & (CP_A_MASK | CP_D_MASK);
 
 @castling_rook_masks = (0) x 64;
 $castling_rook_masks[0] = 0x1;
