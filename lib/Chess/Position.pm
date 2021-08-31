@@ -264,6 +264,9 @@ my @pawn_aux_data = (
 	],
 );
 
+# Map ep squares to the mask of the pawn that gets removed.
+my @ep_pawn_masks;
+
 my @castling_aux_data = (
 	# White.
 	[
@@ -1062,10 +1065,8 @@ sub doMove {
 		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
 			# Exception: En passant capture if the capture pawn is the one
 			# that gives check.
-			# FIXME! The pawn to be removed can be looked up!
-			my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
 			if (!($attacker == CP_PAWN && $to == $ep_shift
-			      && ((1 << ($ep_shift - $pawn_single_offset)) & $in_check))) {
+			      && ($ep_pawn_masks[$ep_shift] & $in_check))) {
 				return;
 			}
 		}
@@ -1109,17 +1110,9 @@ sub doMove {
 	);
 
 	if ($attacker == CP_PAWN) {
-		my $pawn_single_offset = $pawn_aux_data[$to_move]->[3];
-
-		# Check en passant.  A pawn capture can be detected by checking the
-		# difference between the from and to shift.  If it is odd, it is a
-		# capture.
-		#
-		# FIXME! This can be simplified.  It is an en passant capture, if the
-		# destination square is the ep square, and the attacker is a pawn
-		# because there are no other pawn moves with that destination square.
-		if ((($from - $to) & 1) && !($to_mask & $her_pieces)) {
-			my $victim_mask = (1 << ($to - $pawn_single_offset));
+		# Check en passant.
+		if ($ep_shift && $to == $ep_shift) {
+			my $victim_mask = $ep_pawn_masks[$ep_shift];
 			$remove_mask ^= $victim_mask;
 
 			# Removing the pawn may discover a check.
@@ -1135,18 +1128,10 @@ sub doMove {
 			
 			$undo_info[-3] = CP_PAWN;
 			$undo_info[-2] = $victim_mask;
-
-			# FIXME! Check that removing the captured pawn does not expose
-			# the king to check.  This should be possible by checking that
-			# they are on the same bmagic/rmagic attack ray.  This can be
-			# done by setting the squares they occupy to empty.
-			# FIXME! The above has to be done differently for bishop and rook
-			# attacks! For rook attacks, both pawns block the king.  For
-			# bishop attacks it it just the pawn that gets captured.
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
-		if ($to - $from == $pawn_single_offset << 1) {
-			cp_pos_set_ep_shift($self, $from + $pawn_single_offset);
+		if (_cp_pawn_double_step $from, $to) {
+			cp_pos_set_ep_shift($self, $from + (($to - $from) >> 1));
 		} else {
 			cp_pos_set_ep_shift($self, 0);
 		}
@@ -1222,6 +1207,8 @@ sub undoMove {
 		$remove_mask ^= $rook_to_mask;
 	}
 
+	# FIXME! This can be done selectively!  The branch for the queen move is
+	# needed anyway.
 	$self->[CP_POS_W_PIECES] &= $remove_mask;
 	$self->[CP_POS_B_PIECES] &= $remove_mask;
 	$self->[CP_POS_PAWNS] &= $remove_mask;
@@ -1238,6 +1225,9 @@ sub undoMove {
 		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
 	}
 
+	# FIXME! Is this needed? The piece is already removed.  But on the other
+	# hand it should be possible to selectively remove the attacker only.  And
+	# Then this will be needed again.
 	if ($promote) {
 		if ($promote == CP_QUEEN) {
 			$self->[CP_POS_ROOKS] &= $remove_mask;
@@ -1729,6 +1719,14 @@ for my $shift (0 .. 63) {
 }
 $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 		\@black_pawn_capture_masks];
+
+# Map en passant squares to pawns.
+foreach my $shift (16 .. 23) {
+	$ep_pawn_masks[$shift] = 1 << ($shift + 8);
+}
+foreach my $shift (40 .. 47) {
+	$ep_pawn_masks[$shift] = 1 << ($shift - 8);
+}
 
 # Common lines.
 for (my $i = 0; $i < 63; ++$i) {
