@@ -1192,8 +1192,7 @@ sub undoMove {
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
 
-	my $remove_mask = ~(1 << $to);
-	my $add_mask = (1 << $from);
+	my $move_mask = (1 << $from) | (1 << $to);
 	my $to_move = !cp_pos_to_move $self;
 
 	# Castling?
@@ -1201,31 +1200,30 @@ sub undoMove {
 		# Restore the rook.
 		my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
 		# FIXME! We can probably just store the ORed mask instead.
-		my $mask = $rook_from_mask | $rook_to_mask;
+		my $rook_move_mask = $rook_from_mask | $rook_to_mask;
 
-		$self->[CP_POS_W_PIECES + $to_move] ^= $mask;
-		$self->[CP_POS_ROOKS] ^= $mask;
+		$self->[CP_POS_W_PIECES + $to_move] ^= $rook_move_mask;
+		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
 	}
 
-	$self->[CP_POS_W_PIECES + $to_move ] &= $remove_mask;
+	$self->[CP_POS_W_PIECES + $to_move ] ^= $move_mask;
 
-	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
 	if ($is_queen_move) {
-		$self->[CP_POS_BISHOPS] &= $remove_mask;
-		$self->[CP_POS_ROOKS] &= $remove_mask;
-		$self->[CP_POS_BISHOPS] |= $add_mask;
-		$self->[CP_POS_ROOKS] |= $add_mask;
+		$self->[CP_POS_BISHOPS] ^= $move_mask;
+		$self->[CP_POS_ROOKS] ^= $move_mask;
 	} else {
-		$self->[CP_POS_B_PIECES + $attacker] &= $remove_mask;
-		$self->[CP_POS_B_PIECES + $attacker] |= $add_mask;
+		$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
 	}
 
 	if ($promote) {
+		# FIXME! Do not negate and use xor instead.
+		my $remove_mask = ~(1 << $to);
+		$self->[CP_POS_PAWNS] &= $remove_mask;
 		if ($promote == CP_QUEEN) {
 			$self->[CP_POS_ROOKS] &= $remove_mask;
 			$self->[CP_POS_BISHOPS] &= $remove_mask;
 		} else {
-			$self->[CP_POS_PAWNS - 1 + $promote] &= $remove_mask;
+			$self->[CP_POS_B_PIECES + $promote] &= $remove_mask;
 		}
 	}
 
