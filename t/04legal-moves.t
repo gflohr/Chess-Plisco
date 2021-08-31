@@ -89,6 +89,16 @@ my @tests = (
 		fen => 'r4rk1/p1ppqpbQ/bn2pnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 1 2',
 		moves => [qw(g8h7 f6h7)],
 	},
+	{
+		name => 'kiwipete perft bug',
+		fen => 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1',
+		premoves => [qw(e1f1 h3g2 f1e1)],
+		moves => [qw(b4b3 g6g5 c7c6 d7d6 c7c5 g2h1q g2h1r g2h1b g2h1n g2g1q
+			g2g1r g2g1b g2g1n e6d5 b4c3 b6a4 b6c4 b6d5 b6c8 f6e4 f6g4 f6d5
+			f6h5 f6h7 f6g8 a6e2	a6d3 a6c4 a6b5 a6b7 a6c8 g7h6 g7f8 a8b8 a8c8
+			a8d8 h8h2 h8h3 h8h4 h8h5 h8h6 h8h7 h8f8 h8g8 e7c5 e7d6 e7d8 e7f8
+			e8d8 e8f8 e8g8 e8c8)],
+	}
 );
 
 foreach my $test (@tests) {
