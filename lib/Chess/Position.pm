@@ -594,20 +594,43 @@ sub newFromFEN {
 				state => $castling);
 	}
 
-	if ($castling =~ /K/) {
-		cp_pos_set_w_ks_castling($self, 1);
+	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_W_PIECES])
+	      == CP_1_MASK | CP_E_MASK)) {
+		$castling =~ s/KQ//;
 	}
-	if ($castling =~ /Q/) {
-		cp_pos_set_w_qs_castling($self, 1);
-	}
-	if ($castling =~ /k/) {
-		cp_pos_set_b_ks_castling($self, 1);
-	}
-	if ($castling =~ /q/) {
-		cp_pos_set_b_qs_castling($self, 1);
+	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_B_PIECES])
+	      == CP_8_MASK | CP_E_MASK)) {
+		$castling =~ s/kq//;
 	}
 
-	# FIXME! Correct castling state if king or rook has moved.
+	if ($castling =~ /K/) {
+		if ($self->[CP_POS_W_PIECES]
+		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
+		    & CP_1_MASK & CP_H_MASK) {
+			cp_pos_set_w_ks_castling($self, 1);
+		}
+	}
+	if ($castling =~ /Q/) {
+		if ($self->[CP_POS_W_PIECES]
+		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
+		    & CP_1_MASK & CP_A_MASK) {
+			cp_pos_set_w_qs_castling($self, 1);
+		}
+	}
+	if ($castling =~ /k/) {
+		if ($self->[CP_POS_B_PIECES]
+		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
+		    & CP_8_MASK & CP_H_MASK) {
+			cp_pos_set_b_ks_castling($self, 1);
+		}
+	}
+	if ($castling =~ /q/) {
+		if ($self->[CP_POS_B_PIECES]
+		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
+		    & CP_8_MASK & CP_A_MASK) {
+			cp_pos_set_b_qs_castling($self, 1);
+		}
+	}
 
 	if ('-' eq $ep_square) {
 		cp_pos_set_ep_shift($self, 0);
