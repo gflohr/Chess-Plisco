@@ -812,7 +812,6 @@ sub pseudoLegalMoves {
 
 	my $from = cp_bb_count_trailing_zbits $king_mask;
 
-	# FIXME! 6 should be a constant!
 	$base_move = ($from << 6 | CP_KING << 15);
 
 	$target_mask = ~$my_pieces & $king_attack_masks[$from];
@@ -826,25 +825,27 @@ sub pseudoLegalMoves {
 	# Generate castlings.
 	# Mask out the castling rights for the side to move.
 	my $castling_rights = ($info >> ($to_move << 1)) & 0x3;
-	my ($king_from, $king_from_mask, $king_side_crossing_mask,
+	if ($castling_rights) {
+		my ($king_from, $king_from_mask, $king_side_crossing_mask,
 			$king_side_dest_shift,
 			$queen_side_crossing_mask, $queen_side_dest_shift,
 			$queen_side_rook_crossing_mask)
 			= @{$castling_aux_data[$to_move]};
-	if ($king_mask & $king_from_mask) {
-		# FIXME! Generate one single mask of squares that have to be empty!
-		my $king_side_dest_mask = 1 << $king_side_dest_shift;
-		my $queen_side_dest_mask = 1 << $queen_side_dest_shift;
-		if (($castling_rights & 0x1)
-		    && ($king_side_crossing_mask & $empty)
-		    && ($king_side_dest_mask & $empty)) {
-			push @moves, ($king_from << 6 | CP_KING << 15) | $king_side_dest_shift;
-		}
-		if (($castling_rights & 0x2)
-		    && (!(($queen_side_crossing_mask | $queen_side_rook_crossing_mask)
-		         & $occupancy))
-		    && ($queen_side_dest_mask & $empty)) {
-			push @moves, ($king_from << 6 | CP_KING << 15) | $queen_side_dest_shift;
+		if ($king_mask & $king_from_mask) {
+			if (($castling_rights & 0x1)
+				&& !(((1 << $king_side_dest_shift) | $king_side_crossing_mask)
+					& $occupancy)) {
+				push @moves, ($king_from << 6 | CP_KING << 15)
+					| $king_side_dest_shift;
+			}
+			if (($castling_rights & 0x2)
+			    && (!(($queen_side_crossing_mask
+			           | $queen_side_rook_crossing_mask
+				       | (1 << $queen_side_dest_shift))
+				      & $occupancy))) {
+				push @moves, ($king_from << 6 | CP_KING << 15)
+					| $queen_side_dest_shift;
+			}
 		}
 	}
 
