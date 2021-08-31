@@ -1208,18 +1208,16 @@ sub undoMove {
 	}
 
 	$self->[CP_POS_W_PIECES + $to_move ] &= $remove_mask;
-	$self->[CP_POS_PAWNS] &= $remove_mask;
-	$self->[CP_POS_KNIGHTS] &= $remove_mask;
-	$self->[CP_POS_BISHOPS] &= $remove_mask;
-	$self->[CP_POS_ROOKS] &= $remove_mask;
-	$self->[CP_POS_KINGS] &= $remove_mask;
 
 	$self->[CP_POS_W_PIECES + $to_move] |= $add_mask;
 	if ($is_queen_move) {
+		$self->[CP_POS_BISHOPS] &= $remove_mask;
+		$self->[CP_POS_ROOKS] &= $remove_mask;
 		$self->[CP_POS_BISHOPS] |= $add_mask;
 		$self->[CP_POS_ROOKS] |= $add_mask;
 	} else {
-		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
+		$self->[CP_POS_B_PIECES + $attacker] &= $remove_mask;
+		$self->[CP_POS_B_PIECES + $attacker] |= $add_mask;
 	}
 
 	if ($promote) {
