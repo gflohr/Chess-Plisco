@@ -1200,11 +1200,11 @@ sub undoMove {
 	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
 		# Restore the rook.
 		my ($rook_from_mask, $rook_to_mask) = @{$castling_rook_move_masks[$to]};
+		# FIXME! We can probably just store the ORed mask instead.
+		my $mask = $rook_from_mask | $rook_to_mask;
 
-		$self->[CP_POS_W_PIECES + $to_move] |= $rook_from_mask;
-		$self->[CP_POS_ROOKS] |= $rook_from_mask;
-
-		$remove_mask ^= $rook_to_mask;
+		$self->[CP_POS_W_PIECES + $to_move] ^= $mask;
+		$self->[CP_POS_ROOKS] ^= $mask;
 	}
 
 	$self->[CP_POS_W_PIECES + $to_move ] &= $remove_mask;
