@@ -1207,10 +1207,7 @@ sub undoMove {
 		$remove_mask ^= $rook_to_mask;
 	}
 
-	# FIXME! This can be done selectively!  The branch for the queen move is
-	# needed anyway.
-	$self->[CP_POS_W_PIECES] &= $remove_mask;
-	$self->[CP_POS_B_PIECES] &= $remove_mask;
+	$self->[CP_POS_W_PIECES + $to_move ] &= $remove_mask;
 	$self->[CP_POS_PAWNS] &= $remove_mask;
 	$self->[CP_POS_KNIGHTS] &= $remove_mask;
 	$self->[CP_POS_BISHOPS] &= $remove_mask;
@@ -1225,9 +1222,6 @@ sub undoMove {
 		$self->[CP_POS_PAWNS - 1 + $attacker] |= $add_mask;
 	}
 
-	# FIXME! Is this needed? The piece is already removed.  But on the other
-	# hand it should be possible to selectively remove the attacker only.  And
-	# Then this will be needed again.
 	if ($promote) {
 		if ($promote == CP_QUEEN) {
 			$self->[CP_POS_ROOKS] &= $remove_mask;
