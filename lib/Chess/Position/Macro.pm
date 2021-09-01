@@ -152,7 +152,6 @@ define_from_file _cp_pos_pinned_move =>
 	'$p', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
 define_from_file _cp_pos_attacked => '$p', '$shift', 'attacked.pm';
 define_from_file _cp_pos_attacked_move => '$p', '$from', '$to', 'attackedMove.pm';
-define_from_file _cp_pos_checkers => '$p', 'checkers.pm';
 define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
 
 sub import {

@@ -966,7 +966,10 @@ sub update {
 	my $b_king_shift = cp_bb_count_trailing_zbits($b_kings);
 	cp_pos_set_b_king_shift($self, $b_king_shift);
 
-	my $checkers = cp_pos_in_check($self) = _cp_pos_checkers $self;
+	my $pos_info = cp_pos_info($self);
+	my $to_move = cp_pos_info_to_move($pos_info);
+	my $king_shift = $to_move ? $b_king_shift : $w_king_shift;
+	my $checkers = cp_pos_in_check($self) = _cp_pos_attacked $self, $king_shift;
 
 	if ($checkers) {
 		# Check evasion strategy.  If in-check, the options are:
