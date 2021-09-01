@@ -959,14 +959,14 @@ sub update {
 	my ($self) = @_;
 
 	# Update king's shift.
+	my $pos_info = cp_pos_info($self);
 	my $w_kings = cp_pos_kings($self) & cp_pos_w_pieces($self);
 	my $w_king_shift = cp_bb_count_trailing_zbits($w_kings);
-	cp_pos_set_w_king_shift($self, $w_king_shift);
+	cp_pos_info_set_w_king_shift($pos_info, $w_king_shift);
 	my $b_kings = cp_pos_kings($self) & cp_pos_b_pieces($self);
 	my $b_king_shift = cp_bb_count_trailing_zbits($b_kings);
-	cp_pos_set_b_king_shift($self, $b_king_shift);
+	cp_pos_info_set_b_king_shift($pos_info, $b_king_shift);
 
-	my $pos_info = cp_pos_info($self);
 	my $to_move = cp_pos_info_to_move($pos_info);
 	my $king_shift = $to_move ? $b_king_shift : $w_king_shift;
 	my $checkers = cp_pos_in_check($self) = _cp_pos_color_attacked $self, $to_move, $king_shift;
@@ -993,16 +993,16 @@ sub update {
 		# The difference is just the popcount of the evasion bitboard.
 
 		if ($checkers & ($checkers - 1)) {
-			cp_pos_set_evasion($self, CP_EVASION_KING_MOVE);
+			cp_pos_info_set_evasion($pos_info, CP_EVASION_KING_MOVE);
 		} elsif ($checkers & (cp_pos_knights($self) | (cp_pos_pawns($self)))) {
-			cp_pos_set_evasion($self, CP_EVASION_CAPTURE);
+			cp_pos_info_set_evasion($pos_info, CP_EVASION_CAPTURE);
 			cp_pos_evasion_squares($self) = $checkers;
 		} else {
 			# No need to set the evasion strategy because CP_EVASION_ALL is the
 			# default.
 			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
-			my $kso = cp_pos_to_move($self) ? 17 : 11;
-			my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
+			my $kso = $to_move ? 17 : 11;
+			my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
 			my ($attack_type, undef, $attack_ray) =
 				@{$common_lines[$king_shift]->[$attacker_shift]};
 			if ($attack_ray) {
@@ -1012,6 +1012,8 @@ sub update {
 			}
 		}
 	}
+
+	cp_pos_info($self) = $pos_info;
 
 	return $self;
 }
