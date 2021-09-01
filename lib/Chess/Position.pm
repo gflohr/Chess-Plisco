@@ -1044,7 +1044,7 @@ sub pinnedMove {
 sub doMove {
 	my ($self, $move) = @_;
 
-	my $pos_info = cp_pos_info $self;
+	my $pos_info = my $old_pos_info = cp_pos_info $self;
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
@@ -1115,6 +1115,7 @@ sub doMove {
 	$new_castling &= ~$castling_rook_masks[$from];
 	$new_castling &= ~$castling_rook_masks[$to];
 
+	my $hmc = $self->[CP_POS_HALF_MOVE_CLOCK];
 	my $victim = CP_NO_PIECE;
 	my $victim_mask = 0;
 	if ($to_mask & $her_pieces) {
@@ -1136,20 +1137,10 @@ sub doMove {
 		$victim_mask = 1 << $to;
 	}
 
-	my $is_queen_move = $from_mask
-			& $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS];
-	my @undo_info = (
-		$self->[CP_POS_IN_CHECK],
-		$self->[CP_POS_HALF_MOVE_CLOCK],
-		$self->[CP_POS_INFO],
-		$self->[CP_POS_EVASION_SQUARES],
-		$victim, $victim_mask, $is_queen_move,
-	);
-
 	if ($attacker == CP_PAWN) {
 		# Check en passant.
 		if ($ep_shift && $to == $ep_shift) {
-			my $victim_mask = $ep_pawn_masks[$ep_shift];
+			$victim_mask = $ep_pawn_masks[$ep_shift];
 			$remove_mask ^= $victim_mask;
 
 			# Removing the pawn may discover a check.
@@ -1163,8 +1154,7 @@ sub doMove {
 				return;
 			}
 			
-			$undo_info[-3] = CP_PAWN;
-			$undo_info[-2] = $victim_mask;
+			$victim = CP_PAWN;
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
@@ -1179,6 +1169,9 @@ sub doMove {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
 		cp_pos_info_set_ep_shift($pos_info, 0);
 	}
+
+	my $is_queen_move = $from_mask
+		& $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS];
 
 	# Move all pieces involved.
 	$self->[CP_POS_W_PIECES] &= $remove_mask;
@@ -1210,6 +1203,13 @@ sub doMove {
 	} else {
 		$self->[CP_POS_PAWNS - 1 + $attacker] |= $to_mask;
 	}
+
+	my @undo_info = (
+		$self->[CP_POS_IN_CHECK],
+		$hmc, $old_pos_info,
+		$self->[CP_POS_EVASION_SQUARES],
+		$victim, $victim_mask, $is_queen_move,
+	);
 
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_info_set_to_move($pos_info, !$to_move);
