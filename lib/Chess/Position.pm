@@ -1052,6 +1052,7 @@ sub doMove {
 	my $to_move = cp_pos_info_to_move($pos_info);
 	my $from_mask = 1 << $from;
 	my $to_mask = 1 << $to;
+	my $move_mask = (1 << $from) | $to_mask;
 	my $kso = 11 + 6 * $to_move;
 	my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
 
@@ -1066,10 +1067,6 @@ sub doMove {
 	# Checks number two and three are done below, and only for king moves.
 	# Check number 4 is done below for en passant moves.
 	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
-
-	# We define that early, so that it can be extended for castling and for
-	# en passant captures.
-	my $remove_mask = ~($from_mask | $to_mask);
 
 	my $old_castling = my $new_castling = cp_pos_castling $self;
 	my $in_check = cp_pos_in_check $self;
@@ -1141,11 +1138,10 @@ sub doMove {
 		# Check en passant.
 		if ($ep_shift && $to == $ep_shift) {
 			$victim_mask = $ep_pawn_masks[$ep_shift];
-			$remove_mask ^= $victim_mask;
 
-			# Removing the pawn may discover a check.
+			# Removing the pawn may discover a check.  FIXME! Simplify?
 			my $occupancy = (cp_pos_w_pieces($self) | cp_pos_b_pieces($self))
-					& $remove_mask;
+					& ((~$move_mask) ^ $victim_mask);
 			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
 				& cp_pos_bishops($self)) {
 				return;
@@ -1174,15 +1170,23 @@ sub doMove {
 		& $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS];
 
 	# Move all pieces involved.
-	$self->[CP_POS_W_PIECES] &= $remove_mask;
-	$self->[CP_POS_B_PIECES] &= $remove_mask;
-	$self->[CP_POS_PAWNS] &= $remove_mask;
-	$self->[CP_POS_KNIGHTS] &= $remove_mask;
-	$self->[CP_POS_BISHOPS] &= $remove_mask;
-	$self->[CP_POS_ROOKS] &= $remove_mask;
-	$self->[CP_POS_KINGS] &= $remove_mask;
+	if ($victim != CP_NO_PIECE) {
+		$self->[CP_POS_W_PIECES + !$to_move] ^= $victim_mask;
+		if ($victim == CP_QUEEN) {
+			$self->[CP_POS_ROOKS] ^= $victim_mask;
+			$self->[CP_POS_BISHOPS] ^= $victim_mask;
+		} else {
+			$self->[CP_POS_B_PIECES + $victim] ^= $victim_mask;
+		}
+	}
 
-	$self->[CP_POS_W_PIECES + $to_move] |= $to_mask;
+	$self->[CP_POS_W_PIECES + $to_move] ^= $move_mask;
+	if ($is_queen_move) {
+		$self->[CP_POS_ROOKS] ^= $move_mask;
+		$self->[CP_POS_BISHOPS] ^= $move_mask;
+	} else {
+		$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
+	}
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -1191,17 +1195,14 @@ sub doMove {
 	cp_pos_info_set_castling $pos_info, $new_castling;
 
 	if ($promote) {
+		$self->[CP_POS_PAWNS] ^= $to_mask;
+
 		if ($promote == CP_QUEEN) {
-			$self->[CP_POS_BISHOPS] |= $to_mask;
-			$self->[CP_POS_ROOKS] |= $to_mask;
+			$self->[CP_POS_BISHOPS] ^= $to_mask;
+			$self->[CP_POS_ROOKS] ^= $to_mask;
 		} else {
-			$self->[CP_POS_PAWNS - 1 + $promote] |= $to_mask;
+			$self->[CP_POS_PAWNS - 1 + $promote] ^= $to_mask;
 		}
-	} elsif ($is_queen_move) {
-		$self->[CP_POS_BISHOPS] |= $to_mask;
-		$self->[CP_POS_ROOKS] |= $to_mask;
-	} else {
-		$self->[CP_POS_PAWNS - 1 + $attacker] |= $to_mask;
 	}
 
 	my @undo_info = (
