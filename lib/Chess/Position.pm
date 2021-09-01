@@ -969,7 +969,7 @@ sub update {
 	my $pos_info = cp_pos_info($self);
 	my $to_move = cp_pos_info_to_move($pos_info);
 	my $king_shift = $to_move ? $b_king_shift : $w_king_shift;
-	my $checkers = cp_pos_in_check($self) = _cp_pos_attacked $self, $king_shift;
+	my $checkers = cp_pos_in_check($self) = _cp_pos_color_attacked $self, $to_move, $king_shift;
 
 	if ($checkers) {
 		# Check evasion strategy.  If in-check, the options are:
@@ -1019,7 +1019,7 @@ sub update {
 sub attacked {
 	my ($self, $shift) = @_;
 
-	return _cp_pos_attacked $self, $shift;
+	return _cp_pos_color_attacked $self, cp_pos_to_move($self), $shift;
 }
 
 sub attackedMove {
@@ -1083,7 +1083,7 @@ sub doMove {
 			return if $in_check;
 
 			# Is the field that the king has to cross attacked?
-			return if _cp_pos_attacked $self, ($from + $to) >> 1;
+			return if _cp_pos_color_attacked $self, $to_move, ($from + $to) >> 1;
 
 			# The move is legal.  Move the rook.
 			my $rook_move_mask = $castling_rook_move_masks[$to];
