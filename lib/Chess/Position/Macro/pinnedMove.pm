@@ -25,12 +25,12 @@
 		# pinned.  That also covers the case that the piece that moves captures
 		# the piece that pins.
 		#
-		# FIXME! Do we really need rmagic/bmagic here?
+		# FIXME! Do we really need rmagic/bmagic here? Our common_lines
+		# table should be sufficient here.
 		if (!($to_mask & $ray_mask)) {
 			my $my_pieces = $p->[$to_move];
 			my $her_pieces = $p->[!$to_move];
 			my $occupancy = $my_pieces | $her_pieces;
-			my $empty = ~$occupancy;
 			my $my_king_mask = 1 << $ks;
 
 			if ($is_rook) {
