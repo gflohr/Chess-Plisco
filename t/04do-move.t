@@ -130,7 +130,12 @@ my @tests = (
 		before => 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/R4K1R b kq - 0 2',
 		move => 'g2h1q',
 		after => 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBP1P/R4K1q w kq - 0 3',
-	}
+	},
+	{
+		name => 'black king approaches white king',
+		before => '8/7p/p5pb/8/P1pk4/8/P2n1KPP/1r3R2 b - - 1 30',
+		move => 'd4e3',
+	},
 );
 
 foreach my $test (@tests) {

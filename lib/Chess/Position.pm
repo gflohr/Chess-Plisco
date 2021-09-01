@@ -1066,9 +1066,11 @@ sub doMove {
 	#
 	# Checks number two and three are done below, and only for king moves.
 	# Check number 4 is done below for en passant moves.
+	# FIXME! This can be done in an elsif below because it is neither required
+	# for king moves nor when we are in check.
 	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
 
-	my $old_castling = my $new_castling = cp_pos_castling $self;
+	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
 	my $ep_shift = cp_pos_info_ep_shift $pos_info;
 	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
