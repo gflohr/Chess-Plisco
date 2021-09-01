@@ -111,6 +111,12 @@ my @tests = (
 		fen => '7k/2n5/2p1R3/8/8/2P2Bq1/2K5/8 w - - 0 1',
 		attacked => 0,
 	},
+	{
+		name => 'attacked by white king',
+		square => 'e3',
+		fen => '8/7p/p5pb/8/P1pk4/8/P2n1KPP/1r3R2 b - - 1 30',
+		attacked => 1,
+	},
 );
 
 foreach my $test (@tests) {
