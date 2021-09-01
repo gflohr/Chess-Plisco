@@ -1044,15 +1044,16 @@ sub pinnedMove {
 sub doMove {
 	my ($self, $move) = @_;
 
+	my $pos_info = cp_pos_info $self;
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
 
-	my $to_move = cp_pos_to_move($self);
+	my $to_move = cp_pos_info_to_move($pos_info);
 	my $from_mask = 1 << $from;
 	my $to_mask = 1 << $to;
 	my $kso = 11 + 6 * $to_move;
-	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
+	my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
 
 	# A move can be illegal for these reasons:
 	#
@@ -1072,7 +1073,7 @@ sub doMove {
 
 	my $old_castling = my $new_castling = cp_pos_castling $self;
 	my $in_check = cp_pos_in_check $self;
-	my $ep_shift = cp_pos_ep_shift $self;
+	my $ep_shift = cp_pos_info_ep_shift $pos_info;
 	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
 
 	if ($attacker == CP_KING) {
@@ -1167,16 +1168,16 @@ sub doMove {
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			cp_pos_set_ep_shift($self, $from + (($to - $from) >> 1));
+			cp_pos_info_set_ep_shift($pos_info, $from + (($to - $from) >> 1));
 		} else {
-			cp_pos_set_ep_shift($self, 0);
+			cp_pos_info_set_ep_shift($pos_info, 0);
 		}
 	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
-		cp_pos_set_ep_shift($self, 0);
+		cp_pos_info_set_ep_shift($pos_info, 0);
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
-		cp_pos_set_ep_shift($self, 0);
+		cp_pos_info_set_ep_shift($pos_info, 0);
 	}
 
 	# Move all pieces involved.
@@ -1194,7 +1195,7 @@ sub doMove {
 	# it safes branches.  There is one edge case, where a pawn captures a
 	# rook that is on its initial position.  In that case, the castling
 	# rights may have to be updated.
-	cp_pos_set_castling $self, $new_castling;
+	cp_pos_info_set_castling $pos_info, $new_castling;
 
 	if ($promote) {
 		if ($promote == CP_QUEEN) {
@@ -1211,7 +1212,9 @@ sub doMove {
 	}
 
 	++$self->[CP_POS_HALF_MOVES];
-	cp_pos_set_to_move($self, !$to_move);
+	cp_pos_info_set_to_move($pos_info, !$to_move);
+
+	cp_pos_info($self) = $pos_info;
 
 	$self->update;
 
