@@ -19,6 +19,7 @@
 	$her_pieces
 		& (($pawn_masks[$c]->[2]->[$shift] & cp_pos_pawns($p))
 			| ($knight_attack_masks[$shift] & cp_pos_knights($p))
+			| ($king_attack_masks[$shift] & cp_pos_kings($p))
 			| (cp_mm_bmagic($shift, $occupancy) & cp_pos_bishops($p))
 			| (cp_mm_rmagic($shift, $occupancy) & cp_pos_rooks($p)));
 });
