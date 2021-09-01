@@ -17,7 +17,6 @@
 	my $my_pieces = $p->[CP_POS_W_PIECES + $my_color];
 	my $her_pieces = $p->[CP_POS_W_PIECES + $her_color];
 	my $occupancy = ($my_pieces | $her_pieces) & ~(1 << $from);
-	my $empty = ~$occupancy;
 	$her_pieces
 		& (($pawn_masks[$my_color]->[2]->[$to] & cp_pos_pawns($p))
 			| ($knight_attack_masks[$to] & cp_pos_knights($p))
