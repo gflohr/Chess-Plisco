@@ -1586,6 +1586,12 @@ sub coordinatesToShift {
 	return $rank * 8 + 7 - $file;
 }
 
+sub coordinatesToSquare {
+	my (undef, $file, $rank) = @_;
+
+	return chr(97 + $file) . (1 + $rank);
+}
+
 sub shiftToCoordinates {
 	my (undef, $shift) = @_;
 
@@ -1593,6 +1599,12 @@ sub shiftToCoordinates {
 	my $rank = $shift >> 3;
 
 	return $file, $rank;
+}
+
+sub squareToCoordinates {
+	my (undef, $square) = @_;
+
+	return ord($square) - 97, -1 + substr $square, 1;
 }
 
 sub shiftToSquare {
