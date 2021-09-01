@@ -46,8 +46,8 @@ all operations on the board imply expensive lookups and dereferencings.
 
 A more efficient representation takes advantage of the fact that a chess
 board has exactly 64 squares. Nowadays, most computers use integers of
-size 64. And so you can represent a chess board, more exactly one single
-aspect of a chess board, as 64-bit integer, each bit representing
+size 64. Therefore you can represent a chess board, more exactly one single
+aspect of a chess board, as a 64-bit integer, each bit representing
 exactly one square of the board.
 
 But with just one bit of information per square, you cannot represent a
@@ -64,15 +64,18 @@ first few are:
 
 =item * C<b_pieces> - one bitboard for the black pieces
 
-=item * C<kings> - one bitboard for the kings (of both colors)
-
-=item * C<rooks> - one bitboard for the rooks (of both colors)
-
-=item * C<bishops> - one bitboard for the bishops (of both colors)
+=item * C<pawns> - one bitboard for the pawns (of both colors)
 
 =item * C<knights> - one bitboard for the knights (of both colors)
 
-=item * C<pawns> - one bitboard for the pawns (of both colors)
+=item * C<bishops> - one bitboard for the bishops (of both colors)
+
+=item * C<rooks> - one bitboard for the rooks (of both colors)
+
+=item * C<checkers> - one bitboard for all pieces giving check (of the color
+not to move)
+
+=item * C<kings> - one bitboard for the kings (of both colors)
 
 =back
 
@@ -87,7 +90,7 @@ In other words: For each black knight, there must be one bit set in the
 bitboard of black pieces AND in the knight bitboard.
 
 Example: How to get a bitboard of white's regular (bishops, knights,
-rooks, and queens):
+rooks, and queens) pieces:
 
     $w_pieces & ($knights | $bishops | $rooks)
 
@@ -123,7 +126,7 @@ This can be done faster
 
 =back
 
-To find out, whether the move is performaced by a queen or a bishop, or
+To find out, whether the move is performed by a queen or a bishop or
 rook, you just have to look at the starting square of the move. If it is
 occupied by a queen, it is a queen move, otherwise a bishop or rook
 move.
@@ -144,11 +147,9 @@ or a rook.
 =head4 Forsyth-Edwards Notation FEN
 
 The Forsyth-Edwards Notation of a chess position is mostly used for data
-exchange between chess software. See for example the LL<https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation>
+exchange between chess software. See for example
+L<https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation>
 for details.
-
-The constructor C<newFromFEN()> of C<Chess::Position> can be used to
-initialize a chess position from a FEN string.
 
 =head4 Extended Position Description EPD
 
