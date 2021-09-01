@@ -804,7 +804,8 @@ sub legalMoves {
 sub pseudoLegalMoves {
 	my ($self) = @_;
 
-	my $to_move = cp_pos_to_move $self;
+	my $pos_info = cp_pos_info $self;
+	my $to_move = cp_pos_info_to_move $pos_info;
 	my $my_pieces = $self->[$to_move];
 	my $her_pieces = $self->[!$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
@@ -825,13 +826,12 @@ sub pseudoLegalMoves {
 
 	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-	my $info = cp_pos_info $self;
 	my $in_check = cp_pos_in_check $self;
-	last if $in_check && (($info & 0x3) >> 23) == CP_EVASION_KING_MOVE;
+	last if $in_check && (($pos_info & 0x3) >> 23) == CP_EVASION_KING_MOVE;
 
 	# Generate castlings.
 	# Mask out the castling rights for the side to move.
-	my $castling_rights = ($info >> ($to_move << 1)) & 0x3;
+	my $castling_rights = ($pos_info >> ($to_move << 1)) & 0x3;
 	if ($castling_rights) {
 		my ($king_from, $king_from_mask, $king_side_crossing_mask,
 			$king_side_dest_shift,
@@ -909,7 +909,7 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_ep_shift $self;
+	my $ep_shift = cp_pos_info_ep_shift $pos_info;
 	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
 
 	# Pawn single steps and captures w/o promotions.
