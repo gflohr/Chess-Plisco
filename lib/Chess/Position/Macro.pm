@@ -81,7 +81,7 @@ define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
 define cp_pos_w_king_shift => '$p', '(cp_pos_info_w_king_shift(cp_pos_info($p)))';
 define cp_pos_b_king_shift => '$p', '(cp_pos_info_b_king_shift(cp_pos_info($p)))';
-define cp_pos_evasion => '$p', '(cp_pos_infoevasion(cp_pos_info($p)))';
+define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
 
 define cp_pos_set_castling => '$p', '$c',
 	'(cp_pos_info_set_castling(cp_pos_info($p), $c))';
