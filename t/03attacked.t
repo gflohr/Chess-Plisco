@@ -16,7 +16,6 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
-use Chess::Position::Move;
 
 my ($pos, @moves, @expect);
 

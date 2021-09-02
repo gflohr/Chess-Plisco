@@ -16,14 +16,15 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
-use Chess::Position::Move;
 
 my ($pos, $move, $undo_info, $before);
 
 $pos = Chess::Position->new;
-$move = Chess::Position::Move->new('g1h3', $pos)->toInteger;
+$move = $pos->parseMove('g1h3');
+ok $move, 'parse g1h3';
 ok $pos->doMove($move), '1. Nh3';
-$move = Chess::Position::Move->new('h7h6', $pos)->toInteger;
+$move = $pos->parseMove('h7h6');
+ok $move, 'parse h7h6';
 $undo_info = $pos->doMove($move), '1. ...h6';
 ok $undo_info, '1. ...h6';
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_6_MASK),
@@ -35,7 +36,8 @@ ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 # Typo. In-check was not undone correctly.
 $pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/7N/PPPPPPPP/RNBQKB1R w KQkq - 2 2');
 $before = $pos->copy;
-$move = Chess::Position::Move->new('b1c3', $pos)->toInteger;
+$move = $pos->parseMove('b1c3');
+ok $move, 'parse b1c3';
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
@@ -45,7 +47,8 @@ ok $pos->equals($before);
 # Queen moves were not undone correctly.
 $pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 1 2');
 $before = $pos->copy;
-$move = Chess::Position::Move->new('d1e2', $pos)->toInteger;
+$move = $pos->parseMove('d1e2');
+ok $move, 'parse d1e2';
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($move, $undo_info);
@@ -55,7 +58,8 @@ ok $pos->equals($before);
 # 2. ...Bxh3 is not undone correctly.
 $pos = Chess::Position->new('rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2');
 $before = $pos->copy;
-$move = Chess::Position::Move->new('c8h3', $pos)->toInteger;
+$move = $pos->parseMove('c8h3');
+ok $move, 'parse c8h3';
 is(cp_move_attacker($move), CP_BISHOP);
 $undo_info = $pos->doMove($move);
 ok $undo_info;

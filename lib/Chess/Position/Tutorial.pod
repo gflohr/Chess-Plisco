@@ -185,7 +185,7 @@ Additionally, we also have "square masks" (see below).
 =head4 Coordinates
 
 When we talk of coordinates, we mean a pair of a file and a rank, but
-they are always 0-based indexes. So the files "a" to "h" are indexed as
+always as 0-based indexes. So the files "a" to "h" are indexed as
 0 ... 7, and the ranks "1" to "8" are indexed as 0 ... 7.
 
 =head4 Squares

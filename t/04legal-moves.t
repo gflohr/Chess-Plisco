@@ -16,7 +16,6 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
-use Chess::Position::Move;
 
 my ($pos, @moves, @expect);
 
@@ -104,7 +103,8 @@ my @tests = (
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	foreach my $movestr (@{$test->{premoves} || []}) {
-		my $move = Chess::Position::Move->new($movestr, $pos)->toInteger;
+		my $move = $pos->parseMove($movestr);
+		ok $move, "$test->{name}: parse $movestr";
 		ok $pos->doMove($move), "$test->{name}: premove $movestr should be legal";
 	}
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->legalMoves;
