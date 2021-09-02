@@ -88,7 +88,7 @@ my @tests = (
 	{
 		name => 'JMervino 6',
 		fen => 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -',
-		perft => [48, 2039, 97862, 351806, 4085603, 193690690],
+		perft => [48, 2039, 97862, 4085603, 193690690],
 	},
 	{
 		name => 'JMervino 7',
@@ -98,7 +98,7 @@ my @tests = (
 	{
 		name => 'JMervino 8',
 		fen => 'n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - -',
-		perft => [24, 496, 9483, 182828, 3605103, 71179139],
+		perft => [24, 496, 9483, 182838, 3605103, 71179139],
 	},
 	{
 		name => 'JMervino 9',
@@ -122,6 +122,10 @@ my @tests = (
 	},
 );
 
+my $num_tests = 0;
+$num_tests += @$_ foreach (@tests);
+plan tests => $num_tests;
+
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	my @perfts = @{$test->{perft}};
@@ -142,5 +146,3 @@ foreach my $test (@tests) {
 		}
 	}
 }
-
-done_testing;
