@@ -123,7 +123,7 @@ my @tests = (
 );
 
 my $num_tests = 0;
-$num_tests += @$_ foreach (@tests);
+$num_tests += @{$_->{perft}} foreach (@tests);
 plan tests => $num_tests;
 
 foreach my $test (@tests) {
@@ -136,11 +136,12 @@ foreach my $test (@tests) {
 		SKIP: {
 			my $elapsed = tv_interval($started);
 			if (!$ENV{CP_STRESS_TEST} && $elapsed > 1) {
-				my $skipped = @perfts - $depth;
+				my $skipped = @perfts - $depth + 1;
+				$depth = @perfts;
 				skip "set environment variable CP_STRESS_TEST to a truthy value to run all tests",
 					$skipped;
 			}
-			my $expect = $perfts[$depth - 1];
+			my $expect = $perfts[$depth - 0.5];
 			my $got = $pos->perft($depth);
 			is $got, $expect, "perft depth $depth ($test->{name})";
 		}
