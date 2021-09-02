@@ -1557,6 +1557,12 @@ sub dumpBitboard {
 	return $output;
 }
 
+sub coordinateNotation {
+	my (undef, $move) = @_;
+
+	return cp_move_coordinate_notation $move;
+}
+
 sub movesInCoordinateNotation {
 	my (undef, @moves) = @_;
 
@@ -1588,8 +1594,7 @@ sub parseMove {
 		$move = $self->__parseUCIMove(map { lc $_ } ($1, $2, $3))
 			or return;
 	} else {
-		require Carp;
-		Carp::croak("SAN parser not yet implemented.\n");
+		$move = $self->__parseSAN($notation) or return;
 	}
 
 	my $attacker;
@@ -1617,6 +1622,117 @@ sub parseMove {
 	cp_move_set_attacker($move, $attacker);
 
 	return $move;
+}
+
+sub __parseSAN {
+	my ($self, $move) = @_;
+
+	# First clean-up.
+	my $san = $move;
+	$san =~ s/[^a-h0-8pnbrqko]//gi;
+
+	my $pattern;
+
+	my $to_move = cp_pos_to_move $self;
+	if ($san =~ /^[0oO][0oO]([0oO])?$/) {
+		my $queen_side = $1;
+
+		if ($to_move == CP_WHITE) {
+			if ($queen_side) {
+				$pattern = 'Ke1c1';
+			} else {
+				$pattern = 'Ke1g1';
+			}
+		} else {
+			if ($queen_side) {
+				$pattern = 'Ke8c8';
+			} else {
+				$pattern = 'Ke8g8';
+			}
+		}
+	} else {
+		my $piece = '.',
+		my $from_file = '.';
+		my $to_file = '.';
+		my $from_rank = '.';
+		my $to_rank = '.',
+		my $promote = '';
+
+		# Before we convert to lowercase, we try to extract the moving piece
+		# which must always be uppercase.
+		if ($san =~ s/^([PNBRQK])//) {
+			$piece = $1;
+		}
+
+		my @san = split //, lc $san;
+
+		my %pieces = map { $_ => 1 } qw(p n b r q k);
+
+		# Promotion?
+		if (exists $pieces{$san[-1]}) {
+			$promote = $san[-1];
+			pop @san;
+		}
+
+		# Target rank?
+		if (@san && $san[-1] >= '1' && $san[-1] <= '8') {
+			$to_rank = $san[-1];
+			pop @san;
+		}
+
+		# Target file?
+		if (@san && $san[-1] >= 'a' && $san[-1] <= 'h') {
+			$to_file = $san[-1];
+			pop @san;
+		}
+
+		# From rank?
+		if (@san && $san[-1] >= '1' && $san[-1] <= '8') {
+			$from_rank = $san[-1];
+			pop @san;
+		}
+
+		# From file?
+		if (@san && $san[-1] >= 'a' && $san[-1] <= 'h') {
+			$from_file = $san[-1];
+			pop @san;
+		}
+
+		# Leading garbage?
+		return if @san;
+
+		$pattern = join '', $piece, 
+				$from_file, $from_rank, $to_file, $to_rank, $promote;
+	}
+
+	# Get the legal moves.
+	my @legal = $self->movesInCoordinateNotation($self->legalMoves);
+
+	# Prefix every move with the piece that moves.
+	my @pieces = qw(X P N B R Q K);
+	foreach my $move (@legal) {
+		my @from = split '', substr $move, 0, 2;
+		my $file = ord($from[0]) - ord('a');
+		my $rank = $from[1] - 1;
+		my $mover = $self->pieceAtCoordinates;
+		$move = $pieces[$mover] . $move;
+	}
+
+	my @candidates;
+	@candidates = grep { /^$pattern$/ } @legal;
+
+	# We must find exactly one candidate.  If we have 0 matches, the move
+	# could not be parsed.  If we have more than 1 match, the move was
+	# ambiguous.
+	if (@candidates != 1 && $move !~ /^[PNBRQK]/) {
+		# If no piece was explicitely specified, try again with a pawn.
+		$pattern =~ s/^./P/;
+		@candidates = grep { /^$pattern$/ } @legal;
+	}
+
+	return if @candidates != 1;
+
+	return substr $candidates[0], 1;
 }
 
 sub __parseUCIMove {
