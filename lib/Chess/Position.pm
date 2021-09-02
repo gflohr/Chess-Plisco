@@ -1483,6 +1483,57 @@ sub consistent {
 	return;
 }
 
+sub pieceAtSquare {
+	my ($self, $square) = @_;
+
+	return $self->pieceAtShift(cp_square_to_shift $square);
+}
+
+sub pieceAtCoordinates {
+	my ($self, $file, $rank) = @_;
+
+	return $self->pieceAtShift(cp_coords_to_shift $file, $rank);
+}
+
+sub pieceAtShift {
+	my ($self, $shift) = @_;
+
+	return if $shift < 0;
+	return if $shift > 63;
+
+	my $mask = 1 << $shift;
+	my ($piece, $color) = (CP_NO_PIECE);
+	if ($mask & cp_pos_w_pieces $self) {
+		$color = CP_WHITE;
+	} elsif ($mask & cp_pos_b_pieces $self) {
+		$color = CP_BLACK;
+	}
+
+	if (defined $color) {
+		if ($mask & cp_pos_pawns $self) {
+			$piece = CP_PAWN;
+		} elsif ($mask & cp_pos_knights $self) {
+			$piece = CP_KNIGHT;
+		} elsif ($mask & cp_pos_bishops $self) {
+			if ($mask & cp_pos_rooks $self) {
+				$piece = CP_QUEEN;
+			} else {
+				$piece = CP_BISHOP;
+			}
+		} elsif ($mask & cp_pos_rooks $self) {
+			$piece = CP_ROOK;
+		} else {
+			$piece = CP_KING;
+		}
+	}
+
+	if (wantarray) {
+		return $piece, $color;
+	} else {
+		return $piece;
+	}
+}
+
 sub dumpAll {
 	my ($self) = @_;
 
