@@ -14,7 +14,7 @@
 
 use strict;
 
-use Test::More skip_all => 'implement pieceAt() methods first';
+use Test::More;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 

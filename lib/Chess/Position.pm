@@ -1762,10 +1762,8 @@ sub __parseSAN {
 	# Prefix every move with the piece that moves.
 	my @pieces = qw(X P N B R Q K);
 	foreach my $move (@legal) {
-		my @from = split '', substr $move, 0, 2;
-		my $file = ord($from[0]) - ord('a');
-		my $rank = $from[1] - 1;
-		my $mover = $self->pieceAtCoordinates;
+		my $from_square = substr $move, 0, 2;
+		my $mover = $self->pieceAtSquare($from_square);
 		$move = $pieces[$mover] . $move;
 	}
 
@@ -1783,7 +1781,10 @@ sub __parseSAN {
 
 	return if @candidates != 1;
 
-	return substr $candidates[0], 1;
+	$move = $candidates[0];
+	return if $move !~ /^[PNBRQK]([a-h][1-8])([a-h][1-8])([qrbn])?$/;
+
+	return $self->__parseUCIMove($1, $2, $3);
 }
 
 sub __parseUCIMove {
