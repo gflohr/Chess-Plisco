@@ -827,7 +827,7 @@ sub pseudoLegalMoves {
 	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 	my $in_check = cp_pos_in_check $self;
-	last if $in_check && (($pos_info & 0x3) >> 23) == CP_EVASION_KING_MOVE;
+	return @moves if $in_check && CP_EVASION_KING_MOVE == cp_pos_info_evasion($pos_info);
 
 	# Generate castlings.
 	# Mask out the castling rights for the side to move.
