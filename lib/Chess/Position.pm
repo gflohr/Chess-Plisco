@@ -1580,6 +1580,74 @@ sub equals {
 	return $self;
 }
 
+sub parseMove {
+	my ($self, $notation) = @_;
+
+	my $move;
+	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/i) {
+		$move = $self->__parseUCIMove(map { lc $_ } ($1, $2, $3))
+			or return;
+	} else {
+		require Carp;
+		Carp::croak("SAN parser not yet implemented.\n");
+	}
+
+	my $attacker;
+	my $from_mask = 1 << (cp_move_from $move);
+
+	if ($from_mask & cp_pos_pawns($self)) {
+		$attacker = CP_PAWN;
+	} elsif ($from_mask & cp_pos_knights($self)) {
+		$attacker = CP_KNIGHT;
+	} elsif ($from_mask & cp_pos_bishops($self)) {
+		if ($from_mask & cp_pos_rooks($self)) {
+			$attacker = CP_QUEEN;
+		} else {
+			$attacker = CP_BISHOP;
+		}
+	} elsif ($from_mask & cp_pos_rooks($self)) {
+		$attacker = CP_ROOK;
+	} elsif ($from_mask & cp_pos_kings($self)) {
+		$attacker = CP_KING;
+	} else {
+		require Carp;
+		Carp::croak(__"Illegal move: start square is empty.\n");
+	}
+
+	cp_move_set_attacker($move, $attacker);
+
+	return $move;
+}
+
+sub __parseUCIMove {
+	my ($class, $from_square, $to_square, $promote) = @_;
+
+	my $move = 0;
+	my $from = cp_square_to_shift $from_square;
+	my $to = cp_square_to_shift $to_square;
+
+	return if $from < 0;
+	return if $from > 63;
+	return if $to < 0;
+	return if $to > 63;
+
+	cp_move_set_from($move, $from);
+	cp_move_set_to($move, $to);
+
+	if ($promote) {
+		my %pieces = (
+			q => CP_QUEEN,
+			r => CP_ROOK,
+			b => CP_BISHOP,
+			n => CP_KNIGHT,
+		);
+
+		cp_move_set_promote($move, $pieces{$promote} or return);
+	}
+
+	return $move;
+}
+
 sub coordinatesToShift {
 	my (undef, $file, $rank) = @_;
 

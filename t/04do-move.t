@@ -16,7 +16,6 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
-use Chess::Position::Move;
 use Time::HiRes qw(gettimeofday);
 
 my ($pos, @moves, @expect);
@@ -140,7 +139,9 @@ my @tests = (
 
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{before});
-	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
+	my $move = $pos->parseMove($test->{move});
+	ok $move, "$test->{name}: parse $test->{move}";
+
 	my $copy = $pos->copy;
 	my $undoInfo = $pos->doMove($move);
 	ok $pos->consistent, "$test->{name}: position should be consistent after $test->{move}";

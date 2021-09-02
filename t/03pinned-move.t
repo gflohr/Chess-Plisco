@@ -16,7 +16,6 @@ use Test::More;
 use Data::Dumper;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
-use Chess::Position::Move;
 
 my ($pos, @moves, @expect);
 
@@ -107,9 +106,12 @@ my @tests = (
 	}
 );
 
+plan tests => @tests << 1;
+
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
-	my $move = Chess::Position::Move->new($test->{move}, $pos)->toInteger;
+	my $move = $pos->parseMove($test->{move});
+	ok $move, "$test->{name}: parse $test->{move}";
 
 	if ($test->{pinned}) {
 		ok $pos->pinnedMove($move), $test->{name};
@@ -117,5 +119,3 @@ foreach my $test (@tests) {
 		ok !$pos->pinnedMove($move), $test->{name};
 	}
 }
-
-done_testing;
