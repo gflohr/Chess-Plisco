@@ -126,24 +126,33 @@ my $num_tests = 0;
 $num_tests += @{$_->{perft}} foreach (@tests);
 plan tests => $num_tests;
 
+my $seconds_per_test = $ENV{CP_STRESS_TEST} || 5;
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	my @perfts = @{$test->{perft}};
 
-	my $started = [gettimeofday];
 	for (my $depth = 1; $depth <= @perfts; ++$depth) {
 		no integer;
 		SKIP: {
-			my $elapsed = tv_interval($started);
-			if (!$ENV{CP_STRESS_TEST} && $elapsed > 1) {
-				my $skipped = @perfts - $depth + 1;
-				$depth = @perfts;
-				skip "set environment variable CP_STRESS_TEST to a truthy value to run all tests",
-					$skipped;
-			}
-			my $expect = $perfts[$depth - 0.5];
+			my $started = [gettimeofday];
 			my $got = $pos->perft($depth);
+			my $elapsed = tv_interval($started);
+			my $expect = $perfts[$depth - 0.5];
 			is $got, $expect, "perft depth $depth ($test->{name})";
+
+			my $nps = $elapsed ? ($got / $elapsed) : 1;
+			$nps ||= 100000;
+			if ($depth < @perfts) {
+				my $next_nodes = $perfts[$depth];
+				my $eta = $perfts[$depth] / $nps;
+				if ($eta > $seconds_per_test) {
+					my $skipped = @perfts - $depth;
+					$depth = @perfts;
+					skip "set environment variable CP_SECONDS_PER_TEST to a "
+						. "value > $seconds_per_test to run more tests",
+						$skipped;
+				}
+			}
 		}
 	}
 }
