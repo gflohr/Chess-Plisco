@@ -153,7 +153,7 @@ for details.
 
 =head4 Extended Position Description EPD
 
-A similar notation to FEN is the LL<https://en.wikipedia.org/wiki/Extended_Position_Description>.
+A similar notation to FEN is the L<https://en.wikipedia.org/wiki/Extended_Position_Description>.
 You can think of it as FEN with meta data.
 
 =head3 Coordinates and Squares
@@ -180,7 +180,7 @@ dedicated class methods:
 
 =back
 
-Additionally, we also have "square masks" (see below).
+Additionally, we also have "shift masks" (see below).
 
 =head4 Coordinates
 
@@ -232,8 +232,8 @@ Unlike most Perl objects, instances of C<Chess::Position> are blessed
 array references. This design decision was taken because accessing
 accessing array elements is faster than accessing hash elements. But
 there is no need to remember the exact ordering of the array. You can
-either use dedicated macros that operate on directly on
-C<Chess::Position> indexes or use constants for the indexes:
+either use dedicated macros that operate directly on
+C<Chess::Position> instances or use constants for the indexes:
 
  use Chess::Position (:all);
  use Chess::Position::Macro;
@@ -268,7 +268,8 @@ The chess pieces are specified by an enumeration:
 
 =back
 
-The default values are defined by these constants in C<Chess::Position>:
+The default values for each piece are defined by these constants in
+C<Chess::Position>:
 
 =over
 
@@ -286,9 +287,11 @@ The default values are defined by these constants in C<Chess::Position>:
 
 These constants can be overridden in derived classes. This is not
 recommended for the constants specifiying the pieces (see above), as the
-data values may not fit into the other structures.
+data values will not fit into the other structures.
 
 =head3 Moves
+
+=head4 Internal Move Representation
 
 A move in C<Chess::Position> is simply an integer. There is also a
 convenience class C<Chess::Position::Move> but this class is not used
@@ -310,8 +313,7 @@ I<The numbers in parentheses are the 0-based bit numbers.>
 
 Only bits 1 to 15 are really needed to characterize a move, and the bits
 13 to 15 are only needed for pawn promotions. The other bits can be
-derived from the position that the move is applied to, and they are not
-always present:
+derived from the position that the move is applied to.
 
 The piece that moves, the attacker is the piece that stands on the
 starting square.  Note that this is never C<CP_QUEEN> even if the piece that
@@ -349,6 +351,31 @@ an assignment)! For this, use other macros:
 
 =back
 
+=head4 Parsing Moves
+
+The method C<parseMove()> can be used for creating a move.  It expects the
+move in either:
+
+=over 4
+
+=item Coordinate Notation
+
+=item Standard Algebraic Notation (SAN)
+
+=back
+
+The coordinate notation is the notation that most chess engines use.  It is
+simply the start and the destination square appended plus an optional piece
+to promote a pawn to, for example "b1c3" for the piece on square "b1" moving
+to "c3" or "e7d8q" for a pawn on "e7" capturing the piece on "d8" being promoted
+to a queen.
+
+Standard Algebraic Notation (SAN) is the notation conventionally used for
+describing chess games. You will find more information about it on the internet.
+
+Note that the move parser is very forgiving and accepts a lot of moves that
+are not complying with the standard.
+
 =head2 Using Macros
 
 When dealing with chess programming you often find yourself executing
@@ -366,7 +393,7 @@ of small helper functions available, the names of which all begin with
 C<cp_>. You can use them more or less like functions but they are inlined
 into your code at compile-time.
 
-They are a couple of things that you have to keep in minde, when using
+There are a couple of things that you have to keep in minde, when using
 these macros:
 
 =head3 Use C<Chess::Position::Macro> and(!) C<Chess::Position>
@@ -384,7 +411,16 @@ boilerplate:
 =head3 Use C<integer>
 
 Some of the macros will only work on integers. You must therefore always
-C<use integer> in the scope of your code.
+C<use integer> in the scope of your code.  Not doing so will result in
+errors!
+
+If you need floating point arithmetics, activate them only in the limited
+scope of a block:
+
+    {
+        no integer;
+        printf "avg. loss in centipedes: %g\n", $score / 100;
+    }
 
 =head3 Do not Create References to Macros
 
@@ -500,3 +536,4 @@ and it is advantageous to take the second approach.  Only in the exceptional
 case that you want to iterate over a bitboard with all pieces of one color
 or even all pieces of both colors, you are better off using the conventional
 approach.
+
