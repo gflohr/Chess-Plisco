@@ -101,12 +101,13 @@ use constant CP_POS_BISHOPS => 4;
 use constant CP_POS_ROOKS => 5;
 # It is important that there is one gap between the rooks and the kings
 # bitmasks, so that the piece code can be used as an index offset.
-use constant CP_POS_IN_CHECK => 6;
+use constant CP_POS_UNUSED => 6;
 use constant CP_POS_KINGS => 7;
-use constant CP_POS_HALF_MOVE_CLOCK => 8;
-use constant CP_POS_HALF_MOVES => 9;
+use constant CP_POS_HALF_MOVES => 8;
+use constant CP_POS_HALF_MOVE_CLOCK => 9;
 use constant CP_POS_INFO => 10;
 use constant CP_POS_EVASION_SQUARES => 11;
+use constant CP_POS_IN_CHECK => 12;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -1043,7 +1044,7 @@ sub pinnedMove {
 sub doMove {
 	my ($self, $move) = @_;
 
-	my $pos_info = my $old_pos_info = cp_pos_info $self;
+	my $pos_info = cp_pos_info $self;
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_attacker($move));
@@ -1111,7 +1112,8 @@ sub doMove {
 	$new_castling &= ~$castling_rook_masks[$from];
 	$new_castling &= ~$castling_rook_masks[$to];
 
-	my $hmc = $self->[CP_POS_HALF_MOVE_CLOCK];
+	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
+
 	my $victim = CP_NO_PIECE;
 	my $victim_mask = 0;
 	if ($to_mask & $her_pieces) {
@@ -1205,11 +1207,7 @@ sub doMove {
 	}
 
 	my @undo_info = (
-		$self->[CP_POS_IN_CHECK],
-		$hmc, $old_pos_info,
-		$self->[CP_POS_EVASION_SQUARES],
-		$victim, $victim_mask, $is_queen_move,
-	);
+		$victim, $victim_mask, $is_queen_move, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_info_set_to_move($pos_info, !$to_move);
@@ -1224,8 +1222,7 @@ sub doMove {
 sub undoMove {
 	my ($self, $move, $undoInfo) = @_;
 
-	my ($in_check, $half_move_clock, $info, $evasion_squares,
-		$victim, $victim_mask, $is_queen_move) = @$undoInfo;
+	my ($victim, $victim_mask, $is_queen_move, @state) = @$undoInfo;
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1271,10 +1268,9 @@ sub undoMove {
 		}
 	}
 
-	cp_pos_in_check($self) = $in_check;
-	cp_pos_evasion_squares($self) = $evasion_squares;
-	cp_pos_half_move_clock($self) = $half_move_clock;
-	cp_pos_info($self) = $info;
+	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
+
+	# FIXME! Copy as well?
 	--(cp_pos_half_moves($self));
 }
 
