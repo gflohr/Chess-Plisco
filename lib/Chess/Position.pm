@@ -1716,7 +1716,60 @@ sub SAN {
 		}
 	}
 
-	return '?';
+	# Avoid extra hassle for queen moves.
+	my @bitboards = @$self;
+	$bitboards[CP_POS_ROOKS + 1] = cp_pos_rooks($self) & cp_pos_bishops($self);
+
+	my @pieces = ('', '', 'N', 'B', 'R', 'Q', 'K');
+
+	my $san = $pieces[$attacker];
+
+	my $from_board = $bitboards[CP_POS_W_PIECES + cp_pos_to_move($self)]
+		& $bitboards[$attacker];
+
+	# Or use legalMoves?
+	my @cmoves = $self->pseudoLegalMoves or return;
+	my (%files, %ranks);
+	my $candidates = 0;
+	foreach my $cmove (@cmoves) {
+		my ($cfrom, $cto) = (cp_move_from($cmove), cp_move_to($cmove));
+		next if $cto != $to;
+
+		++$candidates;
+		my ($ffile, $frank) = $self->shiftToCoordinates($cfrom);
+		++$files{$ffile};
+		++$ranks{$frank};
+	}
+
+	if ($candidates > 1) {
+		my $numfiles = keys %files;
+		my $numranks = keys %ranks;
+		my @files = ('a' .. 'h');
+		my @ranks = ('1' .. '8');
+		my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
+
+		if ($numfiles == $candidates) {
+			$san .= $files[$from_file];
+		} elsif ($numranks == $candidates) {
+			$san .= $ranks[$from_rank];
+		} else {
+			$san .= "$files[$from_file]$ranks[$from_rank]";
+		}
+	}
+
+	$san .= $self->shiftToSquare($to);
+
+	my $copy = $self->copy;
+	if ($copy->doMove($move) && cp_pos_in_check $copy) {
+		my @moves = $copy->legalMoves;
+		if (!@moves) {
+			$san .= '#';
+		} else {
+			$san .= '+';
+		}
+	}
+
+	return $san;
 }
 
 sub movesInCoordinateNotation {
