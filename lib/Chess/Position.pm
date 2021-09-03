@@ -1697,6 +1697,28 @@ sub coordinateNotation {
 	return cp_move_coordinate_notation $move;
 }
 
+sub SAN {
+	my ($self, $move) = @_;
+
+	my ($from, $to, $promote, $attacker) = (
+		cp_move_from($move),
+		cp_move_to($move),
+		cp_move_promote($move),
+		cp_move_attacker($move),
+	);
+
+	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+		my $to_mask = 1 << $to;
+		if ($to_mask & CP_G_MASK) {
+			return 'O-O';
+		} else {
+			return 'O-O-O';
+		}
+	}
+
+	return '?';
+}
+
 sub movesInCoordinateNotation {
 	my (undef, @moves) = @_;
 
