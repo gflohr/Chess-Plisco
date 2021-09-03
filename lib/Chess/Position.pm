@@ -1276,8 +1276,6 @@ sub undoMove {
 	cp_pos_half_move_clock($self) = $half_move_clock;
 	cp_pos_info($self) = $info;
 	--(cp_pos_half_moves($self));
-
-	return $self;
 }
 
 sub perft {
@@ -1286,11 +1284,6 @@ sub perft {
 	my $nodes = 0;
 	my @moves = $self->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my ($before, $movestr);
-		if (DEBUG_PERFT) {
-			$before = $self->copy;
-			$movestr = cp_move_coordinate_notation $move;
-		}
 		my $undo_info = $self->doMove($move) or next;
 
 		if ($depth > 1) {
@@ -1300,19 +1293,24 @@ sub perft {
 		}
 
 		$self->undoMove($move, $undo_info);
+	}
 
-		if (DEBUG_PERFT) {
-			if (!$self->equals($before)) {
-				warn "Undo $movestr did not restore.\n";
-				if ("$self" ne "$before") {
-					warn "wanted: $before\n";
-					die  "   got: $self\n";
-				} else {
-					require Data::Dumper;
-					warn Data::Dumper::Dumper($before);
-					die Data::Dumper::Dumper($self);
-				}
-			}
+	return $nodes;
+}
+
+sub perftPosition {
+	my ($class, $pos, $depth) = @_;
+
+	my $nodes = 0;
+	my @moves = $pos->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $copy = $pos->copy;
+		$copy->doMove($move) or next;
+
+		if ($depth > 1) {
+			$nodes += $class->perftPosition($copy, $depth - 1);
+		} else {
+			++$nodes;
 		}
 	}
 
@@ -1331,12 +1329,6 @@ sub perftWithOutput {
 
 	my @moves = $self->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my ($before, $movestr) = @_;
-
-		if (DEBUG_PERFT) {
-			$before = $self->copy;
-		}
-
 		my $undo_info = $self->doMove($move) or next;
 
 		my $movestr = cp_move_coordinate_notation $move;
@@ -1356,20 +1348,51 @@ sub perftWithOutput {
 		$fh->print("$subnodes\n");
 
 		$self->undoMove($move, $undo_info);
+	}
 
-		if (DEBUG_PERFT) {
-			if (!$self->equals($before)) {
-				warn "Undo $movestr did not restore.\n";
-				if ("$self" ne "$before") {
-					warn "wanted: $before\n";
-					die  "   got: $self\n";
-				} else {
-					require Data::Dumper;
-					warn Data::Dumper::Dumper($before);
-					die Data::Dumper::Dumper($self);
-				}
-			}
+	no integer;
+
+	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
+
+	my $nps = '+INF';
+	if ($elapsed) {
+		$nps = int (0.5 + $nodes / $elapsed);
+	}
+	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
+
+	return $nodes;
+}
+
+sub perftPositionWithOutput {
+	my ($class, $pos, $depth, $fh) = @_;
+
+	return if $depth <= 0;
+
+	require Time::HiRes;
+	my $started = [Time::HiRes::gettimeofday()];
+
+	my $nodes = 0;
+
+	my @moves = $pos->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $copy = $pos->copy;
+		$copy->doMove($move) or next;
+
+		my $movestr = cp_move_coordinate_notation $move;
+
+		$fh->print("$movestr: ");
+
+		my $subnodes;
+
+		if ($depth > 1) {
+			$subnodes = $class->perftPosition($copy, $depth - 1);
+		} else {
+			$subnodes = 1;
 		}
+
+		$nodes += $subnodes;
+
+		$fh->print("$subnodes\n");
 	}
 
 	no integer;
