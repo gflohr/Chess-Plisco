@@ -1300,7 +1300,7 @@ sub perftPosition {
 	my $nodes = 0;
 	my @moves = $pos->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my $copy = $pos->copy;
+		my $copy = bless [@$pos], 'Chess::Position';
 		$copy->doMove($move) or next;
 
 		if ($depth > 1) {
@@ -1371,7 +1371,7 @@ sub perftPositionWithOutput {
 
 	my @moves = $pos->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my $copy = $pos->copy;
+		my $copy = bless [@$pos], 'Chess::Position';
 		$copy->doMove($move) or next;
 
 		my $movestr = cp_move_coordinate_notation $move;
