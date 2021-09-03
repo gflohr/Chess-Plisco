@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-# Copyright (C) 2018 Guido Flohr <guido.flohr@cantanea.com>,
+# Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
 # all rights reserved.
 
 # This program is free software. It comes without any warranty, to
@@ -8,9 +8,6 @@
 # and/or modify it under the terms of the Do What the Fuck You Want
 # to Public License, Version 2, as published by Sam Hocevar. See
 # http://www.wtfpl.net/ for more details.
-
-# Make Dist::Zilla happy.
-# ABSTRACT: Analyze chess games in PGN format
 
 use strict;
 
@@ -123,5 +120,10 @@ $pos->doMove($pos->parseMove("c7d8q"));
 
 # This is not officially SAN but can still be parsed successfully.
 is $pos->coordinateNotation($pos->parseMove("feb")), "f2e1b", "feb";
+
+# Bug from pgn:
+$fen = 'r4rk1/1p3pp1/1q2b2p/1B2R3/1Q2n3/1K2PN2/1PP3PP/7R w - - 3 22';
+$pos = Chess::Position->new($fen);
+is $pos->coordinateNotation($pos->parseMove('c4')), 'c2c4', 'c4';
 
 done_testing;

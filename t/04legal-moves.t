@@ -97,7 +97,12 @@ my @tests = (
 			f6h5 f6h7 f6g8 a6e2	a6d3 a6c4 a6b5 a6b7 a6c8 g7h6 g7f8 a8b8 a8c8
 			a8d8 h8h2 h8h3 h8h4 h8h5 h8h6 h8h7 h8f8 h8g8 e7c5 e7d6 e7d8 e7f8
 			e8d8 e8f8 e8g8 e8c8)],
-	}
+	},
+	{
+		name => 'white pawn covers check',
+		fen => 'r4rk1/1p3pp1/1q2b2p/1B2R3/1Q2n3/1K2PN2/1PP3PP/7R w - - 3 22',
+		moves => [qw(e5e6 e5d5 b4c4 b5c4 c2c4)],
+	},
 );
 
 foreach my $test (@tests) {

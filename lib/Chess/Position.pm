@@ -998,8 +998,7 @@ sub update {
 			cp_pos_info_set_evasion($pos_info, CP_EVASION_CAPTURE);
 			cp_pos_evasion_squares($self) = $checkers;
 		} else {
-			# No need to set the evasion strategy because CP_EVASION_ALL is the
-			# default.
+			cp_pos_info_set_evasion($pos_info, CP_EVASION_ALL);
 			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
 			my $kso = $to_move ? 17 : 11;
 			my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
@@ -1578,6 +1577,71 @@ sub dumpAll {
 	my $kings = $self->dumpBitboard($self->[CP_POS_KINGS]);
 	$output .= "\n  Kings\n";
 	$output .= $kings;
+
+	return $output;
+}
+
+sub dumpInfo {
+	my ($self) = @_;
+
+	my $info = cp_pos_info $self;
+
+	my $output = 'Castling: ';
+
+	my $castling = cp_pos_info_castling $info;
+	if ($castling) {
+		$output .= 'K' if $castling & 0x1;
+		$output .= 'Q' if $castling & 0x2;
+		$output .= 'k' if $castling & 0x4;
+		$output .= 'q' if $castling & 0x8;
+	} else {
+		$output .= '- ';
+	}
+
+	$output .= "\nTo move: ";
+	if (CP_WHITE == cp_pos_info_to_move $info) {
+		$output .= "white\n";
+	} else {
+		$output .= "black\n";
+	}
+
+	$output .= 'En passant square: ';
+	if (cp_pos_info_ep_shift $info) {
+		$output .= $self->shiftToSquare(cp_pos_info_ep_shift $info);
+	} else {
+		$output .= '-';
+	}
+
+	$output .= "\nWhite king: ";
+	$output .= $self->shiftToSquare(cp_pos_info_w_king_shift $info);
+	$output .= "\nBlack king: ";
+	$output .= $self->shiftToSquare(cp_pos_info_b_king_shift $info);
+	$output .= "\n";
+
+	my $checkers = cp_pos_in_check $self;
+	if ($checkers) {
+		$output .= "In check: yes\n";
+
+		my $evasion_strategy = cp_pos_info_evasion $info;
+		$output .= 'Check evasion strategies: ';
+		if ($evasion_strategy == CP_EVASION_ALL) {
+			$output .= "king move, capture, block\n";
+		} elsif ($evasion_strategy == CP_EVASION_CAPTURE) {
+			$output .= "king move, capture\n";
+		} elsif ($evasion_strategy == CP_EVASION_KING_MOVE) {
+			$output .= "king move\n";
+		} else {
+			$output .= "$evasion_strategy (?)\n";
+		}
+
+		$output .= "Check evasion squares:\n";
+		$output .= $self->dumpBitboard(cp_pos_evasion_squares $self);
+
+		$output .= "Checkers:\n";
+		$output .= $self->dumpBitboard(cp_pos_in_check $self);
+	} else {
+		$output .= "In check: no\n";
+	}
 
 	return $output;
 }
