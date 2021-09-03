@@ -135,6 +135,12 @@ my @tests = (
 		before => '8/7p/p5pb/8/P1pk4/8/P2n1KPP/1r3R2 b - - 1 30',
 		move => 'd4e3',
 	},
+	{
+		name => 'white pawn blocks check',
+		before => 'r4rk1/1p3pp1/1q2b2p/1B2R3/1Q2n3/1K2PN2/1PP3PP/7R w - - 3 22',
+		move => 'c2c4',
+		after => 'r4rk1/1p3pp1/1q2b2p/1B2R3/1QP1n3/1K2PN2/1P4PP/7R b - c3 0 22',
+	},
 );
 
 foreach my $test (@tests) {
