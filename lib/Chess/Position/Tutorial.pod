@@ -537,3 +537,264 @@ case that you want to iterate over a bitboard with all pieces of one color
 or even all pieces of both colors, you are better off using the conventional
 approach.
 
+=head2 Game Play
+
+=head3 Initializing a Position
+
+You use the constructor to instantiate a chess position.  For the start
+position you call it with arguments.  If you have the position represented
+as a string in Forsyth-Edwards Notation (FEN) you pass that as an
+argument to the constructor:
+
+    $pos = Chess::Position->new;
+
+    # Or:
+
+    $fen = 'r4rk1/1p3pp1/1q2b2p/1B2R3/1Q2n3/1K2PN2/1PP3PP/7R w - - 3 22';
+    $pos = Chess::Position->new($fen);
+
+=head3 Making Moves
+
+Applying a move to a position usually requires first parsing a chess move
+as a string into the internal representation.  You then pass that move
+(which is just an integer) to the method C<doMove()>:
+
+    # Parse the move in one of the supported formats.
+    $move = $pos->parseMove('Nc3');
+    $move = $pos->parseMove('Nb1-c3');
+    $move = $pos->parseMove('b1c3');
+    $state = $pos->doMove($move) or die "illegal move";
+
+The method C<doMove()> returns a reference to an array containing state
+information needed to undo the move later.  If the move was illegal,
+the method returns a falsy value.
+
+=head3 Undoing Moves
+
+You will often find that you have to undo a move so that the position is
+reverted to the state before the move had been played.
+
+In general, there are two strategies for undoing moves in chess software.
+The brute force approach is to make a deep copy of the position and revert
+by copying back later, resp. by simply applying the move to the copy only and
+throw it away.
+
+The other possibility is to undo all modifications makde by applying the
+move.  This is, of course, more complicated but often faster than the brute
+force approach.
+
+L<Chess::Position> supports both approaches and currently the brute force
+approach seems to be faster (around 10-15 percent) but this maybe depends on
+the hardware or system.  The reason for that is that a shallow copy is
+sufficient for copying a L<Chess::Position> which makes the copying really
+cheap, whereas undoing a move programmatically requires several dereferencings.
+
+But you are encouraged to try it out yourself.
+
+=head4 Undoing Moves Programmatically
+
+This is done with C<undoMove()>:
+
+    $state = $pos->doMove($move);
+    $pos->undoMove($move, $state);
+
+Not all recovery information can be stored in the move itself.  Therefore,
+you have to pass the state information return from C<doMove()> as the
+second argument to C<undoMove()>.
+
+=head4 Undoing Moves By Copying the Position
+
+How you do this depends a little bit on your exact requirements.  It will
+probably look something like this:
+
+    $copy = bless [@$pos], 'Chess::Position'; # or $copy = $pos->copy;
+    $pos->do_move($move);
+
+There is also a copy constructor C<copy()> but when you are really concerned
+about performance, then you probably choose the manual copying because it
+safes you a method call.
+
+=head3 Playing Games in PGN Format
+
+Playing games stored in Portable Game Notation PGN can be done with the
+external library L<Chess::PGN::Parse>.  Note that a PGN file can actually
+contain a collection of games, not just one:
+
+    $pos = Chess::Position->new;
+    $pgn = Chess::PGN::Parse->new('games.pgn') or die;
+    while ($pgn->read_game) {
+        $pgn->parse_game;
+        @san_moves = $pgn->moves;
+        foreach my $san_move (@san_moves) {
+            $move = $pos->parseMove($san_move)
+                or die "cannot parse move '$san_move'";
+            $pos->doMove($move)
+                or die "illegal move '$san_move'";
+        }
+    }
+
+=head2 Analyzing Positions
+
+L<Chess::Position> offers some high-level methods for analyzing chess
+positions.
+
+=head3 Listing Possible Moves
+
+You have to ways to do this:
+
+    @moves = $pos->legalMoves;
+    foreach $move (@moves) {
+        print join '|', $pos->SAN($move), $pos->coordinateNotation($move);
+    }
+
+Chess engines usually do not try out every legal move for each position but
+prune parts of the search tree by discarding moves which do not make sense.
+Therefore, the move generator in L<Chess::Position> works in two stages.
+The above example could be re-written like this:
+
+    @moves = $pos->pseudoLegalMoves;
+    foreach $move (@moves) {
+        $pos->doMove($move) or next;
+        $pos->undoMove($move);
+        print join '|', $pos->SAN($move), $pos->coordinateNotation($move);
+    }
+
+The method C<pseudoLegalMoves> may return moves that violate the rules of
+chess.  But checking the rules is somewhat expensive.  If the loop above
+may be exited early (this will often happen in chess engines), then these
+extra checks are a waste of time, when you never actually consider the move.
+
+What exactly is a pseudo-legal move is implementation dependent and you should
+not rely on the current implementation.
+
+=head3 Visualizing Bitboards
+
+A bitboard, which is just a 64 bit integer, can be visualized in a
+chess-board-like manner with C<dumpBitboard()>.
+
+    print "white pieces: ", $pos->dumpBitboard($pos->[CP_POS_WHITE_PIECES]);
+
+There is also a method C<dumpAll()> which dumps all bitboards at once.
+
+=head3 Checking for Check
+
+Finding out whether the side to move is in check, can be done like this:
+
+    $checkers = $pos->[CP_POS_IN_CHECK];
+    # or: $checkers = cp_pos_in_check $pos;
+    if ($checkers) {
+        print "pieces giving check: ", $pos->dumpBitboard($checkers);
+    }
+
+In fact, what you get is not a boolean flag but a bitboard with the pieces
+that are giving check.
+
+=head3 Checking for Pieces
+
+Finding out whether a white piece is on "e4" can be done like this:
+
+    $shift = $pos->squareToShift('e4');
+    # or $shift = $pos->coordinatesToShift(4, 0); 
+    $mask = 1 << $shift;
+    $is_white = $mask & $pos->[CP_POS_WHITE_PIECES];
+    # or: $is_white = $mask & cp_pos_white_pieces($pos);
+
+If you want to know whether it is a white king, you go like this:
+
+    $is_king = $mask & ($pos->[CP_POS_WHITE_PIECES] & $pos->[CP_POS_KINGS]);
+    # or: $is_king = $mask & (cp_pos_white_pieces($pos) & cp_pos_kings($pos));
+
+For bishops, queens, and rooks, you have to keep in mind that there is no
+bitboard for queens:
+
+    $is_queen = $mask & cp_pos_bishops($pos) & cp_pos_rooks($pos);
+    $is_rook = $mask & ~cp_pos_bishops($pos) & cp_pos_rooks($pos);
+    $is_bishop = $mask & cp_pos_bishops($pos) & ~cp_pos_rooks($pos);
+
+If you want to also check for the color, you additionally have to do the
+bitwise AND of the white or black bitboard.
+
+Finding out which piece is on a particular location can be done with
+dedicated methods:
+
+    ($piece, $color) = $pos->pieceAtSquare('e4');
+    ($piece, $color) = $pos->pieceAtCoordinates(4, 3);
+    ($piece, $color) = $pos->pieceAtShift(27);
+    $piece = $pos->pieceAtSquare('e4');
+    $piece = $pos->pieceAtCoordinates(4, 3);
+    $piece = $pos->pieceAtShift(27);
+
+In array context, you get the piece and the color, in scalar context just the
+piece.  The piece is one of C<CP_PAWN>, C<CP_KNIGHT>, C<CP_BISHOP>,
+C<CP_QUEEN>, or C<CP_KING>, and the color one of C<CP_WHITE>, C<CP_BLACK>,
+or C<undef> if there is no piece at all at the specified location.
+
+=head3 Castling State
+
+The castling state is encoded with other state information in one single
+integer as a bit mask.  It is highly recommended that you use the macros
+from L<Chess::Position::Macro> for it:
+
+    $white_can_castle_king_side  = cp_pos_w_ks_castle $pos;
+    $white_can_castle_queen_side = cp_pos_w_qs_castle $pos;
+    $black_can_castle_king_side  = cp_pos_b_ks_castle $pos;
+    $black_can_castle_queen_side = cp_pos_b_qs_castle $pos;
+
+=head3 En Passant
+
+You should also use a macro from L<Chess::Position::Macro>:
+
+    $en_passant_shift = cp_pos_ep_shift $pos;
+
+This will be 0 if capturing en passant is not possible in the particular
+position.  You may have to be careful to use this information because 0 is
+also the "shift" for the square "h1".  In doubt, go like this:
+
+    $ep_shift = cp_pos_ep_shift $pos;
+    if ($ep_shift && $ep_shift == $location) {
+        # do what you need ...
+    }
+
+=head3 Evading a Check
+
+A check can be defended in one of three ways:
+
+=over 4
+
+=item Moving the King
+
+This is always an option.
+
+=item Capturing the Piece Giving Check
+
+This is only an option if there is just one piece giving check (because you
+cannot capture multiple pieces at once).
+
+=item Blocking the Check With a Piece
+
+You can also block the check by moving a piece between the king and the
+opponent's piece giving check.  But this is not an option if multiple pieces
+give check, or if the piece giving check is a queen, a rook, or a knight.
+
+Why? If the piece giving check is a pawn, there is no space between it and
+the king, and a knight can jump over other pieces.
+
+=back
+
+This information is always stored in a L<Chess::Position> object:
+
+    $evasion_strategy = cp_pos_evasion $pos;
+    } if (CP_EVASION_KING_MOVE == $evasion_strategy) {
+        say "king must move";
+    } elsif (CP_EVASION_CAPTURE) {
+        say "king can move or piece giving check can be captured";
+    } elsif (CP_EVASION_ALL == $evasion_strategy) {
+        say "king can move, attacker can be captured, or check can be blocked:",
+            $pos->dumpBitboard(cp_pos_evasion_squares($pos));
+    }
+
+Remember that the item at C<CP_POS_IN_CHECK> gives you a bitboard with all
+pieces giving check.  Alternatively, you can use the macro C<cp_pos_in_check>.
+
+The bitboard at C<CP_POS_EVASION_SQUARES> has bits set for all pieces giving
+check.
