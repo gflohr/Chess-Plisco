@@ -40,6 +40,31 @@ my @tests = (
 		move => 'e8e7',
 		san => 'Ke7',
 	},
+	{
+		fen => 'r6r/4k3/3R4/r6r/R6R/8/3RK3/R6R w - - 0 1',
+		move => 'a1a3',
+		san => 'R1a3',
+	},
+	{
+		fen => 'r6r/4k3/3R4/r6r/R6R/8/3RK3/R6R w - - 0 1',
+		move => 'a1c1',
+		san => 'Rac1',
+	},
+	{
+		fen => 'r6r/4k3/3R4/r6r/R6R/8/3RK3/R6R w - - 0 1',
+		move => 'a4d4',
+		san => 'Ra4d4',
+	},
+	{
+		fen => 'r6r/4k3/3R4/r6r/R6R/8/3RK3/R6R w - - 0 1',
+		move => 'd6e6',
+		san => 'Re6+',
+	},
+	{
+		fen => 'kr6/qn6/8/1N6/8/8/4K3/8 w - - 0 1',
+		move => 'b5c7',
+		san => 'Nc7#',
+	},
 );
 
 plan tests => 3 * @tests;
