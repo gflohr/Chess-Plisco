@@ -1698,7 +1698,7 @@ sub coordinateNotation {
 }
 
 sub SAN {
-	my ($self, $move) = @_;
+	my ($self, $move, $use_pseudo_legal_moves) = @_;
 
 	my ($from, $to, $promote, $attacker) = (
 		cp_move_from($move),
@@ -1728,7 +1728,11 @@ sub SAN {
 		& $bitboards[$attacker];
 
 	# Or use legalMoves?
-	my @cmoves = $self->pseudoLegalMoves or return;
+	my @legal_moves = $self->legalMoves or return;
+	my @cmoves = $use_pseudo_legal_moves
+		? $self->pseudoLegalMoves : @legal_moves;
+	return if !@cmoves;
+
 	my (%files, %ranks);
 	my $candidates = 0;
 	foreach my $cmove (@cmoves) {
@@ -1741,12 +1745,17 @@ sub SAN {
 		++$ranks{$frank};
 	}
 
+	my $to_mask = 1 << $to;
+	my $to_move = cp_pos_to_move $self;
+	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
+	my $ep_shift = cp_pos_ep_shift $self;
+	my @files = ('a' .. 'h');
+	my @ranks = ('1' .. '8');
+	my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
+
 	if ($candidates > 1) {
 		my $numfiles = keys %files;
 		my $numranks = keys %ranks;
-		my @files = ('a' .. 'h');
-		my @ranks = ('1' .. '8');
-		my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
 
 		if ($numfiles == $candidates) {
 			$san .= $files[$from_file];
@@ -1755,6 +1764,16 @@ sub SAN {
 		} else {
 			$san .= "$files[$from_file]$ranks[$from_rank]";
 		}
+	}
+
+	if (($to_mask & $her_pieces)
+	    || ($ep_shift && $attacker == CP_PAWN && $to == $ep_shift)) {
+		# Capture.  For pawn captures we always add the file unless it was
+		# already added.
+		if ($attacker == CP_PAWN && !length $san) {
+			$san .= $files[$from_file];
+		}
+		$san .= 'x';
 	}
 
 	$san .= $self->shiftToSquare($to);
