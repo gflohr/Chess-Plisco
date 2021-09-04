@@ -33,11 +33,13 @@
 			if ($is_rook) {
 				my $rmagic = cp_mm_rmagic($from, $occupancy) & $ray_mask;
 				$pinned = ($rmagic & $my_king_mask)
-						&& ($rmagic & $her_pieces & cp_pos_rooks($p));
+						&& ($rmagic & $her_pieces
+							& (cp_pos_queens($p) | cp_pos_rooks($p)));
 			} else {
 				my $bmagic = cp_mm_bmagic($from, $occupancy) & $ray_mask;
 				$pinned = ($bmagic & $my_king_mask)
-						&& ($bmagic & $her_pieces & cp_pos_bishops($p));
+						&& ($bmagic & $her_pieces
+							& (cp_pos_queens($p) | cp_pos_bishops($p)));
 			}
 		}
 	}
