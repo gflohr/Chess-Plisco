@@ -17,10 +17,11 @@
 	my $my_pieces = $p->[CP_POS_W_PIECES + $my_color];
 	my $her_pieces = $p->[CP_POS_W_PIECES + $her_color];
 	my $occupancy = ($my_pieces | $her_pieces) & ~(1 << $from);
+	my $queens = cp_pos_queens($p);
 	$her_pieces
 		& (($pawn_masks[$my_color]->[2]->[$to] & cp_pos_pawns($p))
 			| ($knight_attack_masks[$to] & cp_pos_knights($p))
 			| ($king_attack_masks[$to] & cp_pos_kings($p))
-			| (cp_mm_bmagic($to, $occupancy) & cp_pos_bishops($p))
-			| (cp_mm_rmagic($to, $occupancy) & cp_pos_rooks($p)));
+			| (cp_mm_bmagic($to, $occupancy) & ($queens | cp_pos_bishops($p)))
+			| (cp_mm_rmagic($to, $occupancy) & ($queens | cp_pos_rooks($p))));
 });

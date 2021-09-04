@@ -386,21 +386,11 @@ foreach my $test (@tests) {
 		} elsif ($from_mask & cp_pos_knights($pos)) {
 			$attacker = CP_KNIGHT;
 		} elsif ($from_mask & cp_pos_bishops($pos)) {
-			if ($from_mask & cp_pos_rooks($pos)) {
-				# Did it move like a bishop or like a queen?
-				my ($from, $to) = (cp_move_from($move), cp_move_to($move));
-				my ($from_file, $from_rank) = $pos->shiftToCoordinates($from);
-				my ($to_file, $to_rank) = $pos->shiftToCoordinates($to);
-				if (($from_file != $to_file) && ($from_rank != $to_rank)) {
-					$attacker = CP_BISHOP;
-				} else {
-					$attacker = CP_ROOK;
-				}
-			} else {
-				$attacker = CP_BISHOP;
-			}
+			$attacker = CP_BISHOP;
 		} elsif ($from_mask & cp_pos_rooks($pos)) {
 			$attacker = CP_ROOK;
+		} elsif ($from_mask & cp_pos_queens($pos)) {
+			$attacker = CP_QUEEN;
 		} elsif ($from_mask & cp_pos_kings($pos)) {
 			$attacker = CP_KING;
 		} else {

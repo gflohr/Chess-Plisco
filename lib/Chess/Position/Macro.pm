@@ -32,6 +32,7 @@ define cp_pos_b_pieces => '$p', '$p->[CP_POS_B_PIECES]';
 define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
 define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
 define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
+define cp_pos_queens => '$p', '$p->[CP_POS_QUEENS]';
 define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
 define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';

@@ -48,7 +48,8 @@ use constant DEBUG_PERFT => 0;
 
 my @export_accessors = qw(
 	CP_POS_W_PIECES CP_POS_B_PIECES
-	CP_POS_KINGS CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
+	CP_POS_KINGS CP_POS_QUEENS
+	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_INFO
 	CP_POS_IN_CHECK CP_POS_EVASION_SQUARES
@@ -99,9 +100,7 @@ use constant CP_POS_PAWNS => 2;
 use constant CP_POS_KNIGHTS => 3;
 use constant CP_POS_BISHOPS => 4;
 use constant CP_POS_ROOKS => 5;
-# It is important that there is one gap between the rooks and the kings
-# bitmasks, so that the piece code can be used as an index offset.
-use constant CP_POS_UNUSED => 6;
+use constant CP_POS_QUEENS => 6;
 use constant CP_POS_KINGS => 7;
 use constant CP_POS_HALF_MOVES => 8;
 use constant CP_POS_HALF_MOVE_CLOCK => 9;
@@ -444,13 +443,15 @@ sub new {
 	cp_pos_w_pieces($self) = CP_1_MASK | CP_2_MASK;
 	cp_pos_b_pieces($self) = CP_8_MASK | CP_7_MASK,
 	cp_pos_kings($self) = (CP_1_MASK | CP_8_MASK) & CP_E_MASK;
-	cp_pos_rooks($self) = ((CP_A_MASK | CP_D_MASK | CP_H_MASK) & CP_1_MASK)
-			| ((CP_A_MASK | CP_D_MASK | CP_H_MASK) & CP_8_MASK),
-	cp_pos_bishops($self) = ((CP_C_MASK | CP_D_MASK | CP_F_MASK) & CP_1_MASK)
-			| ((CP_C_MASK | CP_D_MASK | CP_F_MASK) & CP_8_MASK),
+	cp_pos_queens($self) = (CP_D_MASK & CP_1_MASK)
+			| (CP_D_MASK & CP_8_MASK);
+	cp_pos_rooks($self) = ((CP_A_MASK | CP_H_MASK) & CP_1_MASK)
+			| ((CP_A_MASK | CP_H_MASK) & CP_8_MASK);
+	cp_pos_bishops($self) = ((CP_C_MASK | CP_F_MASK) & CP_1_MASK)
+			| ((CP_C_MASK | CP_F_MASK) & CP_8_MASK);
 	cp_pos_knights($self) = ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
-			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK),
-	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK,
+			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK);
+	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
 	cp_pos_half_move_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
 
@@ -495,6 +496,7 @@ sub newFromFEN {
 	my $rooks = 0;
 	my $knights = 0;
 	my $bishops = 0;
+	my $queens = 0;
 	my $pawns = 0;
 
 	my $shift = 63;
@@ -540,12 +542,10 @@ sub newFromFEN {
 				$kings |= $mask;
 			} elsif ('Q' eq $char) {
 				$w_pieces |= $mask;
-				$rooks |= $mask;
-				$bishops |= $mask;
+				$queens |= $mask;
 			} elsif ('q' eq $char) {
 				$b_pieces |= $mask;
-				$rooks |= $mask;
-				$bishops |= $mask;
+				$queens |= $mask;
 			} else {
 				die __x("Illegal FEN: Illegal piece/number '{x}'.\n",
 						x => $char);
@@ -576,6 +576,7 @@ sub newFromFEN {
 	$self->[CP_POS_W_PIECES] = $w_pieces;
 	$self->[CP_POS_B_PIECES] = $b_pieces;
 	$self->[CP_POS_KINGS] = $kings;
+	$self->[CP_POS_QUEENS] = $queens;
 	$self->[CP_POS_ROOKS] = $rooks;
 	$self->[CP_POS_BISHOPS] = $bishops;
 	$self->[CP_POS_KNIGHTS] = $knights;
@@ -695,6 +696,7 @@ sub toFEN {
 	my $bishops = cp_pos_bishops($self);
 	my $knights = cp_pos_knights($self);
 	my $rooks = cp_pos_rooks($self);
+	my $queens = cp_pos_queens($self);
 
 	my $fen = '';
 
@@ -716,13 +718,11 @@ sub toFEN {
 					} elsif ($mask & $knights) {
 						$fen .= 'N';
 					} elsif ($mask & $bishops) {
-						if ($mask & $rooks) {
-							$fen .= 'Q';
-						} else {
-							$fen .= 'B';
-						}
+						$fen .= 'B';
 					} elsif ($mask & $rooks) {
 						$fen .= 'R';
+					} elsif ($mask & $queens) {
+						$fen .= 'Q';
 					} else {
 						$fen .= 'K';
 					}
@@ -732,13 +732,11 @@ sub toFEN {
 					} elsif ($mask & $knights) {
 						$fen .= 'n';
 					} elsif ($mask & $bishops) {
-						if ($mask & $rooks) {
-							$fen .= 'q';
-						} else {
-							$fen .= 'b';
-						}
+						$fen .= 'b';
 					} elsif ($mask & $rooks) {
 						$fen .= 'r';
+					} elsif ($mask & $queens) {
+						$fen .= 'q';
 					} else {
 						$fen .= 'k';
 					}
@@ -897,6 +895,23 @@ sub pseudoLegalMoves {
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 		$rook_mask = cp_bb_clear_least_set $rook_mask;
+	}
+
+	# Generate queen moves.
+	my $queen_mask = $my_pieces & cp_pos_queens $self;
+	while ($queen_mask) {
+		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $queen_mask;
+
+		$base_move = ($from << 6 | CP_QUEEN << 15);
+	
+		$target_mask = 
+			(cp_mm_rmagic($from, $occupancy)
+				| cp_mm_bmagic($from, $occupancy))
+			& ($empty | $her_pieces);
+
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+		$queen_mask = cp_bb_clear_least_set $queen_mask;
 	}
 
 	# Generate pawn moves.
@@ -1122,11 +1137,7 @@ sub doMove {
 		} elsif ($to_mask & cp_pos_knights($self)) {
 			$victim = CP_KNIGHT;
 		} elsif ($to_mask & cp_pos_bishops($self)) {
-			if ($to_mask & cp_pos_rooks($self)) {
-				$victim = CP_QUEEN;
-			} else {
-				$victim = CP_BISHOP;
-			}
+			$victim = CP_BISHOP;
 		} elsif ($to_mask & cp_pos_rooks($self)) {
 			$victim = CP_ROOK;
 		} else {
@@ -1144,10 +1155,10 @@ sub doMove {
 			my $occupancy = (cp_pos_w_pieces($self) | cp_pos_b_pieces($self))
 					& ((~$move_mask) ^ $victim_mask);
 			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
-				& cp_pos_bishops($self)) {
+				& (cp_pos_bishops($self) | cp_pos_queens($self))) {
 				return;
 			} elsif (cp_mm_rmagic($king_shift, $occupancy) & $her_pieces
-				& cp_pos_rooks($self)) {
+				& (cp_pos_rooks($self) | cp_pos_queens($self))) {
 				return;
 			}
 			
@@ -1167,27 +1178,14 @@ sub doMove {
 		cp_pos_info_set_ep_shift($pos_info, 0);
 	}
 
-	my $is_queen_move = $from_mask
-		& $self->[CP_POS_BISHOPS] & $self->[CP_POS_ROOKS];
-
 	# Move all pieces involved.
 	if ($victim != CP_NO_PIECE) {
 		$self->[CP_POS_W_PIECES + !$to_move] ^= $victim_mask;
-		if ($victim == CP_QUEEN) {
-			$self->[CP_POS_ROOKS] ^= $victim_mask;
-			$self->[CP_POS_BISHOPS] ^= $victim_mask;
-		} else {
-			$self->[CP_POS_B_PIECES + $victim] ^= $victim_mask;
-		}
+		$self->[CP_POS_B_PIECES + $victim] ^= $victim_mask;
 	}
 
 	$self->[CP_POS_W_PIECES + $to_move] ^= $move_mask;
-	if ($is_queen_move) {
-		$self->[CP_POS_ROOKS] ^= $move_mask;
-		$self->[CP_POS_BISHOPS] ^= $move_mask;
-	} else {
-		$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
-	}
+	$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -1197,17 +1195,10 @@ sub doMove {
 
 	if ($promote) {
 		$self->[CP_POS_PAWNS] ^= $to_mask;
-
-		if ($promote == CP_QUEEN) {
-			$self->[CP_POS_BISHOPS] ^= $to_mask;
-			$self->[CP_POS_ROOKS] ^= $to_mask;
-		} else {
-			$self->[CP_POS_PAWNS - 1 + $promote] ^= $to_mask;
-		}
+		$self->[CP_POS_PAWNS - 1 + $promote] ^= $to_mask;
 	}
 
-	my @undo_info = (
-		$victim, $victim_mask, $is_queen_move, @state);
+	my @undo_info = ($victim, $victim_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_info_set_to_move($pos_info, !$to_move);
@@ -1222,7 +1213,7 @@ sub doMove {
 sub undoMove {
 	my ($self, $move, $undoInfo) = @_;
 
-	my ($victim, $victim_mask, $is_queen_move, @state) = @$undoInfo;
+	my ($victim, $victim_mask, @state) = @$undoInfo;
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1242,30 +1233,17 @@ sub undoMove {
 
 	$self->[CP_POS_W_PIECES + $to_move ] ^= $move_mask;
 
-	if ($is_queen_move) {
-		$self->[CP_POS_BISHOPS] ^= $move_mask;
-		$self->[CP_POS_ROOKS] ^= $move_mask;
-	} elsif ($promote) {
+	if ($promote) {
 		my $remove_mask = 1 << $to;
 		$self->[CP_POS_PAWNS] |= 1 << $from;
-		if ($promote == CP_QUEEN) {
-			$self->[CP_POS_ROOKS] ^= $remove_mask;
-			$self->[CP_POS_BISHOPS] ^= $remove_mask;
-		} else {
-			$self->[CP_POS_B_PIECES + $promote] ^= $remove_mask;
-		}
+		$self->[CP_POS_B_PIECES + $promote] ^= $remove_mask;
 	} else {
 		$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
 	}
 
 	if ($victim) {
 		$self->[CP_POS_W_PIECES + !$to_move] |= $victim_mask;
-		if ($victim != CP_QUEEN) {
-			$self->[CP_POS_PAWNS - 1 + $victim] |= $victim_mask;
-		} else {
-			$self->[CP_POS_BISHOPS] |= $victim_mask;
-			$self->[CP_POS_ROOKS] |= $victim_mask;
-		}
+		$self->[CP_POS_PAWNS - 1 + $victim] |= $victim_mask;
 	}
 
 	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
@@ -1424,9 +1402,11 @@ sub consistent {
 	my $knights = $self->[CP_POS_KNIGHTS];
 	my $bishops = $self->[CP_POS_BISHOPS];
 	my $rooks = $self->[CP_POS_ROOKS];
+	my $queens = $self->[CP_POS_QUEENS];
 	my $kings = $self->[CP_POS_KINGS];
 
-	my $occupied_by_pieces = $pawns | $knights | $bishops | $rooks | $kings;
+	my $occupied_by_pieces = $pawns | $knights | $bishops | $rooks | $queens
+		| $kings;
 	if ($occupied_by_pieces & $empty) {
 		if ($pawns & $empty) {
 			warn "Orphaned pawn(s) (neither black nor white).\n";
@@ -1442,6 +1422,10 @@ sub consistent {
 		}
 		if ($rooks & $empty) {
 			warn "Orphaned rooks(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($queens & $empty) {
+			warn "Orphaned queens(s) (neither black nor white).\n";
 			undef $consistent;
 		}
 		if ($kings & $empty) {
@@ -1471,6 +1455,10 @@ sub consistent {
 		warn "Pawns and rooks overlap.\n";
 		undef $consistent;
 	}
+	if ($pawns & $queens) {
+		warn "Pawns and queens overlap.\n";
+		undef $consistent;
+	}
 	if ($pawns & $kings) {
 		warn "Pawns and kings overlap.\n";
 		undef $consistent;
@@ -1483,14 +1471,28 @@ sub consistent {
 		warn "Knights and rooks overlap.\n";
 		undef $consistent;
 	}
+	if ($knights & $queens) {
+		warn "Knights and queens overlap.\n";
+		undef $consistent;
+	}
 	if ($knights & $kings) {
 		warn "Knights and kings overlap.\n";
 		undef $consistent;
 	}
-	# Bishops and rooks overlap on purpose.  The intersection is occupied by
-	# queens.
+	if ($bishops & $rooks) {
+		warn "Bishops and rooks overlap.\n";
+		undef $consistent;
+	}
+	if ($bishops & $queens) {
+		warn "Bishops and queens overlap.\n";
+		undef $consistent;
+	}
 	if ($bishops & $kings) {
 		warn "Bishops and kings overlap.\n";
+		undef $consistent;
+	}
+	if ($queens & $kings) {
+		warn "Queens and kings overlap.\n";
 		undef $consistent;
 	}
 
@@ -1533,13 +1535,11 @@ sub pieceAtShift {
 		} elsif ($mask & cp_pos_knights $self) {
 			$piece = CP_KNIGHT;
 		} elsif ($mask & cp_pos_bishops $self) {
-			if ($mask & cp_pos_rooks $self) {
-				$piece = CP_QUEEN;
-			} else {
-				$piece = CP_BISHOP;
-			}
+			$piece = CP_BISHOP;
 		} elsif ($mask & cp_pos_rooks $self) {
 			$piece = CP_ROOK;
+		} elsif ($mask & cp_pos_queens $self) {
+			$piece = CP_QUEEN;
 		} else {
 			$piece = CP_KING;
 		}
@@ -1593,9 +1593,14 @@ sub dumpAll {
 		$output .= "$bishops[$i]   $rooks[$i]\n";
 	}
 
+	my $queens = $self->dumpBitboard($self->[CP_POS_QUEENS]);
+	my @queens = split /\n/, $queens;
 	my $kings = $self->dumpBitboard($self->[CP_POS_KINGS]);
-	$output .= "\n  Kings\n";
-	$output .= $kings;
+	my @kings = map { $pad19->() } split /\n/, $kings;
+	$output .= "\n  Queens              Kings\n";
+	for (my $i = 0; $i < @queens; ++$i) {
+		$output .= "$queens[$i]   $kings[$i]\n";
+	}
 
 	return $output;
 }
@@ -1717,15 +1722,12 @@ sub SAN {
 	}
 
 	# Avoid extra hassle for queen moves.
-	my @bitboards = @$self;
-	$bitboards[CP_POS_ROOKS + 1] = cp_pos_rooks($self) & cp_pos_bishops($self);
-
 	my @pieces = ('', '', 'N', 'B', 'R', 'Q', 'K');
 
 	my $san = $pieces[$attacker];
 
-	my $from_board = $bitboards[CP_POS_W_PIECES + cp_pos_to_move($self)]
-		& $bitboards[$attacker];
+	my $from_board = $self->[CP_POS_W_PIECES + cp_pos_to_move($self)]
+		& $self->[CP_POS_B_PIECES + $attacker];
 
 	# Or use legalMoves?
 	my @legal_moves = $self->legalMoves or return;
@@ -1833,13 +1835,11 @@ sub parseMove {
 	} elsif ($from_mask & cp_pos_knights($self)) {
 		$attacker = CP_KNIGHT;
 	} elsif ($from_mask & cp_pos_bishops($self)) {
-		if ($from_mask & cp_pos_rooks($self)) {
-			$attacker = CP_QUEEN;
-		} else {
-			$attacker = CP_BISHOP;
-		}
+		$attacker = CP_BISHOP;
 	} elsif ($from_mask & cp_pos_rooks($self)) {
 		$attacker = CP_ROOK;
+	} elsif ($from_mask & cp_pos_queens($self)) {
+		$attacker = CP_QUEEN;
 	} elsif ($from_mask & cp_pos_kings($self)) {
 		$attacker = CP_KING;
 	} else {
