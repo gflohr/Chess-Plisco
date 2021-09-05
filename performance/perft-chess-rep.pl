@@ -29,8 +29,7 @@ sub perftWithOutput {
 
 	my $nodes = 0;
 
-	my $moves = $pos->status->{moves};
-	foreach my $move (@$moves) {
+	foreach my $move (@{$pos->status->{moves}}) {
 		my $movestr = join '', map {
 			my ($rank, $file) = (($_ & 0x70) >> 4, $_ & 0x7);
 			chr($file + 97) . chr($rank + 49);
@@ -72,8 +71,7 @@ sub perft {
 	my ($pos, $depth) = @_;
 
 	my $nodes = 0;
-	my $moves = $pos->status->{moves};
-	foreach my $move (@$moves) {
+	foreach my $move (@{$pos->status->{moves}}) {
 		my $movestr = join '', map {
 			my ($rank, $file) = (($_ & 0x70) >> 4, $_ & 0x7);
 			chr($file + 97) . chr($rank + 49);
