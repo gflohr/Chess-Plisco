@@ -36,10 +36,17 @@ sub perftWithOutput {
 
 	my $nodes = 0;
 
+	my @saved_board = @{$pos->{BOARD} };
+	my @saved_last_double_move = @{$pos->{LAST_DOUBLE_MOVE} };
+	my %saved_castle_ok = %{ $pos->{CASTLE_OK} };
+	my %saved_under_check = %{$pos->{UNDER_CHECK} };
+	my $saved_rule_50_moves = $pos->{RULE_50_MOVES};
+	my $saved_color_to_move = $pos->{COLOR_TO_MOVE};
+	my $saved_move_number = $pos->{FEN_MOVE_NUMBER};
+ 
 	my @moves = $pos->generate_legal_moves($pos->{COLOR_TO_MOVE});
 	foreach my $move (@moves) {
-		my $copy = dclone $pos;
-		$copy->execute_move($move);
+		$pos->execute_move($move);
 
 		my $movestr = Chess::Play::move_to_coord($move);
 		$fh->print("$movestr: ");
@@ -47,7 +54,7 @@ sub perftWithOutput {
 		my $subnodes;
 
 		if ($depth > 1) {
-			$subnodes = perft($copy, $depth - 1);
+			$subnodes = perft($pos, $depth - 1);
 		} else {
 			$subnodes = 1;
 		}
@@ -55,6 +62,14 @@ sub perftWithOutput {
 		$nodes += $subnodes;
 
 		$fh->print("$subnodes\n");
+
+		@{$pos->{BOARD}} = @saved_board;
+		@{$pos->{LAST_DOUBLE_MOVE}} = @saved_last_double_move;
+		%{$pos->{CASTLE_OK}} = %saved_castle_ok;
+		%{$pos->{UNDER_CHECK}} = %saved_under_check;
+		$pos->{RULE_50_MOVES} = $saved_rule_50_moves;
+		$pos->{COLOR_TO_MOVE} = $saved_color_to_move;
+		$pos->{FEN_MOVE_NUMBER} = $saved_move_number;
 	}
 
 	no integer;
@@ -75,16 +90,31 @@ sub perft {
 
 	my $nodes = 0;
 
+	my @saved_board = @{$pos->{BOARD} };
+	my @saved_last_double_move = @{$pos->{LAST_DOUBLE_MOVE} };
+	my %saved_castle_ok = %{ $pos->{CASTLE_OK} };
+	my %saved_under_check = %{$pos->{UNDER_CHECK} };
+	my $saved_rule_50_moves = $pos->{RULE_50_MOVES};
+	my $saved_color_to_move = $pos->{COLOR_TO_MOVE};
+	my $saved_move_number = $pos->{FEN_MOVE_NUMBER};
+ 
 	my @moves = $pos->generate_legal_moves($pos->{COLOR_TO_MOVE});
 	foreach my $move (@moves) {
-		my $copy = dclone $pos;
-		$copy->execute_move($move);
+		$pos->execute_move($move);
 
 		if ($depth > 1) {
-			$nodes += perft($copy, $depth - 1);
+			$nodes += perft($pos, $depth - 1);
 		} else {
 			++$nodes;
 		}
+
+		@{$pos->{BOARD}} = @saved_board;
+		@{$pos->{LAST_DOUBLE_MOVE}} = @saved_last_double_move;
+		%{$pos->{CASTLE_OK}} = %saved_castle_ok;
+		%{$pos->{UNDER_CHECK}} = %saved_under_check;
+		$pos->{RULE_50_MOVES} = $saved_rule_50_moves;
+		$pos->{COLOR_TO_MOVE} = $saved_color_to_move;
+		$pos->{FEN_MOVE_NUMBER} = $saved_move_number;
 	}
 
 	return $nodes;
