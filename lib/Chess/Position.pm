@@ -1675,21 +1675,17 @@ sub dumpBitboard {
 	my (undef, $bitboard) = @_;
 
 	my $output = "  a b c d e f g h\n";
-	foreach my $shift (reverse (0 .. 63)) {
-		if (($shift & 0x7) == 0x7) {
-			$output .= 1 + ($shift >> 3);
+	foreach my $rank (reverse(0 .. 7)) {
+		$output .= $rank + 1;
+		foreach my $file (0 .. 7) {
+			my $shift = ($rank << 3) + $file;
+			if ($bitboard & 1 << $shift) {
+				$output .= ' x';
+			} else {
+				$output .= ' .';
+			}
 		}
-		if ($bitboard & 1 << $shift) {
-			$output .= ' x';
-		} else {
-			$output .= ' .';
-		}
-
-		if (($shift & 0x7) == 0) {
-			$output .= ' ';
-			$output .= 1 + ($shift >> 3);
-			$output .= "\n";
-		}
+		$output .= ' ' . ($rank + 1) . "\n";
 	}
 	$output .= "  a b c d e f g h\n";
 
