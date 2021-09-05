@@ -72,6 +72,8 @@ first few are:
 
 =item * C<rooks> - one bitboard for the rooks (of both colors)
 
+=item * C<queens> - one bitboard for the queens (of both colors)
+
 =item * C<checkers> - one bitboard for all pieces giving check (of the color
 not to move)
 
@@ -92,55 +94,14 @@ bitboard of black pieces AND in the knight bitboard.
 Example: How to get a bitboard of white's regular (bishops, knights,
 rooks, and queens) pieces:
 
-    $w_pieces & ($knights | $bishops | $rooks)
+    $w_pieces & ($knights | $bishops | $rooks | $queens)
 
-Now you probably ask yourself, why there is no bitboard for the queens.
-
-The main purpose of bitboards is to generate a list of possible resp.
-legal moves in a certain position, and to find out which squares the
-pieces control or attack. In that respect, a queen is simply a
-combination of a bishop and a rook.
-
-When the moves are getting generated, it would be an inefficient waste
-of time to generate the queen moves in a separate step. Look at it:
-
-=over
-
-=item 1. generate (diagonal) bishop moves
-
-=item 2. generate (horizontal and vertical) rook moves
-
-=item 3. generate diagonal queen moves
-
-=item 4. generate horizontal and vertical queen moves
-
-=back
-
-This can be done faster
-
-=over
-
-=item 1. generate diagonal bishop and queen moves
-
-=item 2. generate horizontal and vertical rook and queen moves
-
-=back
-
-To find out, whether the move is performed by a queen or a bishop or
-rook, you just have to look at the starting square of the move. If it is
-occupied by a queen, it is a queen move, otherwise a bishop or rook
-move.
-
-The drawback of this is that it is a little more complicated to get a
-bitboard of the bishops, rooks, and queens:
-
-    $white_queens = $w_pieces & $bishops & $rooks
-    $white_rooks = $w_pieces & ($rooks & ~$bishops)
-    $white_bishops = $w_pieces & ($bishops & ~$rooks)
-
-But these bitwise operations are very fast and cheap, and in fact, you
-rarely have to find out whether a square is really occupied by a queen
-or a rook.
+A lot of libraries do not use a separate bitboard for queens because the moves
+that a queen can make are just a superset of the moves of a bishop and the
+moves of a rook.  Having no bitboard for queens, can therefore speed up parts
+of the move generation but on the other hand requires a lot of extra
+branching (conditionals).  In the case of L<Chess::Position> it turned out
+that it is actually faster with a separate bitboard for the queens.
 
 =head3 Other Board Representations
 
@@ -293,9 +254,8 @@ data values will not fit into the other structures.
 
 =head4 Internal Move Representation
 
-A move in C<Chess::Position> is simply an integer. There is also a
-convenience class C<Chess::Position::Move> but this class is not used
-internally for performance reasons. The individual bits of a move are:
+A move in C<Chess::Position> is simply an integer. The individual bits of a
+move are:
 
 =over
 
@@ -376,6 +336,18 @@ describing chess games. You will find more information about it on the internet.
 Note that the move parser is very forgiving and accepts a lot of moves that
 are not complying with the standard.
 
+=head4 Making Moves Human-Readable
+
+The methods C<SAN> and C<coordinateNotation> can be used to print a move in
+humand-readable format:
+
+    $pos->SAN($move);
+    # Nxe7#
+    $pos->coordinateNotation($move);
+    # d6e7
+
+In general, you will prefer print moves in Standard Algebraic Notation.
+
 =head2 Using Macros
 
 When dealing with chess programming you often find yourself executing
@@ -393,8 +365,11 @@ of small helper functions available, the names of which all begin with
 C<cp_>. You can use them more or less like functions but they are inlined
 into your code at compile-time.
 
-There are a couple of things that you have to keep in minde, when using
-these macros:
+But this is only necessary, when performance is important. For normal
+purposes, you can just use regular instance methods instead of macros.
+
+But when you want to use the macros, there are a couple of caveats that you
+have to keep in mind:
 
 =head3 Use C<Chess::Position::Macro> and(!) C<Chess::Position>
 
@@ -487,7 +462,8 @@ approach and it is actually reasonably fast.
 
 =head4 Efficient and Fast Approach
 
-But there is a better technique to achieve the same result:
+But there is a another technique that achieves the same result and is often
+faster:
 
     use integer;
     use Chess::Position qw(:all);
