@@ -115,14 +115,14 @@ use constant CP_EVASION_KING_MOVE => 2;
 
 # Board masks.
 # Files.
-use constant CP_A_MASK => 0x8080808080808080;
-use constant CP_B_MASK => 0x4040404040404040;
-use constant CP_C_MASK => 0x2020202020202020;
-use constant CP_D_MASK => 0x1010101010101010;
-use constant CP_E_MASK => 0x0808080808080808;
-use constant CP_F_MASK => 0x0404040404040404;
-use constant CP_G_MASK => 0x0202020202020202;
-use constant CP_H_MASK => 0x0101010101010101;
+use constant CP_A_MASK => 0x0101010101010101;
+use constant CP_B_MASK => 0x0202020202020202;
+use constant CP_C_MASK => 0x0404040404040404;
+use constant CP_D_MASK => 0x0808080808080808;
+use constant CP_E_MASK => 0x1010101010101010;
+use constant CP_F_MASK => 0x2020202020202020;
+use constant CP_G_MASK => 0x4040404040404040;
+use constant CP_H_MASK => 0x8080808080808080;
 
 # Ranks.
 use constant CP_1_MASK => 0x00000000000000ff;
@@ -1992,7 +1992,7 @@ sub __parseUCIMove {
 sub coordinatesToShift {
 	my (undef, $file, $rank) = @_;
 
-	return $rank * 8 + 7 - $file;
+	return ($rank << 3) + $file;
 }
 
 sub coordinatesToSquare {
@@ -2004,7 +2004,7 @@ sub coordinatesToSquare {
 sub shiftToCoordinates {
 	my (undef, $shift) = @_;
 
-	my $file = (7 - $shift) & 0x7;
+	my $file = $shift & 0x7;
 	my $rank = $shift >> 3;
 
 	return $file, $rank;
@@ -2020,7 +2020,7 @@ sub shiftToSquare {
 	my (undef, $shift) = @_;
 
 	my $rank = 1 + ($shift >> 3);
-	my $file = 7 - ($shift & 0x7);
+	my $file = $shift & 0x7;
 
 	return sprintf '%c%u', $file + ord 'a', $rank;
 }

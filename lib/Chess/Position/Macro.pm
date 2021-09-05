@@ -138,12 +138,12 @@ define cp_mm_rmagic => '$s', '$o',
 	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & ((1 << (64 - 52)) - 1)]';
 
 # Conversion between different notions of a square.
-define cp_coords_to_shift => '$f', '$r', '(($r) * 8 + (7 - ($f)))';
-define cp_shift_to_coords => '$s', '(7 - $s & 0x7, $s >> 3)';
+define cp_coords_to_shift => '$f', '$r', '(($r << 3) + $f)';
+define cp_shift_to_coords => '$s', '($s & 0x7, $s >> 3)';
 define cp_coords_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
 define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
-define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + 104 - ord($s)';
-define cp_shift_to_square => '$s', 'chr(97 + ((7 - $s) & 0x7)) . (1 + ($s >> 3))';
+define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + ord($s) - 97';
+define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 
 define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
 	'movesFromMask.pm';
