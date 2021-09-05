@@ -44,8 +44,7 @@ sub perftWithOutput {
 	my $saved_color_to_move = $pos->{COLOR_TO_MOVE};
 	my $saved_move_number = $pos->{FEN_MOVE_NUMBER};
  
-	my @moves = $pos->generate_legal_moves($pos->{COLOR_TO_MOVE});
-	foreach my $move (@moves) {
+	foreach my $move ($pos->generate_legal_moves($pos->{COLOR_TO_MOVE})) {
 		$pos->execute_move($move);
 
 		my $movestr = Chess::Play::move_to_coord($move);
@@ -98,8 +97,7 @@ sub perft {
 	my $saved_color_to_move = $pos->{COLOR_TO_MOVE};
 	my $saved_move_number = $pos->{FEN_MOVE_NUMBER};
  
-	my @moves = $pos->generate_legal_moves($pos->{COLOR_TO_MOVE});
-	foreach my $move (@moves) {
+	foreach my $move ($pos->generate_legal_moves($pos->{COLOR_TO_MOVE})) {
 		$pos->execute_move($move);
 
 		if ($depth > 1) {
