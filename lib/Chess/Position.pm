@@ -271,34 +271,34 @@ my @castling_aux_data = (
 	# White.
 	[
 		# From shift.
-		3,
+		cp_square_to_shift('e1'),
 		# From mask.
 		(CP_E_MASK & CP_1_MASK),
 		# King-side crossing square.
 		(CP_F_MASK & CP_1_MASK),
 		# King-side king's destination square.
-		1,
+		cp_square_to_shift('g1'),
 		# Queen-side crossing mask.
 		(CP_D_MASK & CP_1_MASK),
 		# Queen-side king's destination square.
-		5,
+		cp_square_to_shift('c1'),
 		# Queen-side rook crossing mask.
 		(CP_B_MASK & CP_1_MASK),
 	],
 	# Black.
 	[
 		# From shift.
-		59,
+		cp_square_to_shift('e8'),
 		# From mask.
 		(CP_E_MASK & CP_8_MASK),
 		# King-side crossing mask.
 		(CP_F_MASK & CP_8_MASK),
 		# King-side king's destination square.
-		57,
+		cp_square_to_shift('g8'),
 		# Queen-side crossing mask.
 		(CP_D_MASK & CP_8_MASK),
 		# Queen-side king's destination square.
-		61,
+		cp_square_to_shift('c8'),
 		# Queen-side rook crossing mask.
 		(CP_B_MASK & CP_8_MASK),
 	],
