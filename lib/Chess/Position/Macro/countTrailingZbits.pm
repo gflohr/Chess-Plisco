@@ -11,12 +11,12 @@
 
 # This is a macro that is not intended to run standalone.
 
-while ($target_mask) {
-	my $base_move = $b | cp_bb_count_trailing_zbits $t;
-	push @m,
-		$b | (CP_QUEEN << 12),
-		$b | (CP_ROOK << 12),
-		$b | (CP_BISHOP << 12),
-		$b | (CP_KNIGHT << 12);
-	$target_mask = cp_bb_clear_least_set $target_mask;
-}
+(do {
+	my $B = $bb & -$bb;
+	my $A = $B - 1 - ((($B - 1) >> 1) & 0x5555_5555_5555_5555);
+	my $C = ($A & 0x3333_3333_3333_3333) + (($A >> 2) & 0x3333_3333_3333_3333);
+	my $n = $C + ($C >> 32);
+	$n = ($n & 0x0f0f0f0f) + (($n >> 4) & 0x0f0f0f0f);
+	$n = ($n & 0xffff) + ($n >> 16);
+	$n = ($n & 0xff) + ($n >> 8);
+})

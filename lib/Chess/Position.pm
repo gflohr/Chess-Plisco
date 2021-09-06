@@ -933,7 +933,7 @@ sub pseudoLegalMoves {
 	# Generate knight moves.
 	my $knight_mask = $my_pieces & cp_pos_knights $self;
 	while ($knight_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $knight_mask;
+		my $from = cp_bb_count_trailing_zbits $knight_mask;
 
 		$base_move = ($from << 6 | CP_KNIGHT << 15);
 	
@@ -947,7 +947,7 @@ sub pseudoLegalMoves {
 	# Generate bishop moves.
 	my $bishop_mask = $my_pieces & cp_pos_bishops $self;
 	while ($bishop_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $bishop_mask;
+		my $from = cp_bb_count_trailing_zbits $bishop_mask;
 
 		$base_move = ($from << 6 | CP_BISHOP << 15);
 	
@@ -961,7 +961,7 @@ sub pseudoLegalMoves {
 	# Generate rook moves.
 	my $rook_mask = $my_pieces & cp_pos_rooks $self;
 	while ($rook_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $rook_mask;
+		my $from = cp_bb_count_trailing_zbits $rook_mask;
 
 		$base_move = ($from << 6 | CP_ROOK << 15);
 	
@@ -975,7 +975,7 @@ sub pseudoLegalMoves {
 	# Generate queen moves.
 	my $queen_mask = $my_pieces & cp_pos_queens $self;
 	while ($queen_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $queen_mask;
+		my $from = cp_bb_count_trailing_zbits $queen_mask;
 
 		$base_move = ($from << 6 | CP_QUEEN << 15);
 	
@@ -1006,7 +1006,7 @@ sub pseudoLegalMoves {
 	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $from = cp_bb_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
@@ -1018,7 +1018,7 @@ sub pseudoLegalMoves {
 	# Pawn double steps.
 	$pawn_mask = $my_pieces & $pawns & $double_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $from = cp_bb_count_trailing_zbits $pawn_mask;
 		my $cross_mask = $pawn_single_masks->[$from] & $empty;
 
 		if ($cross_mask) {
@@ -1034,7 +1034,7 @@ sub pseudoLegalMoves {
 	# Pawn promotions including captures.
 	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $from = cp_bb_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
@@ -2267,7 +2267,7 @@ foreach my $m1 (
 	my $m2 = $m1;
 	my @shifts;
 	while ($m2) {
-		push @shifts, cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $m2;
+		push @shifts, cp_bb_count_trailing_zbits $m2;
 		$m2 = cp_bb_clear_least_set $m2;
 	}
 
@@ -2301,7 +2301,7 @@ foreach my $m1 (
 	my $m2 = $m1;
 	my @shifts;
 	while ($m2) {
-		push @shifts, cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $m2;
+		push @shifts, cp_bb_count_trailing_zbits $m2;
 		$m2 = cp_bb_clear_least_set $m2;
 	}
 
