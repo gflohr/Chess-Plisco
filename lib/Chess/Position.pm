@@ -2086,6 +2086,9 @@ sub __parseUCIMove {
 	return $move;
 }
 
+# Macros below this line will not ne expanded.
+# __NO_MACROS__
+
 sub coordinatesToShift {
 	my (undef, $file, $rank) = @_;
 
