@@ -399,6 +399,10 @@ my @castling_rook_move_masks;
 # castling rights.
 my @castling_rook_masks;
 
+# Change in material.  Looked up via a combined mask of color to move,
+# victim and promotion piece.
+my @material_deltas;
+
 # Magic moves.
 my @magicmoves_r_shift = (
 	52, 53, 53, 53, 53, 53, 53, 52,
@@ -1291,21 +1295,10 @@ sub doMove {
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_info_set_to_move($pos_info, !$to_move);
 
-	my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
-		CP_ROOK_VALUE, CP_QUEEN_VALUE);
-	my $material = cp_pos_info_material $pos_info;
-	if ($to_move == CP_WHITE) {
-		$material += $piece_values[$victim];
-		if ($promote) {
-			$material += ($piece_values[$promote] - CP_PAWN_VALUE);
-		}
-	} else {
-		$material -= $piece_values[$victim];
-		if ($promote) {
-			$material -= ($piece_values[$promote] - CP_PAWN_VALUE);
-		}
-	}
-	cp_pos_info_set_material($pos_info, $material);
+	# The material balance is stored in the most signicant bits.  It is
+	# already left-shifted 25 bites in the lookup table so that we can
+	# simply add it.
+	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($victim << 4)];
 
 	cp_pos_info($self) = $pos_info;
 
@@ -2363,6 +2356,20 @@ $castling_rook_masks[CP_H1] = 0x1;
 $castling_rook_masks[CP_A1] = 0x2;
 $castling_rook_masks[CP_H8] = 0x4;
 $castling_rook_masks[CP_A8] = 0x8;
+
+my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
+	CP_ROOK_VALUE, CP_QUEEN_VALUE);
+@material_deltas = (0) x (1 + (1 | (CP_QUEEN << 1) | (CP_QUEEN << 4)));
+foreach my $victim (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
+	$material_deltas[CP_WHITE | ($victim << 4)] = ($piece_values[$victim] << 25);
+	$material_deltas[CP_BLACK | ($victim << 4)] = (-$piece_values[$victim] << 25);
+	foreach my $promote (CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
+		$material_deltas[CP_WHITE | ($promote << 1) | ($victim << 4)] =
+			($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 25;
+		$material_deltas[CP_BLACK | ($promote << 1) | ($victim << 4)] =
+			-($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 25;
+	}
+}
 
 # Magic moves.
 sub initmagicmoves_occ {
