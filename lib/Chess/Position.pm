@@ -2053,28 +2053,28 @@ for my $shift (0 .. 63) {
 	my $mask = 0;
 
 	# East.
-	$mask |= (1 << ($shift - 1)) if $file < 7;
+	$mask |= (1 << ($shift + 1)) if $file < 7;
 
 	# South-east.
-	$mask |= (1 << ($shift - 9)) if $file < 7 && $rank > 0;
+	$mask |= (1 << ($shift - 7)) if $file < 7 && $rank > 0;
 
 	# South.
 	$mask |= (1 << ($shift - 8)) if              $rank > 0;
 
 	# South-west.
-	$mask |= (1 << ($shift - 7)) if $file > 0 && $rank > 0;
+	$mask |= (1 << ($shift - 9)) if $file > 0 && $rank > 0;
 
 	# West.
-	$mask |= (1 << ($shift + 1)) if $file > 0;
+	$mask |= (1 << ($shift - 1)) if $file > 0;
 
 	# North-west.
-	$mask |= (1 << ($shift + 9)) if $file > 0 && $rank < 7;
+	$mask |= (1 << ($shift + 7)) if $file > 0 && $rank < 7;
 
 	# North.
 	$mask |= (1 << ($shift + 8)) if              $rank < 7;
 
 	# North-east.
-	$mask |= (1 << ($shift + 7)) if $file < 7 && $rank < 7;
+	$mask |= (1 << ($shift + 9)) if $file < 7 && $rank < 7;
 
 	$king_attack_masks[$shift] = $mask;
 }
@@ -2086,28 +2086,28 @@ for my $shift (0 .. 63) {
 	my $mask = 0;
 
 	# North-north-east.
-	$mask |= (1 << ($shift + 15)) if $file < 7 && $rank < 6;
+	$mask |= (1 << ($shift + 17)) if $file < 7 && $rank < 6;
 
 	# North-east-east.
-	$mask |= (1 << ($shift +  6)) if $file < 6 && $rank < 7;
+	$mask |= (1 << ($shift + 10)) if $file < 6 && $rank < 7;
 
 	# South-east-east.
-	$mask |= (1 << ($shift - 10)) if $file < 6 && $rank > 0;
+	$mask |= (1 << ($shift -  6)) if $file < 6 && $rank > 0;
 
 	# South-south-east.
-	$mask |= (1 << ($shift - 17)) if $file < 7&&  $rank > 1;
+	$mask |= (1 << ($shift - 15)) if $file < 7&&  $rank > 1;
 
 	# South-south-west.
-	$mask |= (1 << ($shift - 15)) if $file > 0 && $rank > 1;
+	$mask |= (1 << ($shift - 17)) if $file > 0 && $rank > 1;
 
 	# South-west-west.
-	$mask |= (1 << ($shift -  6)) if $file > 1 && $rank > 0;
+	$mask |= (1 << ($shift - 10)) if $file > 1 && $rank > 0;
 
 	# North-west-west.
-	$mask |= (1 << ($shift + 10)) if $file > 1 && $rank < 7;
+	$mask |= (1 << ($shift +  6)) if $file > 1 && $rank < 7;
 
 	# North-north-west.
-	$mask |= (1 << ($shift + 17)) if $file > 0 && $rank < 6;
+	$mask |= (1 << ($shift + 15)) if $file > 0 && $rank < 6;
 
 	$knight_attack_masks[$shift] = $mask;
 }
@@ -2130,10 +2130,10 @@ for my $shift (0 .. 63) {
 	my ($file, $rank) = shiftToCoordinates undef, $shift;
 	my $mask = 0;
 	if ($file > 0) {
-		$mask |= 1 << ($shift + 9);
+		$mask |= 1 << ($shift + 7);
 	}
 	if ($file < 7) {
-		$mask |= 1 << ($shift + 7);
+		$mask |= 1 << ($shift + 9);
 	}
 	push @white_pawn_capture_masks, $mask;
 }
@@ -2157,10 +2157,10 @@ for my $shift (0 .. 63) {
 	my ($file, $rank) = shiftToCoordinates undef, $shift;
 	my $mask = 0;
 	if ($file > 0) {
-		$mask |= 1 << ($shift - 7);
+		$mask |= 1 << ($shift - 9);
 	}
 	if ($file < 7) {
-		$mask |= 1 << ($shift - 9);
+		$mask |= 1 << ($shift - 7);
 	}
 	push @black_pawn_capture_masks, $mask;
 }
