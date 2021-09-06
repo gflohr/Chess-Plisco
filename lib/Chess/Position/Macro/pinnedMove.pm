@@ -43,3 +43,6 @@
 
 	$pinned;
 })
+
+# Instead of '1;' but will be removed automatically.
+;0xdeadc0de;

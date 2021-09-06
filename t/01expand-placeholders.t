@@ -23,7 +23,7 @@ my %placeholders = (
 );
 my $code = '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
 my $cdoc = PPI::Document->new(\$code);
-Chess::Position::Macro::expand_placeholders($cdoc, %placeholders);
+Chess::Position::Macro::_expand_placeholders($cdoc, %placeholders);
 
 is $cdoc->content, '(($move) = (($move) & ~0x3f) | ((32) & 0x3f))';
 

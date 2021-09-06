@@ -16,144 +16,144 @@ use strict;
 use Filter::Util::Call;
 use PPI::Document;
 
-sub define;
-sub define_from_file;
+sub _define;
+sub _define_from_file;
 sub preprocess;
-sub extract_arguments;
-sub split_arguments;
-sub expand;
-sub expand_placeholders;
-sub expand_placeholder;
+sub _extract_arguments;
+sub _split_arguments;
+sub _expand;
+sub _expand_placeholders;
+sub _expand_placeholder;
 
 my %defines;
 
-define cp_pos_w_pieces => '$p', '$p->[CP_POS_W_PIECES]';
-define cp_pos_b_pieces => '$p', '$p->[CP_POS_B_PIECES]';
-define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
-define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
-define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
-define cp_pos_queens => '$p', '$p->[CP_POS_QUEENS]';
-define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
-define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
-define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
-define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
-define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
+_define cp_pos_w_pieces => '$p', '$p->[CP_POS_W_PIECES]';
+_define cp_pos_b_pieces => '$p', '$p->[CP_POS_B_PIECES]';
+_define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
+_define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
+_define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
+_define cp_pos_queens => '$p', '$p->[CP_POS_QUEENS]';
+_define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
+_define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
+_define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
+_define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
+_define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 
-define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
+_define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 
-define cp_pos_info_castling => '$i', '$i & 0xf';
-define cp_pos_info_w_ks_castle => '$i', '$i & (1 << 0)';
-define cp_pos_info_w_qs_castle => '$i', '$i & (1 << 1)';
-define cp_pos_info_b_ks_castle => '$i', '$i & (1 << 2)';
-define cp_pos_info_b_qs_castle => '$i', '$i & (1 << 3)';
-define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
-define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
-define cp_pos_info_w_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
-define cp_pos_info_b_king_shift => '$i', '(($i & (0x3f << 17)) >> 17)';
-define cp_pos_info_evasion => '$i', '(($i & (0x3 << 23)) >> 23)';
-define cp_pos_info_material => '$i', '($i >> 25)';
+_define cp_pos_info_castling => '$i', '$i & 0xf';
+_define cp_pos_info_w_ks_castle => '$i', '$i & (1 << 0)';
+_define cp_pos_info_w_qs_castle => '$i', '$i & (1 << 1)';
+_define cp_pos_info_b_ks_castle => '$i', '$i & (1 << 2)';
+_define cp_pos_info_b_qs_castle => '$i', '$i & (1 << 3)';
+_define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
+_define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
+_define cp_pos_info_w_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
+_define cp_pos_info_b_king_shift => '$i', '(($i & (0x3f << 17)) >> 17)';
+_define cp_pos_info_evasion => '$i', '(($i & (0x3 << 23)) >> 23)';
+_define cp_pos_info_material => '$i', '($i >> 25)';
 
-define cp_pos_info_set_castling => '$i', '$c',
+_define cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | $c)';
-define cp_pos_info_set_w_ks_castling => '$i', '$c',
+_define cp_pos_info_set_w_ks_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 0)) | ($c << 0))';
-define cp_pos_info_set_w_qs_castling => '$i', '$c',
+_define cp_pos_info_set_w_qs_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 1)) | ($c << 1))';
-define cp_pos_info_set_b_ks_castling => '$i', '$c',
+_define cp_pos_info_set_b_ks_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 2)) | ($c << 2))';
-define cp_pos_info_set_b_qs_castling => '$i', '$c',
+_define cp_pos_info_set_b_qs_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | ($c << 3))';
-define cp_pos_info_set_to_move => '$i', '$c',
+_define cp_pos_info_set_to_move => '$i', '$c',
 	'($i = ($i & ~(1 << 4)) | ($c << 4))';
-define cp_pos_info_set_ep_shift => '$i', '$s',
+_define cp_pos_info_set_ep_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 5)) | ($s << 5))';
-define cp_pos_info_set_w_king_shift => '$i', '$s',
+_define cp_pos_info_set_w_king_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 11)) | ($s << 11))';
-define cp_pos_info_set_b_king_shift => '$i', '$s',
+_define cp_pos_info_set_b_king_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 17)) | ($s << 17))';
-define cp_pos_info_set_evasion => '$i', '$e',
+_define cp_pos_info_set_evasion => '$i', '$e',
 	'($i = ($i & ~(0x3 << 23)) | ($e << 23))';
-define cp_pos_info_set_material => '$i', '$m',
+_define cp_pos_info_set_material => '$i', '$m',
 	'($i = (($i & 0x1ffffff) | ($m << 25)))';
 
-define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
-define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
-define cp_pos_w_qs_castle => '$p', '(cp_pos_info_w_qs_castle(cp_pos_info($p)))';
-define cp_pos_b_ks_castle => '$p', '(cp_pos_info_b_ks_castle(cp_pos_info($p)))';
-define cp_pos_b_qs_castle => '$p', '(cp_pos_info_b_qs_castle(cp_pos_info($p)))';
-define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
-define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
-define cp_pos_w_king_shift => '$p', '(cp_pos_info_w_king_shift(cp_pos_info($p)))';
-define cp_pos_b_king_shift => '$p', '(cp_pos_info_b_king_shift(cp_pos_info($p)))';
-define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
-define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
+_define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
+_define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
+_define cp_pos_w_qs_castle => '$p', '(cp_pos_info_w_qs_castle(cp_pos_info($p)))';
+_define cp_pos_b_ks_castle => '$p', '(cp_pos_info_b_ks_castle(cp_pos_info($p)))';
+_define cp_pos_b_qs_castle => '$p', '(cp_pos_info_b_qs_castle(cp_pos_info($p)))';
+_define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
+_define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
+_define cp_pos_w_king_shift => '$p', '(cp_pos_info_w_king_shift(cp_pos_info($p)))';
+_define cp_pos_b_king_shift => '$p', '(cp_pos_info_b_king_shift(cp_pos_info($p)))';
+_define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
+_define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
 
-define cp_pos_set_castling => '$p', '$c',
+_define cp_pos_set_castling => '$p', '$c',
 	'(cp_pos_info_set_castling(cp_pos_info($p), $c))';
-define cp_pos_set_w_ks_castling => '$p', '$c',
+_define cp_pos_set_w_ks_castling => '$p', '$c',
 	'(cp_pos_info_set_w_ks_castling(cp_pos_info($p), $c))';
-define cp_pos_set_w_qs_castling => '$p', '$c',
+_define cp_pos_set_w_qs_castling => '$p', '$c',
 	'(cp_pos_info_set_w_qs_castling(cp_pos_info($p), $c))';
-define cp_pos_set_b_ks_castling => '$p', '$c',
+_define cp_pos_set_b_ks_castling => '$p', '$c',
 	'(cp_pos_info_set_b_ks_castling(cp_pos_info($p), $c))';
-define cp_pos_set_b_qs_castling => '$p', '$c',
+_define cp_pos_set_b_qs_castling => '$p', '$c',
 	'(cp_pos_info_set_b_qs_castling(cp_pos_info($p), $c))';
-define cp_pos_set_to_move => '$p', '$c',
+_define cp_pos_set_to_move => '$p', '$c',
 	'(cp_pos_info_set_to_move(cp_pos_info($p), $c))';
-define cp_pos_set_ep_shift => '$p', '$s',
+_define cp_pos_set_ep_shift => '$p', '$s',
 	'(cp_pos_info_set_ep_shift(cp_pos_info($p), $s))';
-define cp_pos_set_w_king_shift => '$p', '$s',
+_define cp_pos_set_w_king_shift => '$p', '$s',
 	'(cp_pos_info_set_w_king_shift(cp_pos_info($p), $s))';
-define cp_pos_set_b_king_shift => '$p', '$s',
+_define cp_pos_set_b_king_shift => '$p', '$s',
 	'(cp_pos_info_set_b_king_shift(cp_pos_info($p), $s))';
-define cp_pos_set_evasion => '$p', '$e',
+_define cp_pos_set_evasion => '$p', '$e',
 	'(cp_pos_info_set_evasion(cp_pos_info($p), $e))';
-define cp_pos_set_material => '$p', '$m',
+_define cp_pos_set_material => '$p', '$m',
 	'(cp_pos_info_set_material(cp_pos_info($p), $m))';
 
-define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
+_define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
 
-define cp_move_to => '$m', '(($m) & 0x3f)';
-define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
-define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
-define cp_move_set_from => '$m', '$v', '(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
-define cp_move_promote => '$m', '(($m >> 12) & 0x7)';
-define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
-define cp_move_attacker => '$m', '(($m >> 15) & 0x7)';
-define cp_move_set_attacker => '$m', '$a', '(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
-define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
+_define cp_move_to => '$m', '(($m) & 0x3f)';
+_define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
+_define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
+_define cp_move_set_from => '$m', '$v', '(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
+_define cp_move_promote => '$m', '(($m >> 12) & 0x7)';
+_define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
+_define cp_move_attacker => '$m', '(($m >> 15) & 0x7)';
+_define cp_move_set_attacker => '$m', '$a', '(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
+_define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 
 # Bitboard macros.
-define cp_bb_popcount => '$b', '$c',
+_define cp_bb_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
-define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
-define_from_file cp_bb_count_isolated_trailing_zbits => '$bb', 'countIsolatedTrailingZbits.pm';
-define_from_file cp_bb_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
-define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
+_define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
+_define_from_file cp_bb_count_isolated_trailing_zbits => '$bb', 'countIsolatedTrailingZbits.pm';
+_define_from_file cp_bb_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
+_define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 
 # Magic moves.
-define cp_mm_bmagic => '$s', '$o',
+_define cp_mm_bmagic => '$s', '$o',
 	'CP_MAGICMOVESBDB->[$s][(((($o) & CP_MAGICMOVES_B_MASK->[$s]) * CP_MAGICMOVES_B_MAGICS->[$s]) >> 55) & ((1 << (64 - 55)) - 1)]';
-define cp_mm_rmagic => '$s', '$o',
+_define cp_mm_rmagic => '$s', '$o',
 	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & ((1 << (64 - 52)) - 1)]';
 
 # Conversion between different notions of a square.
-define cp_coords_to_shift => '$f', '$r', '(($r << 3) + $f)';
-define cp_shift_to_coords => '$s', '($s & 0x7, $s >> 3)';
-define cp_coords_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
-define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
-define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + ord($s) - 97';
-define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
+_define cp_coords_to_shift => '$f', '$r', '(($r << 3) + $f)';
+_define cp_shift_to_coords => '$s', '($s & 0x7, $s >> 3)';
+_define cp_coords_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
+_define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
+_define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + ord($s) - 97';
+_define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 
-define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
+_define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
 	'movesFromMask.pm';
-define_from_file _cp_promotion_moves_from_mask => '$t', '@m', '$b',
+_define_from_file _cp_promotion_moves_from_mask => '$t', '@m', '$b',
 	'promotionMovesFromMask.pm';
-define_from_file _cp_pos_pinned_move =>
+_define_from_file _cp_pos_pinned_move =>
 	'$p', '$from', '$to', '$to_move', '$ks', 'pinnedMove.pm';
-define_from_file _cp_pos_color_attacked => '$p', '$c', '$shift', 'attacked.pm';
-define_from_file _cp_pos_attacked_move => '$p', '$from', '$to', 'attackedMove.pm';
-define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
+_define_from_file _cp_pos_color_attacked => '$p', '$c', '$shift', 'attacked.pm';
+_define_from_file _cp_pos_attacked_move => '$p', '$from', '$to', 'attackedMove.pm';
+_define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
 
 sub import {
 	my ($type) = @_;
@@ -185,7 +185,7 @@ sub filter {
 	return $status;
 }
 
-sub expand {
+sub _expand {
 	my ($parent, $invocation) = @_;
 
 	# First find the invocation.
@@ -222,7 +222,7 @@ sub expand {
 			$cut = $to - $idx;
 		}
 	} else {
-		my @arguments = extract_arguments $invocation;
+		my @arguments = _extract_arguments $invocation;
 		my @placeholders = @{$definition->{args}};
 		my %placeholders;
 		for (my $i = 0; $i < @placeholders; ++$i) {
@@ -233,7 +233,7 @@ sub expand {
 				$placeholders{$placeholder} = $arguments[$i];
 			}
 		}
-		expand_placeholders $cdoc, %placeholders;
+		_expand_placeholders $cdoc, %placeholders;
 
 		my ($to, $first_significant);
 		foreach ($to = $idx + 1; $to < @siblings; ++$to) {
@@ -271,7 +271,7 @@ sub expand {
 	return $invocation;
 }
 
-sub expand_placeholders {
+sub _expand_placeholders {
 	my ($doc, %placeholders) = @_;
 
 	my $words = $doc->find(sub { 
@@ -280,11 +280,11 @@ sub expand_placeholders {
 	});
 
 	foreach my $word (@$words) {
-		expand_placeholder $word, @{$placeholders{$word->content}};
+		_expand_placeholder $word, @{$placeholders{$word->content}};
 	}
 }
 
-sub expand_placeholder {
+sub _expand_placeholder {
 	my ($word, @arglist) = @_;
 
 	# Find the word in the parent.
@@ -334,13 +334,13 @@ sub preprocess {
 		my $invocation = $invocations->[-1];
 		my $parent = $invocation->parent;
 
-		expand $parent, $invocation;
+		_expand $parent, $invocation;
 	}
 
 	return $source->content . $tail;
 }
 
-sub define {
+sub _define {
 	my ($name, @args) = @_;
 
 	my $code = pop @args;
@@ -368,7 +368,7 @@ sub define {
 	return;
 }
 
-sub define_from_file {
+sub _define_from_file {
 	my ($name, @args) = @_;
 
 	my $relname = pop @args;
@@ -380,10 +380,12 @@ sub define_from_file {
 	
 	my $code = join '', <$fh>;
 
-	return define $name, @args, $code;
+	$code =~ s/;0xdeadcode;//;
+
+	return _define $name, @args, $code;
 }
 
-sub extract_arguments {
+sub _extract_arguments {
 	my ($word) = @_;
 
 	my $parent = $word->parent;
@@ -437,10 +439,10 @@ sub extract_arguments {
 		}
 	}
 
-	return split_arguments $argnodes_parent, @argnodes;
+	return _split_arguments $argnodes_parent, @argnodes;
 }
 
-sub split_arguments {
+sub _split_arguments {
 	my ($parent, @argnodes) = @_;
 
 	my @arguments;

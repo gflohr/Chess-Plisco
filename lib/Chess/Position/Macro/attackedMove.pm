@@ -14,6 +14,7 @@
 ## no critic (TestingAndDebugging::RequireUseStrict)
 
 (do {
+	# FIXME! Pass the color in to the macro!
 	my $my_color = cp_pos_to_move($p);
 	my $her_pieces = $p->[CP_POS_W_PIECES + !$my_color];
 	my $occupancy = ($p->[CP_POS_W_PIECES + $my_color] | $her_pieces) & ~(1 << $from);
@@ -25,3 +26,6 @@
 			| (cp_mm_bmagic($to, $occupancy) & ($queens | cp_pos_bishops($p)))
 			| (cp_mm_rmagic($to, $occupancy) & ($queens | cp_pos_rooks($p))));
 })
+
+# Instead of '1;' but will be removed automatically.
+;0xdeadc0de;

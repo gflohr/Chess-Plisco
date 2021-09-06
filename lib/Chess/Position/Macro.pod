@@ -127,6 +127,10 @@ And some more esoteric usages will probaly also not work.
 
 =head1 FUNCTIONS
 
+=over 4
+
+=item B<preprocess>
+
 You should only use one single function of this module, the function
 C<preprocess()> that does the actual translation of your code.  Example:
 
@@ -136,6 +140,8 @@ C<preprocess()> that does the actual translation of your code.  Example:
 
 This will dump the translated source code of F<YourModule.pm> on standard
 output.
+
+=back
 
 =head1 MACROS
 
