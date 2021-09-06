@@ -60,6 +60,14 @@ my @export_board = qw(
 	CP_FILE_E CP_FILE_F CP_FILE_G CP_FILE_H
 	CP_RANK_1 CP_RANK_2 CP_RANK_3 CP_RANK_4
 	CP_RANK_5 CP_RANK_6 CP_RANK_7 CP_RANK_8
+	CP_A1 CP_A2 CP_A3 CP_A4 CP_A5 CP_A6 CP_A7 CP_A8
+	CP_B1 CP_B2 CP_B3 CP_B4 CP_B5 CP_B6 CP_B7 CP_B8
+	CP_C1 CP_C2 CP_C3 CP_C4 CP_C5 CP_C6 CP_C7 CP_C8
+	CP_D1 CP_D2 CP_D3 CP_D4 CP_D5 CP_D6 CP_D7 CP_D8
+	CP_E1 CP_E2 CP_E3 CP_E4 CP_E5 CP_E6 CP_E7 CP_E8
+	CP_F1 CP_F2 CP_F3 CP_F4 CP_F5 CP_F6 CP_F7 CP_F8
+	CP_G1 CP_G2 CP_G3 CP_G4 CP_G5 CP_G6 CP_G7 CP_G8
+	CP_H1 CP_H2 CP_H3 CP_H4 CP_H5 CP_H6 CP_H7 CP_H8
 	CP_A_MASK CP_B_MASK CP_C_MASK CP_D_MASK
 	CP_E_MASK CP_F_MASK CP_G_MASK CP_H_MASK
 	CP_1_MASK CP_2_MASK CP_3_MASK CP_4_MASK
@@ -113,7 +121,73 @@ use constant CP_EVASION_ALL => 0;
 use constant CP_EVASION_CAPTURE => 1;
 use constant CP_EVASION_KING_MOVE => 2;
 
-# Board masks.
+# Board masks and shifts.
+# Squares.
+use constant CP_A1 => 0;
+use constant CP_B1 => 1;
+use constant CP_C1 => 2;
+use constant CP_D1 => 3;
+use constant CP_E1 => 4;
+use constant CP_F1 => 5;
+use constant CP_G1 => 6;
+use constant CP_H1 => 7;
+use constant CP_A2 => 8;
+use constant CP_B2 => 9;
+use constant CP_C2 => 10;
+use constant CP_D2 => 11;
+use constant CP_E2 => 12;
+use constant CP_F2 => 13;
+use constant CP_G2 => 14;
+use constant CP_H2 => 15;
+use constant CP_A3 => 16;
+use constant CP_B3 => 17;
+use constant CP_C3 => 18;
+use constant CP_D3 => 19;
+use constant CP_E3 => 20;
+use constant CP_F3 => 21;
+use constant CP_G3 => 22;
+use constant CP_H3 => 23;
+use constant CP_A4 => 24;
+use constant CP_B4 => 25;
+use constant CP_C4 => 26;
+use constant CP_D4 => 27;
+use constant CP_E4 => 28;
+use constant CP_F4 => 29;
+use constant CP_G4 => 30;
+use constant CP_H4 => 31;
+use constant CP_A5 => 32;
+use constant CP_B5 => 33;
+use constant CP_C5 => 34;
+use constant CP_D5 => 35;
+use constant CP_E5 => 36;
+use constant CP_F5 => 37;
+use constant CP_G5 => 38;
+use constant CP_H5 => 39;
+use constant CP_A6 => 40;
+use constant CP_B6 => 41;
+use constant CP_C6 => 42;
+use constant CP_D6 => 43;
+use constant CP_E6 => 44;
+use constant CP_F6 => 45;
+use constant CP_G6 => 46;
+use constant CP_H6 => 47;
+use constant CP_A7 => 48;
+use constant CP_B7 => 49;
+use constant CP_C7 => 50;
+use constant CP_D7 => 51;
+use constant CP_E7 => 52;
+use constant CP_F7 => 53;
+use constant CP_G7 => 54;
+use constant CP_H7 => 55;
+use constant CP_A8 => 56;
+use constant CP_B8 => 57;
+use constant CP_C8 => 58;
+use constant CP_D8 => 59;
+use constant CP_E8 => 60;
+use constant CP_F8 => 61;
+use constant CP_G8 => 62;
+use constant CP_H8 => 63;
+
 # Files.
 use constant CP_A_MASK => 0x0101010101010101;
 use constant CP_B_MASK => 0x0202020202020202;
@@ -271,34 +345,34 @@ my @castling_aux_data = (
 	# White.
 	[
 		# From shift.
-		cp_square_to_shift('e1'),
+		CP_E1,
 		# From mask.
 		(CP_E_MASK & CP_1_MASK),
 		# King-side crossing square.
 		(CP_F_MASK & CP_1_MASK),
 		# King-side king's destination square.
-		cp_square_to_shift('g1'),
+		CP_G1,
 		# Queen-side crossing mask.
 		(CP_D_MASK & CP_1_MASK),
 		# Queen-side king's destination square.
-		cp_square_to_shift('c1'),
+		CP_C1,
 		# Queen-side rook crossing mask.
 		(CP_B_MASK & CP_1_MASK),
 	],
 	# Black.
 	[
 		# From shift.
-		cp_square_to_shift('e8'),
+		CP_E8,
 		# From mask.
 		(CP_E_MASK & CP_8_MASK),
 		# King-side crossing mask.
 		(CP_F_MASK & CP_8_MASK),
 		# King-side king's destination square.
-		cp_square_to_shift('g8'),
+		CP_G8,
 		# Queen-side crossing mask.
 		(CP_D_MASK & CP_8_MASK),
 		# Queen-side king's destination square.
-		cp_square_to_shift('c8'),
+		CP_C8,
 		# Queen-side rook crossing mask.
 		(CP_B_MASK & CP_8_MASK),
 	],
@@ -2248,16 +2322,18 @@ foreach my $m1 (
 	}
 }
 
-$castling_rook_move_masks[1] = CP_1_MASK & (CP_H_MASK | CP_F_MASK);
-$castling_rook_move_masks[5] = CP_1_MASK & (CP_A_MASK | CP_D_MASK);
-$castling_rook_move_masks[57] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
-$castling_rook_move_masks[61] = CP_8_MASK & (CP_A_MASK | CP_D_MASK);
+# The indices are the target squares of the king.
+$castling_rook_move_masks[CP_C1] = CP_1_MASK & (CP_A_MASK | CP_D_MASK);
+$castling_rook_move_masks[CP_G1] = CP_1_MASK & (CP_H_MASK | CP_F_MASK);
+$castling_rook_move_masks[CP_C8] = CP_8_MASK & (CP_A_MASK | CP_D_MASK);
+$castling_rook_move_masks[CP_G8] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
 
+# The indices are the original squares of the rooks.
 @castling_rook_masks = (0) x 64;
-$castling_rook_masks[0] = 0x1;
-$castling_rook_masks[7] = 0x2;
-$castling_rook_masks[56] = 0x4;
-$castling_rook_masks[63] = 0x8;
+$castling_rook_masks[CP_H1] = 0x1;
+$castling_rook_masks[CP_A1] = 0x2;
+$castling_rook_masks[CP_H8] = 0x4;
+$castling_rook_masks[CP_A8] = 0x8;
 
 # Magic moves.
 sub initmagicmoves_occ {
