@@ -19,25 +19,20 @@
 	if ($king_ray) {
 		my ($is_rook, $ray_mask) = @$king_ray;
 
-		my $to_mask = 1 << $to;
-
 		# If the destination square is on the same line, the piece cannot be
 		# pinned.  That also covers the case that the piece that moves captures
 		# the piece that pins.
-		if (!($to_mask & $ray_mask)) {
-			my $my_pieces = $p->[$to_move];
+		if (!((1 << $to) & $ray_mask)) {
 			my $her_pieces = $p->[!$to_move];
-			my $occupancy = $my_pieces | $her_pieces;
-			my $my_king_mask = 1 << $ks;
 
 			if ($is_rook) {
-				my $rmagic = cp_mm_rmagic($from, $occupancy) & $ray_mask;
-				$pinned = ($rmagic & $my_king_mask)
+				my $rmagic = cp_mm_rmagic($from, ($p->[$to_move] | $her_pieces)) & $ray_mask;
+				$pinned = ($rmagic & (1 << $ks))
 						&& ($rmagic & $her_pieces
 							& (cp_pos_queens($p) | cp_pos_rooks($p)));
 			} else {
-				my $bmagic = cp_mm_bmagic($from, $occupancy) & $ray_mask;
-				$pinned = ($bmagic & $my_king_mask)
+				my $bmagic = cp_mm_bmagic($from, ($p->[$to_move] | $her_pieces)) & $ray_mask;
+				$pinned = ($bmagic & (1 << $ks))
 						&& ($bmagic & $her_pieces
 							& (cp_pos_queens($p) | cp_pos_bishops($p)));
 			}
