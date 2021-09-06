@@ -11,7 +11,10 @@
 
 # This is a macro that is not intended to run standalone.
 
+## no critic (TestingAndDebugging::RequireUseStrict)
+
 while ($target_mask) {
+
 	my $base_move = $b | cp_bb_count_trailing_zbits $t;
 	push @m,
 		$b | (CP_QUEEN << 12),

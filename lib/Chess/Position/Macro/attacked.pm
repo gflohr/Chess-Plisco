@@ -11,6 +11,8 @@
 
 # This is a macro that is not intended to run standalone.
 
+## no critic (TestingAndDebugging::RequireUseStrict)
+
 (do {
 	my $her_color = !$c;
 	my $her_pieces = $p->[CP_POS_W_PIECES + $her_color];

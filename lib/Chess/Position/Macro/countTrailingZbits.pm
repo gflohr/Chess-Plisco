@@ -11,6 +11,8 @@
 
 # This is a macro that is not intended to run standalone.
 
+## no critic (TestingAndDebugging::RequireUseStrict)
+
 (do {
 	my $B = $bb & -$bb;
 	my $A = $B - 1 - ((($B - 1) >> 1) & 0x5555_5555_5555_5555);
