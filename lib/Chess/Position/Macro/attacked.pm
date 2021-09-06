@@ -13,9 +13,8 @@
 
 (do {
 	my $her_color = !$c;
-	my $my_pieces = $p->[CP_POS_W_PIECES + $c];
 	my $her_pieces = $p->[CP_POS_W_PIECES + $her_color];
-	my $occupancy = $my_pieces | $her_pieces;
+	my $occupancy = $p->[CP_POS_W_PIECES + $c] | $her_pieces;
 	my $queens = cp_pos_queens($p);
 	$her_pieces
 		& (($pawn_masks[$c]->[2]->[$shift] & cp_pos_pawns($p))
