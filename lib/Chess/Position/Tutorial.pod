@@ -346,12 +346,12 @@ are not complying with the standard.
 
 =head4 Making Moves Human-Readable
 
-The methods C<SAN> and C<coordinateNotation> can be used to print a move in
+The methods C<SAN> and C<moveCoordinateNotation> can be used to print a move in
 humand-readable format:
 
     $pos->SAN($move);
     # Nxe7#
-    $pos->coordinateNotation($move);
+    $pos->moveCoordinateNotation($move);
     # d6e7
 
 In general, you will prefer print moves in Standard Algebraic Notation.
@@ -498,7 +498,7 @@ bitboard.  Therefore, the population count of the bitboard decreases by
 one with each iteration.
 
 If you want to benchmark both approaches, make sure to remove the expensive
-operations inside the loop body, that is the call to `cp_shift_to_square()`
+operations inside the loop body, that is the call to C<cp_shift_to_square()>
 and especially the print to the console.
 
 What you will find out is that the second approach runs around 10-15 %
@@ -626,7 +626,7 @@ You have to ways to do this:
 
     @moves = $pos->legalMoves;
     foreach $move (@moves) {
-        print join '|', $pos->SAN($move), $pos->coordinateNotation($move);
+        print join '|', $pos->SAN($move), $pos->moveCoordinateNotation($move);
     }
 
 Chess engines usually do not try out every legal move for each position but
@@ -638,7 +638,7 @@ The above example could be re-written like this:
     foreach $move (@moves) {
         $pos->doMove($move) or next;
         $pos->undoMove($move);
-        print join '|', $pos->SAN($move), $pos->coordinateNotation($move);
+        print join '|', $pos->SAN($move), $pos->moveCoordinateNotation($move);
     }
 
 The method C<pseudoLegalMoves> may return moves that violate the rules of
