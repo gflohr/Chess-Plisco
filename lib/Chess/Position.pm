@@ -1349,6 +1349,7 @@ sub undoMove {
 	--(cp_pos_half_moves($self));
 }
 
+# Position info methods.
 sub castling {
 	my ($self) = @_;
 
@@ -1413,6 +1414,37 @@ sub material {
 	my ($self) = @_;
 
 	return cp_pos_material($self);
+}
+
+# Move methods.
+sub moveFrom {
+	my (undef, $move) = @_;
+
+	return cp_move_from $move;
+}
+
+sub moveTo {
+	my (undef, $move) = @_;
+
+	return cp_move_to $move;
+}
+
+sub movePromote {
+	my (undef, $move) = @_;
+
+	return cp_move_promote $move;
+}
+
+sub moveAttacker {
+	my (undef, $move) = @_;
+
+	return cp_move_attacker $move;
+}
+
+sub moveCoordinateNotation {
+	my (undef, $move) = @_;
+
+	return cp_move_coordinate_notation $move;
 }
 
 sub consistent {
@@ -1725,12 +1757,6 @@ sub dumpBitboard {
 	return $output;
 }
 
-sub coordinateNotation {
-	my (undef, $move) = @_;
-
-	return cp_move_coordinate_notation $move;
-}
-
 sub SAN {
 	my ($self, $move, $use_pseudo_legal_moves) = @_;
 
@@ -1881,6 +1907,40 @@ sub parseMove {
 	return $move;
 }
 
+sub __parseUCIMove {
+	my ($class, $from_square, $to_square, $promote) = @_;
+
+	my $move = 0;
+	my $from = $class->squareToShift($from_square);
+	my $to = $class->squareToShift($to_square);
+
+	return if $from < 0;
+	return if $from > 63;
+	return if $to < 0;
+	return if $to > 63;
+
+	cp_move_set_from($move, $from);
+	cp_move_set_to($move, $to);
+
+	if ($promote) {
+		my %pieces = (
+			q => CP_QUEEN,
+			r => CP_ROOK,
+			b => CP_BISHOP,
+			n => CP_KNIGHT,
+		);
+
+		cp_move_set_promote($move, $pieces{$promote} or return);
+	}
+
+	return $move;
+}
+
+# Macros below this line will not be expanded.  In other words, everything
+# that is not performance critical or does not require macros, should go
+# below this line.
+# __NO_MACROS__
+
 sub __parseSAN {
 	my ($self, $move) = @_;
 
@@ -1890,7 +1950,7 @@ sub __parseSAN {
 
 	my $pattern;
 
-	my $to_move = cp_pos_to_move $self;
+	my $to_move = $self->toMove;
 	if ($san =~ /^[0oO][0oO]([0oO])?$/) {
 		my $queen_side = $1;
 
@@ -1992,38 +2052,6 @@ sub __parseSAN {
 
 	return $self->__parseUCIMove($1, $2, $3);
 }
-
-sub __parseUCIMove {
-	my ($class, $from_square, $to_square, $promote) = @_;
-
-	my $move = 0;
-	my $from = cp_square_to_shift $from_square;
-	my $to = cp_square_to_shift $to_square;
-
-	return if $from < 0;
-	return if $from > 63;
-	return if $to < 0;
-	return if $to > 63;
-
-	cp_move_set_from($move, $from);
-	cp_move_set_to($move, $to);
-
-	if ($promote) {
-		my %pieces = (
-			q => CP_QUEEN,
-			r => CP_ROOK,
-			b => CP_BISHOP,
-			n => CP_KNIGHT,
-		);
-
-		cp_move_set_promote($move, $pieces{$promote} or return);
-	}
-
-	return $move;
-}
-
-# Macros below this line will not be expanded.
-# __NO_MACROS__
 
 sub perft {
 	my ($self, $depth) = @_;
