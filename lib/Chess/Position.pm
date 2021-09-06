@@ -195,7 +195,6 @@ use constant CP_PIECE_CHARS => [
 	['', 'p', 'n', 'b', 'r', 'q', 'k'],
 ];
 
-
 my @pawn_aux_data = (
 	# White.
 	[
@@ -559,126 +558,6 @@ sub newFromFEN {
 	$self->update;
 
 	return $self;
-}
-
-sub copy {
-	my ($self) = @_;
-
-	bless [@$self], ref $self;
-}
-
-sub toFEN {
-	my ($self) = @_;
-
-	my $w_pieces = cp_pos_w_pieces($self);
-	my $b_pieces = cp_pos_b_pieces($self);
-	my $pieces = $w_pieces | $b_pieces;
-	my $pawns = cp_pos_pawns($self);
-	my $bishops = cp_pos_bishops($self);
-	my $knights = cp_pos_knights($self);
-	my $rooks = cp_pos_rooks($self);
-	my $queens = cp_pos_queens($self);
-
-	my $fen = '';
-
-	for (my $rank = CP_RANK_8; $rank >= CP_RANK_1; --$rank) {
-		my $empty = 0;
-		for (my $file = CP_FILE_A; $file <= CP_FILE_H; ++$file) {
-			my $shift = $self->coordinatesToShift($file, $rank);
-			my $mask = 1 << $shift;
-
-			if ($mask & $pieces) {
-				if ($empty) {
-					$fen .= $empty;
-					$empty = 0;
-				}
-
-				if ($mask & $w_pieces) {
-					if ($mask & $pawns) {
-						$fen .= 'P';
-					} elsif ($mask & $knights) {
-						$fen .= 'N';
-					} elsif ($mask & $bishops) {
-						$fen .= 'B';
-					} elsif ($mask & $rooks) {
-						$fen .= 'R';
-					} elsif ($mask & $queens) {
-						$fen .= 'Q';
-					} else {
-						$fen .= 'K';
-					}
-				} elsif ($mask & $b_pieces) {
-					if ($mask & $pawns) {
-						$fen .= 'p';
-					} elsif ($mask & $knights) {
-						$fen .= 'n';
-					} elsif ($mask & $bishops) {
-						$fen .= 'b';
-					} elsif ($mask & $rooks) {
-						$fen .= 'r';
-					} elsif ($mask & $queens) {
-						$fen .= 'q';
-					} else {
-						$fen .= 'k';
-					}
-				}
-			} else {
-				++$empty;
-			}
-
-			if ($file == CP_FILE_H) {
-				if ($empty) {
-					$fen .= $empty;
-					$empty = 0;
-				}
-				if ($rank != CP_RANK_1) {
-					$fen .= '/';
-				}
-			}
-		}
-	}
-
-	my $pos_info = cp_pos_info($self);
-
-	$fen .= (cp_pos_info_to_move($pos_info) == CP_WHITE) ? ' w ' : ' b ';
-
-	my $castling = cp_pos_info_castling($pos_info);
-
-	if ($castling) {
-		my $castle = '';
-		$castle .= 'K' if $castling & 0x1;
-		$castle .= 'Q' if $castling & 0x2;
-		$castle .= 'k' if $castling & 0x4;
-		$castle .= 'q' if $castling & 0x8;
-		$fen .= "$castle ";
-	} else {
-		$fen .= '- ';
-	}
-
-	if (cp_pos_ep_shift $self) {
-		$fen .= $self->shiftToSquare(cp_pos_ep_shift $self);
-	} else {
-		$fen .= '-';
-	}
-
-	$fen .= sprintf ' %u %u', cp_pos_half_move_clock($self),
-			1 + (cp_pos_half_moves($self) >> 1);
-
-	return $fen;
-}
-
-sub legalMoves {
-	my ($self) = @_;
-
-	my @legal;
-
-	foreach my $move ($self->pseudoLegalMoves) {
-		my $undo_info = $self->doMove($move) or next;
-		push @legal, $move;
-		$self->undoMove($move, $undo_info);
-	}
-
-	return @legal;
 }
 
 sub pseudoLegalMoves {
@@ -1798,6 +1677,124 @@ use constant CP_A7B8_MASK => 0x0201000000000000;
 	0x0002040810204000, 0x0004081020400000, 0x000A102040000000, 0x0014224000000000,
 	0x0028440200000000, 0x0050080402000000, 0x0020100804020000, 0x0040201008040200
 );
+
+sub copy {
+	my ($self) = @_;
+
+	bless [@$self], ref $self;
+}
+
+sub toFEN {
+	my ($self) = @_;
+
+	my $w_pieces = $self->[CP_POS_W_PIECES];
+	my $b_pieces = $self->[CP_POS_B_PIECES];
+	my $pieces = $w_pieces | $b_pieces;
+	my $pawns = $self->[CP_POS_PAWNS];
+	my $bishops = $self->[CP_POS_BISHOPS];
+	my $knights = $self->[CP_POS_KNIGHTS];
+	my $rooks = $self->[CP_POS_ROOKS];
+	my $queens = $self->[CP_POS_QUEENS];
+
+	my $fen = '';
+
+	for (my $rank = CP_RANK_8; $rank >= CP_RANK_1; --$rank) {
+		my $empty = 0;
+		for (my $file = CP_FILE_A; $file <= CP_FILE_H; ++$file) {
+			my $shift = $self->coordinatesToShift($file, $rank);
+			my $mask = 1 << $shift;
+
+			if ($mask & $pieces) {
+				if ($empty) {
+					$fen .= $empty;
+					$empty = 0;
+				}
+
+				if ($mask & $w_pieces) {
+					if ($mask & $pawns) {
+						$fen .= 'P';
+					} elsif ($mask & $knights) {
+						$fen .= 'N';
+					} elsif ($mask & $bishops) {
+						$fen .= 'B';
+					} elsif ($mask & $rooks) {
+						$fen .= 'R';
+					} elsif ($mask & $queens) {
+						$fen .= 'Q';
+					} else {
+						$fen .= 'K';
+					}
+				} elsif ($mask & $b_pieces) {
+					if ($mask & $pawns) {
+						$fen .= 'p';
+					} elsif ($mask & $knights) {
+						$fen .= 'n';
+					} elsif ($mask & $bishops) {
+						$fen .= 'b';
+					} elsif ($mask & $rooks) {
+						$fen .= 'r';
+					} elsif ($mask & $queens) {
+						$fen .= 'q';
+					} else {
+						$fen .= 'k';
+					}
+				}
+			} else {
+				++$empty;
+			}
+
+			if ($file == CP_FILE_H) {
+				if ($empty) {
+					$fen .= $empty;
+					$empty = 0;
+				}
+				if ($rank != CP_RANK_1) {
+					$fen .= '/';
+				}
+			}
+		}
+	}
+
+	$fen .= ($self->toMove == CP_WHITE) ? ' w ' : ' b ';
+
+	my $castling = $self->castling;
+
+	if ($castling) {
+		my $castle = '';
+		$castle .= 'K' if $castling & 0x1;
+		$castle .= 'Q' if $castling & 0x2;
+		$castle .= 'k' if $castling & 0x4;
+		$castle .= 'q' if $castling & 0x8;
+		$fen .= "$castle ";
+	} else {
+		$fen .= '- ';
+	}
+
+	if (cp_pos_ep_shift $self) {
+		$fen .= $self->shiftToSquare($self->enPassantShift);
+	} else {
+		$fen .= '-';
+	}
+
+	$fen .= sprintf ' %u %u', $self->[CP_POS_HALF_MOVE_CLOCK],
+			1 + ($self->[CP_POS_HALF_MOVES] >> 1);
+
+	return $fen;
+}
+
+sub legalMoves {
+	my ($self) = @_;
+
+	my @legal;
+
+	foreach my $move ($self->pseudoLegalMoves) {
+		my $undo_info = $self->doMove($move) or next;
+		push @legal, $move;
+		$self->undoMove($move, $undo_info);
+	}
+
+	return @legal;
+}
 
 sub dumpBitboard {
 	my (undef, $bitboard) = @_;
