@@ -1349,134 +1349,70 @@ sub undoMove {
 	--(cp_pos_half_moves($self));
 }
 
-sub perft {
-	my ($self, $depth) = @_;
+sub castling {
+	my ($self) = @_;
 
-	my $nodes = 0;
-	my @moves = $self->pseudoLegalMoves;
-	foreach my $move (@moves) {
-		my $undo_info = $self->doMove($move) or next;
-
-		if ($depth > 1) {
-			$nodes += $self->perft($depth - 1);
-		} else {
-			++$nodes;
-		}
-
-		$self->undoMove($move, $undo_info);
-	}
-
-	return $nodes;
+	return cp_pos_castling $self;
 }
 
-sub perftPosition {
-	my ($class, $pos, $depth) = @_;
+sub whiteKingSideCastlingRight {
+	my ($self) = @_;
 
-	my $nodes = 0;
-	my @moves = $pos->pseudoLegalMoves;
-	foreach my $move (@moves) {
-		my $copy = bless [@$pos], 'Chess::Position';
-		$copy->doMove($move) or next;
-
-		if ($depth > 1) {
-			$nodes += $class->perftPosition($copy, $depth - 1);
-		} else {
-			++$nodes;
-		}
-	}
-
-	return $nodes;
+	return cp_pos_w_ks_castle($self);
 }
 
-sub perftWithOutput {
-	my ($self, $depth, $fh) = @_;
+sub whiteQueenSideCastlingRight {
+	my ($self) = @_;
 
-	return if $depth <= 0;
-
-	require Time::HiRes;
-	my $started = [Time::HiRes::gettimeofday()];
-
-	my $nodes = 0;
-
-	my @moves = $self->pseudoLegalMoves;
-	foreach my $move (@moves) {
-		my $undo_info = $self->doMove($move) or next;
-
-		my $movestr = cp_move_coordinate_notation $move;
-
-		$fh->print("$movestr: ");
-
-		my $subnodes;
-
-		if ($depth > 1) {
-			$subnodes = $self->perft($depth - 1);
-		} else {
-			$subnodes = 1;
-		}
-
-		$nodes += $subnodes;
-
-		$fh->print("$subnodes\n");
-
-		$self->undoMove($move, $undo_info);
-	}
-
-	no integer;
-
-	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
-
-	my $nps = '+INF';
-	if ($elapsed) {
-		$nps = int (0.5 + $nodes / $elapsed);
-	}
-	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
-
-	return $nodes;
+	return cp_pos_w_qs_castle($self);
 }
 
-sub perftPositionWithOutput {
-	my ($class, $pos, $depth, $fh) = @_;
+sub blackKingSideCastlingRight {
+	my ($self) = @_;
 
-	return if $depth <= 0;
+	return cp_pos_b_ks_castle($self);
+}
 
-	require Time::HiRes;
-	my $started = [Time::HiRes::gettimeofday()];
+sub blackQueenSideCastlingRight {
+	my ($self) = @_;
 
-	my $nodes = 0;
+	return cp_pos_b_qs_castle($self);
+}
 
-	my @moves = $pos->pseudoLegalMoves;
-	foreach my $move (@moves) {
-		my $copy = bless [@$pos], 'Chess::Position';
-		$copy->doMove($move) or next;
+sub toMove {
+	my ($self) = @_;
 
-		my $movestr = cp_move_coordinate_notation $move;
+	return cp_pos_to_move($self);
+}
 
-		$fh->print("$movestr: ");
+sub enPassantShift {
+	my ($self) = @_;
 
-		my $subnodes;
+	return cp_pos_ep_shift($self);
+}
 
-		if ($depth > 1) {
-			$subnodes = $class->perftPosition($copy, $depth - 1);
-		} else {
-			$subnodes = 1;
-		}
+sub whiteKingShift {
+	my ($self) = @_;
 
-		$nodes += $subnodes;
+	return cp_pos_sw_king_shift($self);
+}
 
-		$fh->print("$subnodes\n");
-	}
+sub blackKingShift {
+	my ($self) = @_;
 
-	no integer;
+	return cp_pos_b_king_shift($self);
+}
 
-	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
+sub evasion {
+	my ($self) = @_;
 
-	my $nps = '+INF';
-	if ($elapsed) {
-		$nps = int (0.5 + $nodes / $elapsed);
-	}
-	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
+	return cp_pos_b_king_shift($self);
+}
 
-	return $nodes;
+sub material {
+	my ($self) = @_;
+
+	return cp_pos_material($self);
 }
 
 sub consistent {
@@ -2086,8 +2022,138 @@ sub __parseUCIMove {
 	return $move;
 }
 
-# Macros below this line will not ne expanded.
+# Macros below this line will not be expanded.
 # __NO_MACROS__
+
+sub perft {
+	my ($self, $depth) = @_;
+
+	my $nodes = 0;
+	my @moves = $self->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $undo_info = $self->doMove($move) or next;
+
+		if ($depth > 1) {
+			$nodes += $self->perft($depth - 1);
+		} else {
+			++$nodes;
+		}
+
+		$self->undoMove($move, $undo_info);
+	}
+
+	return $nodes;
+}
+
+sub perftPosition {
+	my ($class, $pos, $depth) = @_;
+
+	my $nodes = 0;
+	my @moves = $pos->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $copy = bless [@$pos], 'Chess::Position';
+		$copy->doMove($move) or next;
+
+		if ($depth > 1) {
+			$nodes += $class->perftPosition($copy, $depth - 1);
+		} else {
+			++$nodes;
+		}
+	}
+
+	return $nodes;
+}
+
+sub perftWithOutput {
+	my ($self, $depth, $fh) = @_;
+
+	return if $depth <= 0;
+
+	require Time::HiRes;
+	my $started = [Time::HiRes::gettimeofday()];
+
+	my $nodes = 0;
+
+	my @moves = $self->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $undo_info = $self->doMove($move) or next;
+
+		my $movestr = cp_move_coordinate_notation $move;
+
+		$fh->print("$movestr: ");
+
+		my $subnodes;
+
+		if ($depth > 1) {
+			$subnodes = $self->perft($depth - 1);
+		} else {
+			$subnodes = 1;
+		}
+
+		$nodes += $subnodes;
+
+		$fh->print("$subnodes\n");
+
+		$self->undoMove($move, $undo_info);
+	}
+
+	no integer;
+
+	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
+
+	my $nps = '+INF';
+	if ($elapsed) {
+		$nps = int (0.5 + $nodes / $elapsed);
+	}
+	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
+
+	return $nodes;
+}
+
+sub perftPositionWithOutput {
+	my ($class, $pos, $depth, $fh) = @_;
+
+	return if $depth <= 0;
+
+	require Time::HiRes;
+	my $started = [Time::HiRes::gettimeofday()];
+
+	my $nodes = 0;
+
+	my @moves = $pos->pseudoLegalMoves;
+	foreach my $move (@moves) {
+		my $copy = bless [@$pos], 'Chess::Position';
+		$copy->doMove($move) or next;
+
+		my $movestr = cp_move_coordinate_notation $move;
+
+		$fh->print("$movestr: ");
+
+		my $subnodes;
+
+		if ($depth > 1) {
+			$subnodes = $class->perftPosition($copy, $depth - 1);
+		} else {
+			$subnodes = 1;
+		}
+
+		$nodes += $subnodes;
+
+		$fh->print("$subnodes\n");
+	}
+
+	no integer;
+
+	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
+
+	my $nps = '+INF';
+	if ($elapsed) {
+		$nps = int (0.5 + $nodes / $elapsed);
+	}
+	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
+
+	return $nodes;
+}
 
 sub coordinatesToShift {
 	my (undef, $file, $rank) = @_;
