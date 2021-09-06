@@ -121,14 +121,7 @@ define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m)
 define cp_bb_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
 define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
-define cp_bb_count_trailing_zbits => '$bb', '(do {'
-	. 'my $A = $bb - 1 - ((($bb - 1) >> 1) & 0x5555_5555_5555_5555);'
-	. 'my $C = ($A & 0x3333_3333_3333_3333) + (($A >> 2) & 0x3333_3333_3333_3333);'
-	. 'my $n = $C + ($C >> 32);'
-	. '$n = ($n & 0x0f0f0f0f) + (($n >> 4) & 0x0f0f0f0f);'
-	. '$n = ($n & 0xffff) + ($n >> 16);'
-	. '$n = ($n & 0xff) + ($n >> 8);'
-	. '})';
+define_from_file cp_bb_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
 define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 
 # Magic moves.

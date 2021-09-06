@@ -24,4 +24,4 @@
 			| ($king_attack_masks[$to] & cp_pos_kings($p))
 			| (cp_mm_bmagic($to, $occupancy) & ($queens | cp_pos_bishops($p)))
 			| (cp_mm_rmagic($to, $occupancy) & ($queens | cp_pos_rooks($p))));
-});
+})
