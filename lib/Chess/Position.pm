@@ -892,7 +892,7 @@ sub pseudoLegalMoves {
 	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
 
-	my $from = cp_bb_count_trailing_zbits $king_mask;
+	my $from = cp_bb_count_isolated_trailing_zbits $king_mask;
 
 	$base_move = ($from << 6 | CP_KING << 15);
 
@@ -933,7 +933,7 @@ sub pseudoLegalMoves {
 	# Generate knight moves.
 	my $knight_mask = $my_pieces & cp_pos_knights $self;
 	while ($knight_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $knight_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $knight_mask;
 
 		$base_move = ($from << 6 | CP_KNIGHT << 15);
 	
@@ -947,7 +947,7 @@ sub pseudoLegalMoves {
 	# Generate bishop moves.
 	my $bishop_mask = $my_pieces & cp_pos_bishops $self;
 	while ($bishop_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $bishop_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $bishop_mask;
 
 		$base_move = ($from << 6 | CP_BISHOP << 15);
 	
@@ -961,7 +961,7 @@ sub pseudoLegalMoves {
 	# Generate rook moves.
 	my $rook_mask = $my_pieces & cp_pos_rooks $self;
 	while ($rook_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $rook_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $rook_mask;
 
 		$base_move = ($from << 6 | CP_ROOK << 15);
 	
@@ -975,7 +975,7 @@ sub pseudoLegalMoves {
 	# Generate queen moves.
 	my $queen_mask = $my_pieces & cp_pos_queens $self;
 	while ($queen_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $queen_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $queen_mask;
 
 		$base_move = ($from << 6 | CP_QUEEN << 15);
 	
@@ -1006,7 +1006,7 @@ sub pseudoLegalMoves {
 	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
@@ -1018,7 +1018,7 @@ sub pseudoLegalMoves {
 	# Pawn double steps.
 	$pawn_mask = $my_pieces & $pawns & $double_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 		my $cross_mask = $pawn_single_masks->[$from] & $empty;
 
 		if ($cross_mask) {
@@ -1034,7 +1034,7 @@ sub pseudoLegalMoves {
 	# Pawn promotions including captures.
 	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
+		my $from = cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
@@ -1052,10 +1052,10 @@ sub update {
 	# Update king's shift.
 	my $pos_info = cp_pos_info($self);
 	my $w_kings = cp_pos_kings($self) & cp_pos_w_pieces($self);
-	my $w_king_shift = cp_bb_count_trailing_zbits($w_kings);
+	my $w_king_shift = cp_bb_count_isolated_trailing_zbits($w_kings);
 	cp_pos_info_set_w_king_shift($pos_info, $w_king_shift);
 	my $b_kings = cp_pos_kings($self) & cp_pos_b_pieces($self);
-	my $b_king_shift = cp_bb_count_trailing_zbits($b_kings);
+	my $b_king_shift = cp_bb_count_isolated_trailing_zbits($b_kings);
 	cp_pos_info_set_b_king_shift($pos_info, $b_king_shift);
 
 	my $to_move = cp_pos_info_to_move($pos_info);
@@ -1090,7 +1090,7 @@ sub update {
 			cp_pos_evasion_squares($self) = $checkers;
 		} else {
 			cp_pos_info_set_evasion($pos_info, CP_EVASION_ALL);
-			my $attacker_shift = cp_bb_count_trailing_zbits $checkers;
+			my $attacker_shift = cp_bb_count_isolated_trailing_zbits $checkers;
 			my $kso = $to_move ? 17 : 11;
 			my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
 			my ($attack_type, undef, $attack_ray) =
@@ -2267,7 +2267,7 @@ foreach my $m1 (
 	my $m2 = $m1;
 	my @shifts;
 	while ($m2) {
-		push @shifts, cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $m2;
+		push @shifts, cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $m2;
 		$m2 = cp_bb_clear_least_set $m2;
 	}
 
@@ -2301,7 +2301,7 @@ foreach my $m1 (
 	my $m2 = $m1;
 	my @shifts;
 	while ($m2) {
-		push @shifts, cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $m2;
+		push @shifts, cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $m2;
 		$m2 = cp_bb_clear_least_set $m2;
 	}
 

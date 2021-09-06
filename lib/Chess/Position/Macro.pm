@@ -121,7 +121,7 @@ define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m)
 define cp_bb_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
 define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
-define_from_file cp_bb_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
+define_from_file cp_bb_count_isolated_trailing_zbits => '$bb', 'countIsolatedTrailingZbits.pm';
 define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 
 # Magic moves.

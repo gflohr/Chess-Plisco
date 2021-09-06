@@ -56,20 +56,20 @@ is(cp_bb_clear_but_least_set($bitboard), 0x1,
 	"cp_bb_clear_but_least_set($bitboard)");
 
 $bitboard = 0x2;
-is(cp_bb_count_trailing_zbits($bitboard), 1,
-	"cp_bb_count_trailing_zbits($bitboard)");
+is(cp_bb_count_isolated_trailing_zbits($bitboard), 1,
+	"cp_bb_count_isolated_trailing_zbits($bitboard)");
 
 $bitboard = 0x8000;
-is(cp_bb_count_trailing_zbits($bitboard), 15,
-	"cp_bb_count_trailing_zbits($bitboard)");
+is(cp_bb_count_isolated_trailing_zbits($bitboard), 15,
+	"cp_bb_count_isolated_trailing_zbits($bitboard)");
 
 $bitboard = 0x8000_0000_0000_0000;
-is(cp_bb_count_trailing_zbits($bitboard), 63,
-	"cp_bb_count_trailing_zbits($bitboard)");
+is(cp_bb_count_isolated_trailing_zbits($bitboard), 63,
+	"cp_bb_count_isolated_trailing_zbits($bitboard)");
 
 $bitboard = 0x1;
-is(cp_bb_count_trailing_zbits($bitboard), 0,
-	"cp_bb_count_trailing_zbits($bitboard)");
+is(cp_bb_count_isolated_trailing_zbits($bitboard), 0,
+	"cp_bb_count_isolated_trailing_zbits($bitboard)");
 
 $bitboard = 0x3;
 is(cp_bb_clear_least_set($bitboard), 0x2,

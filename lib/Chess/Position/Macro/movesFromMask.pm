@@ -12,6 +12,6 @@
 # This is a macro that is not intended to run standalone.
 
 while ($target_mask) {
-	push @m, $b | cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $t;
+	push @m, $b | cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $t;
 	$target_mask = cp_bb_clear_least_set $target_mask;
 }

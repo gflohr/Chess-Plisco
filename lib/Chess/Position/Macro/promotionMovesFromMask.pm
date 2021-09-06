@@ -12,7 +12,7 @@
 # This is a macro that is not intended to run standalone.
 
 while ($target_mask) {
-	my $base_move = $b | cp_bb_count_trailing_zbits cp_bb_clear_but_least_set $t;
+	my $base_move = $b | cp_bb_count_isolated_trailing_zbits cp_bb_clear_but_least_set $t;
 	push @m,
 		$b | (CP_QUEEN << 12),
 		$b | (CP_ROOK << 12),
