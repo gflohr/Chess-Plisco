@@ -1115,304 +1115,6 @@ sub moveCoordinateNotation {
 	return cp_move_coordinate_notation $move;
 }
 
-sub consistent {
-	my ($self) = @_;
-
-	my $consistent = 1;
-
-	my $w_pieces = $self->[CP_POS_W_PIECES];
-	my $b_pieces = $self->[CP_POS_B_PIECES];
-
-	if ($w_pieces & $b_pieces) {
-		warn "White and black pieces overlap.\n";
-		undef $consistent;
-	}
-
-	my $occupied = $w_pieces | $b_pieces;
-	my $empty = ~$occupied;	
-
-	my $pawns = $self->[CP_POS_PAWNS];
-	my $knights = $self->[CP_POS_KNIGHTS];
-	my $bishops = $self->[CP_POS_BISHOPS];
-	my $rooks = $self->[CP_POS_ROOKS];
-	my $queens = $self->[CP_POS_QUEENS];
-	my $kings = $self->[CP_POS_KINGS];
-
-	my $occupied_by_pieces = $pawns | $knights | $bishops | $rooks | $queens
-		| $kings;
-	if ($occupied_by_pieces & $empty) {
-		if ($pawns & $empty) {
-			warn "Orphaned pawn(s) (neither black nor white).\n";
-			undef $consistent;
-		}
-		if ($knights & $empty) {
-			warn "Orphaned knight(s) (neither black nor white).\n";
-			undef $consistent;
-		}
-		if ($bishops & $empty) {
-			warn "Orphaned bishop(s) (neither black nor white).\n";
-			undef $consistent;
-		}
-		if ($rooks & $empty) {
-			warn "Orphaned rooks(s) (neither black nor white).\n";
-			undef $consistent;
-		}
-		if ($queens & $empty) {
-			warn "Orphaned queens(s) (neither black nor white).\n";
-			undef $consistent;
-		}
-		if ($kings & $empty) {
-			warn "Orphaned king(s) (neither black nor white).\n";
-			undef $consistent;
-		}
-	}
-
-	my $not_occupied_by_pieces = ~$occupied_by_pieces;
-	if ($not_occupied_by_pieces & $b_pieces) {
-		warn "Square occupied by black without a piece.\n";
-		undef $consistent;
-	} elsif ($not_occupied_by_pieces & $w_pieces) {
-		warn "Square occupied by white without a piece.\n";
-		undef $consistent;
-	}
-
-	if ($pawns & $knights) {
-		warn "Pawns and knights overlap.\n";
-		undef $consistent;
-	}
-	if ($pawns & $bishops) {
-		warn "Pawns and bishops overlap.\n";
-		undef $consistent;
-	}
-	if ($pawns & $rooks) {
-		warn "Pawns and rooks overlap.\n";
-		undef $consistent;
-	}
-	if ($pawns & $queens) {
-		warn "Pawns and queens overlap.\n";
-		undef $consistent;
-	}
-	if ($pawns & $kings) {
-		warn "Pawns and kings overlap.\n";
-		undef $consistent;
-	}
-	if ($knights & $bishops) {
-		warn "Knights and bishops overlap.\n";
-		undef $consistent;
-	}
-	if ($knights & $rooks) {
-		warn "Knights and rooks overlap.\n";
-		undef $consistent;
-	}
-	if ($knights & $queens) {
-		warn "Knights and queens overlap.\n";
-		undef $consistent;
-	}
-	if ($knights & $kings) {
-		warn "Knights and kings overlap.\n";
-		undef $consistent;
-	}
-	if ($bishops & $rooks) {
-		warn "Bishops and rooks overlap.\n";
-		undef $consistent;
-	}
-	if ($bishops & $queens) {
-		warn "Bishops and queens overlap.\n";
-		undef $consistent;
-	}
-	if ($bishops & $kings) {
-		warn "Bishops and kings overlap.\n";
-		undef $consistent;
-	}
-	if ($queens & $kings) {
-		warn "Queens and kings overlap.\n";
-		undef $consistent;
-	}
-
-	return $self if $consistent;
-
-	warn $self->dumpAll;
-
-	return;
-}
-
-sub pieceAtSquare {
-	my ($self, $square) = @_;
-
-	return $self->pieceAtShift(cp_square_to_shift $square);
-}
-
-sub pieceAtCoordinates {
-	my ($self, $file, $rank) = @_;
-
-	return $self->pieceAtShift(cp_coords_to_shift $file, $rank);
-}
-
-sub pieceAtShift {
-	my ($self, $shift) = @_;
-
-	return if $shift < 0;
-	return if $shift > 63;
-
-	my $mask = 1 << $shift;
-	my ($piece, $color) = (CP_NO_PIECE);
-	if ($mask & cp_pos_w_pieces $self) {
-		$color = CP_WHITE;
-	} elsif ($mask & cp_pos_b_pieces $self) {
-		$color = CP_BLACK;
-	}
-
-	if (defined $color) {
-		if ($mask & cp_pos_pawns $self) {
-			$piece = CP_PAWN;
-		} elsif ($mask & cp_pos_knights $self) {
-			$piece = CP_KNIGHT;
-		} elsif ($mask & cp_pos_bishops $self) {
-			$piece = CP_BISHOP;
-		} elsif ($mask & cp_pos_rooks $self) {
-			$piece = CP_ROOK;
-		} elsif ($mask & cp_pos_queens $self) {
-			$piece = CP_QUEEN;
-		} else {
-			$piece = CP_KING;
-		}
-	}
-
-	if (wantarray) {
-		return $piece, $color;
-	} else {
-		return $piece;
-	}
-}
-
-sub dumpAll {
-	my ($self) = @_;
-
-	my $pad19 = sub {
-		my $str = $_;
-		while (19 > length $str) {
-			$str .= ' ';
-		}
-
-		return $str;
-	};
-
-	my $output = '';
-
-	my $w_pieces = $self->dumpBitboard($self->[CP_POS_W_PIECES]);
-	my $b_pieces = $self->dumpBitboard($self->[CP_POS_B_PIECES]);
-	my @w_pieces = map { $pad19->() } split /\n/, $w_pieces;
-	my @b_pieces = map { $pad19->() } split /\n/, $b_pieces;
-	$output .= "  White               Black\n";
-	for (my $i = 0; $i < @w_pieces; ++$i) {
-		$output .= "$w_pieces[$i]   $b_pieces[$i]\n";
-	}
-
-	my $pawns = $self->dumpBitboard($self->[CP_POS_PAWNS]);
-	my @pawns = map { $pad19->() } split /\n/, $pawns;
-	my $knights = $self->dumpBitboard($self->[CP_POS_KNIGHTS]);
-	my @knights = map { $pad19->() } split /\n/, $knights;
-	$output .= "\n  Pawns               Knights\n";
-	for (my $i = 0; $i < @pawns; ++$i) {
-		$output .= "$pawns[$i]   $knights[$i]\n";
-	}
-
-	my $bishops = $self->dumpBitboard($self->[CP_POS_BISHOPS]);
-	my @bishops = split /\n/, $bishops;
-	my $rooks = $self->dumpBitboard($self->[CP_POS_ROOKS]);
-	my @rooks = map { $pad19->() } split /\n/, $rooks;
-	$output .= "\n  Bishops             Rooks\n";
-	for (my $i = 0; $i < @bishops; ++$i) {
-		$output .= "$bishops[$i]   $rooks[$i]\n";
-	}
-
-	my $queens = $self->dumpBitboard($self->[CP_POS_QUEENS]);
-	my @queens = split /\n/, $queens;
-	my $kings = $self->dumpBitboard($self->[CP_POS_KINGS]);
-	my @kings = map { $pad19->() } split /\n/, $kings;
-	$output .= "\n  Queens              Kings\n";
-	for (my $i = 0; $i < @queens; ++$i) {
-		$output .= "$queens[$i]   $kings[$i]\n";
-	}
-
-	return $output;
-}
-
-sub dumpInfo {
-	my ($self) = @_;
-
-	my $info = cp_pos_info $self;
-
-	my $output = 'Castling: ';
-
-	my $castling = cp_pos_info_castling $info;
-	if ($castling) {
-		$output .= 'K' if $castling & 0x1;
-		$output .= 'Q' if $castling & 0x2;
-		$output .= 'k' if $castling & 0x4;
-		$output .= 'q' if $castling & 0x8;
-	} else {
-		$output .= '- ';
-	}
-
-	$output .= "\nTo move: ";
-	if (CP_WHITE == cp_pos_info_to_move $info) {
-		$output .= "white\n";
-	} else {
-		$output .= "black\n";
-	}
-
-	$output .= 'En passant square: ';
-	if (cp_pos_info_ep_shift $info) {
-		$output .= $self->shiftToSquare(cp_pos_info_ep_shift $info);
-	} else {
-		$output .= '-';
-	}
-
-	$output .= "\nWhite king: ";
-	$output .= $self->shiftToSquare(cp_pos_info_w_king_shift $info);
-	$output .= "\nBlack king: ";
-	$output .= $self->shiftToSquare(cp_pos_info_b_king_shift $info);
-	$output .= "\n";
-
-	my $checkers = cp_pos_in_check $self;
-	if ($checkers) {
-		$output .= "In check: yes\n";
-
-		my $evasion_strategy = cp_pos_info_evasion $info;
-		$output .= 'Check evasion strategies: ';
-		if ($evasion_strategy == CP_EVASION_ALL) {
-			$output .= "king move, capture, block\n";
-		} elsif ($evasion_strategy == CP_EVASION_CAPTURE) {
-			$output .= "king move, capture\n";
-		} elsif ($evasion_strategy == CP_EVASION_KING_MOVE) {
-			$output .= "king move\n";
-		} else {
-			$output .= "$evasion_strategy (?)\n";
-		}
-
-		$output .= "Check evasion squares:\n";
-		$output .= $self->dumpBitboard(cp_pos_evasion_squares $self);
-
-		$output .= "Checkers:\n";
-		$output .= $self->dumpBitboard(cp_pos_in_check $self);
-	} else {
-		$output .= "In check: no\n";
-	}
-
-	return $output;
-}
-
-sub movesInCoordinateNotation {
-	my (undef, @moves) = @_;
-
-	foreach my $move (@moves) {
-		$move = cp_move_coordinate_notation $move;
-	}
-
-	return @moves;
-}
-
 sub parseMove {
 	my ($self, $notation) = @_;
 
@@ -2212,8 +1914,305 @@ sub squareToShift {
 	return $whatever->coordinatesToShift($file, $rank);
 }
 
+sub consistent {
+	my ($self) = @_;
+
+	my $consistent = 1;
+
+	my $w_pieces = $self->[CP_POS_W_PIECES];
+	my $b_pieces = $self->[CP_POS_B_PIECES];
+
+	if ($w_pieces & $b_pieces) {
+		warn "White and black pieces overlap.\n";
+		undef $consistent;
+	}
+
+	my $occupied = $w_pieces | $b_pieces;
+	my $empty = ~$occupied;	
+
+	my $pawns = $self->[CP_POS_PAWNS];
+	my $knights = $self->[CP_POS_KNIGHTS];
+	my $bishops = $self->[CP_POS_BISHOPS];
+	my $rooks = $self->[CP_POS_ROOKS];
+	my $queens = $self->[CP_POS_QUEENS];
+	my $kings = $self->[CP_POS_KINGS];
+
+	my $occupied_by_pieces = $pawns | $knights | $bishops | $rooks | $queens
+		| $kings;
+	if ($occupied_by_pieces & $empty) {
+		if ($pawns & $empty) {
+			warn "Orphaned pawn(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($knights & $empty) {
+			warn "Orphaned knight(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($bishops & $empty) {
+			warn "Orphaned bishop(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($rooks & $empty) {
+			warn "Orphaned rooks(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($queens & $empty) {
+			warn "Orphaned queens(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+		if ($kings & $empty) {
+			warn "Orphaned king(s) (neither black nor white).\n";
+			undef $consistent;
+		}
+	}
+
+	my $not_occupied_by_pieces = ~$occupied_by_pieces;
+	if ($not_occupied_by_pieces & $b_pieces) {
+		warn "Square occupied by black without a piece.\n";
+		undef $consistent;
+	} elsif ($not_occupied_by_pieces & $w_pieces) {
+		warn "Square occupied by white without a piece.\n";
+		undef $consistent;
+	}
+
+	if ($pawns & $knights) {
+		warn "Pawns and knights overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $bishops) {
+		warn "Pawns and bishops overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $rooks) {
+		warn "Pawns and rooks overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $queens) {
+		warn "Pawns and queens overlap.\n";
+		undef $consistent;
+	}
+	if ($pawns & $kings) {
+		warn "Pawns and kings overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $bishops) {
+		warn "Knights and bishops overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $rooks) {
+		warn "Knights and rooks overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $queens) {
+		warn "Knights and queens overlap.\n";
+		undef $consistent;
+	}
+	if ($knights & $kings) {
+		warn "Knights and kings overlap.\n";
+		undef $consistent;
+	}
+	if ($bishops & $rooks) {
+		warn "Bishops and rooks overlap.\n";
+		undef $consistent;
+	}
+	if ($bishops & $queens) {
+		warn "Bishops and queens overlap.\n";
+		undef $consistent;
+	}
+	if ($bishops & $kings) {
+		warn "Bishops and kings overlap.\n";
+		undef $consistent;
+	}
+	if ($queens & $kings) {
+		warn "Queens and kings overlap.\n";
+		undef $consistent;
+	}
+
+	return $self if $consistent;
+
+	warn $self->dumpAll;
+
+	return;
+}
+
+
+sub pieceAtSquare {
+	my ($self, $square) = @_;
+
+	return $self->pieceAtShift($self->squareToShift($square));
+}
+
+sub pieceAtCoordinates {
+	my ($self, $file, $rank) = @_;
+
+	return $self->pieceAtShift($self->coordinatesToShift($file, $rank));
+}
+
+sub pieceAtShift {
+	my ($self, $shift) = @_;
+
+	return if $shift < 0;
+	return if $shift > 63;
+
+	my $mask = 1 << $shift;
+	my ($piece, $color) = (CP_NO_PIECE);
+	if ($mask & $self->[CP_POS_W_PIECES]) {
+		$color = CP_WHITE;
+	} elsif ($mask & $self->[CP_POS_B_PIECES]) {
+		$color = CP_BLACK;
+	}
+
+	if (defined $color) {
+		if ($mask & $self->[CP_POS_PAWNS]) {
+			$piece = CP_PAWN;
+		} elsif ($mask & $self->[CP_POS_KNIGHTS]) {
+			$piece = CP_KNIGHT;
+		} elsif ($mask & $self->[CP_POS_BISHOPS]) {
+			$piece = CP_BISHOP;
+		} elsif ($mask & $self->[CP_POS_ROOKS]) {
+			$piece = CP_ROOK;
+		} elsif ($mask & $self->[CP_POS_QUEENS]) {
+			$piece = CP_QUEEN;
+		} else {
+			$piece = CP_KING;
+		}
+	}
+
+	if (wantarray) {
+		return $piece, $color;
+	} else {
+		return $piece;
+	}
+}
+
+sub dumpAll {
+	my ($self) = @_;
+
+	my $pad19 = sub {
+		my $str = $_;
+		while (19 > length $str) {
+			$str .= ' ';
+		}
+
+		return $str;
+	};
+
+	my $output = '';
+
+	my $w_pieces = $self->dumpBitboard($self->[CP_POS_W_PIECES]);
+	my $b_pieces = $self->dumpBitboard($self->[CP_POS_B_PIECES]);
+	my @w_pieces = map { $pad19->() } split /\n/, $w_pieces;
+	my @b_pieces = map { $pad19->() } split /\n/, $b_pieces;
+	$output .= "  White               Black\n";
+	for (my $i = 0; $i < @w_pieces; ++$i) {
+		$output .= "$w_pieces[$i]   $b_pieces[$i]\n";
+	}
+
+	my $pawns = $self->dumpBitboard($self->[CP_POS_PAWNS]);
+	my @pawns = map { $pad19->() } split /\n/, $pawns;
+	my $knights = $self->dumpBitboard($self->[CP_POS_KNIGHTS]);
+	my @knights = map { $pad19->() } split /\n/, $knights;
+	$output .= "\n  Pawns               Knights\n";
+	for (my $i = 0; $i < @pawns; ++$i) {
+		$output .= "$pawns[$i]   $knights[$i]\n";
+	}
+
+	my $bishops = $self->dumpBitboard($self->[CP_POS_BISHOPS]);
+	my @bishops = split /\n/, $bishops;
+	my $rooks = $self->dumpBitboard($self->[CP_POS_ROOKS]);
+	my @rooks = map { $pad19->() } split /\n/, $rooks;
+	$output .= "\n  Bishops             Rooks\n";
+	for (my $i = 0; $i < @bishops; ++$i) {
+		$output .= "$bishops[$i]   $rooks[$i]\n";
+	}
+
+	my $queens = $self->dumpBitboard($self->[CP_POS_QUEENS]);
+	my @queens = split /\n/, $queens;
+	my $kings = $self->dumpBitboard($self->[CP_POS_KINGS]);
+	my @kings = map { $pad19->() } split /\n/, $kings;
+	$output .= "\n  Queens              Kings\n";
+	for (my $i = 0; $i < @queens; ++$i) {
+		$output .= "$queens[$i]   $kings[$i]\n";
+	}
+
+	return $output;
+}
+
+sub dumpInfo {
+	my ($self) = @_;
+
+	my $output = 'Castling: ';
+
+	my $castling = $self->castling;
+	if ($castling) {
+		$output .= 'K' if $castling & 0x1;
+		$output .= 'Q' if $castling & 0x2;
+		$output .= 'k' if $castling & 0x4;
+		$output .= 'q' if $castling & 0x8;
+	} else {
+		$output .= '- ';
+	}
+
+	$output .= "\nTo move: ";
+	if (CP_WHITE == $self->toMove) {
+		$output .= "white\n";
+	} else {
+		$output .= "black\n";
+	}
+
+	$output .= 'En passant square: ';
+	if ($self->enPassantShift) {
+		$output .= $self->shiftToSquare($self->enPassantShift);
+	} else {
+		$output .= '-';
+	}
+
+	$output .= "\nWhite king: ";
+	$output .= $self->shiftToSquare($self->whiteKingShift);
+	$output .= "\nBlack king: ";
+	$output .= $self->shiftToSquare($self->blackKingShift);
+	$output .= "\n";
+
+	my $checkers = $self->[CP_POS_IN_CHECK];
+	if ($checkers) {
+		$output .= "In check: yes\n";
+
+		my $evasion_strategy = $self->evasion;
+		$output .= 'Check evasion strategies: ';
+		if ($evasion_strategy == CP_EVASION_ALL) {
+			$output .= "king move, capture, block\n";
+		} elsif ($evasion_strategy == CP_EVASION_CAPTURE) {
+			$output .= "king move, capture\n";
+		} elsif ($evasion_strategy == CP_EVASION_KING_MOVE) {
+			$output .= "king move\n";
+		} else {
+			$output .= "$evasion_strategy (?)\n";
+		}
+
+		$output .= "Check evasion squares:\n";
+		$output .= $self->dumpBitboard($self->[CP_POS_EVASION_SQUARES]);
+
+		$output .= "Checkers:\n";
+		$output .= $self->dumpBitboard($self->[CP_POS_IN_CHECK]);
+	} else {
+		$output .= "In check: no\n";
+	}
+
+	return $output;
+}
+
+sub movesInCoordinateNotation {
+	my ($class, @moves) = @_;
+
+	foreach my $move (@moves) {
+		$move = $class->moveCoordinateNotation($move);
+	}
+
+	return @moves;
+}
+
 ###########################################################################
-# Generate attack masks.
+# Generate lookup tables.
 ###########################################################################
 
 # This would be slightly more efficient in one giant loop but with separate
