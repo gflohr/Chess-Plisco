@@ -72,7 +72,7 @@ define cp_pos_info_set_w_king_shift => '$i', '$s',
 define cp_pos_info_set_b_king_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 17)) | ($s << 17))';
 define cp_pos_info_set_evasion => '$i', '$e',
-	'($i = ($i & ~(0x3f << 23)) | ($e << 23))';
+	'($i = ($i & ~(0x3 << 23)) | ($e << 23))';
 define cp_pos_info_set_material => '$i', '$m',
 	'($i = (($i & 0x1ffffff) | ($m << 25)))';
 
