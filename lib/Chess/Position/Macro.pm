@@ -316,7 +316,9 @@ sub expand_placeholder {
 }
 
 sub preprocess {
-	my ($code) = @_;
+	my ($content) = @_;
+
+	my ($code, $tail) = split /^# *__NO_MACRO__.*$/, $content;
 
 	my $source = PPI::Document->new(\$code);
 
@@ -335,7 +337,7 @@ sub preprocess {
 		expand $parent, $invocation;
 	}
 
-	return $source->content;
+	return $source->content . $tail;
 }
 
 sub define {
