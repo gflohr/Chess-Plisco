@@ -1291,6 +1291,22 @@ sub doMove {
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_info_set_to_move($pos_info, !$to_move);
 
+	my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
+		CP_ROOK_VALUE, CP_QUEEN_VALUE);
+	my $material = cp_pos_info_material $pos_info;
+	if ($to_move == CP_WHITE) {
+		$material += $piece_values[$victim];
+		if ($promote) {
+			$material += ($piece_values[$promote] - CP_PAWN_VALUE);
+		}
+	} else {
+		$material -= $piece_values[$victim];
+		if ($promote) {
+			$material -= ($piece_values[$promote] - CP_PAWN_VALUE);
+		}
+	}
+	cp_pos_info_set_material($pos_info, $material);
+
 	cp_pos_info($self) = $pos_info;
 
 	$self->update;
