@@ -474,7 +474,7 @@ faster:
 
     while ($white_pawn_mask) {
         my $shift_mask = cp_bb_clear_but_least_set $white_pawn_mask;
-        my $shift = cp_bb_count_trailing_zbits $shift_mask;
+        my $shift = cp_bb_count_isolated_trailing_zbits $shift_mask;
 
         my $square = cp_shift_to_square $shift;
         print "There is a white pawn on $square.\n";
@@ -484,7 +484,7 @@ faster:
 
 The macro `cp_bb_clear_but_least_set()` clears all bits in a bitboard except
 for the last significant one.  If you count the trailing zero bits with the
-macro `cp_bb_count_trailing_zbits()` you get the position of that bit in the
+macro `cp_bb_count_isolated_trailing_zbits()` you get the position of that bit in the
 bitboard and you can now use that information for whatever you want to do.
 
 At the end of the loop body, you clear the least significant bit of the
