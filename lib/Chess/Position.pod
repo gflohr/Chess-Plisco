@@ -99,7 +99,7 @@ Only the lower 16 bits of the move are set, that means the start and destination
 square, a possible promotion piece and the en passant flag in case the move
 is an en passant capture.
 
-=item B<dumpBitboard(BITBOARD)
+=item B<dumpBitboard(BITBOARD)>
 
 Generate a string representation of B<BITBOARD> in ASCII art.
 
