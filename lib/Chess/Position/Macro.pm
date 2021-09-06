@@ -51,6 +51,7 @@ define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
 define cp_pos_info_w_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
 define cp_pos_info_b_king_shift => '$i', '(($i & (0x3f << 17)) >> 17)';
 define cp_pos_info_evasion => '$i', '(($i & (0x3 << 23)) >> 23)';
+define cp_pos_info_material => '$i', '($i >> 25)';
 
 define cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | $c)';
@@ -72,6 +73,8 @@ define cp_pos_info_set_b_king_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 17)) | ($s << 17))';
 define cp_pos_info_set_evasion => '$i', '$e',
 	'($i = ($i & ~(0x3f << 23)) | ($e << 23))';
+define cp_pos_info_set_material => '$i', '$m',
+	'($i = (($i & 0x1ffffff) | ($m << 25)))';
 
 define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
 define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
@@ -83,6 +86,7 @@ define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
 define cp_pos_w_king_shift => '$p', '(cp_pos_info_w_king_shift(cp_pos_info($p)))';
 define cp_pos_b_king_shift => '$p', '(cp_pos_info_b_king_shift(cp_pos_info($p)))';
 define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
+define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
 
 define cp_pos_set_castling => '$p', '$c',
 	'(cp_pos_info_set_castling(cp_pos_info($p), $c))';
@@ -104,6 +108,8 @@ define cp_pos_set_b_king_shift => '$p', '$s',
 	'(cp_pos_info_set_b_king_shift(cp_pos_info($p), $s))';
 define cp_pos_set_evasion => '$p', '$e',
 	'(cp_pos_info_set_evasion(cp_pos_info($p), $e))';
+define cp_pos_set_material => '$p', '$m',
+	'(cp_pos_info_set_material(cp_pos_info($p), $m))';
 
 define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
 
