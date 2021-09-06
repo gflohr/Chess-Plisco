@@ -1757,97 +1757,6 @@ sub dumpBitboard {
 	return $output;
 }
 
-sub SAN {
-	my ($self, $move, $use_pseudo_legal_moves) = @_;
-
-	my ($from, $to, $promote, $attacker) = (
-		cp_move_from($move),
-		cp_move_to($move),
-		cp_move_promote($move),
-		cp_move_attacker($move),
-	);
-
-	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
-		my $to_mask = 1 << $to;
-		if ($to_mask & CP_G_MASK) {
-			return 'O-O';
-		} else {
-			return 'O-O-O';
-		}
-	}
-
-	# Avoid extra hassle for queen moves.
-	my @pieces = ('', '', 'N', 'B', 'R', 'Q', 'K');
-
-	my $san = $pieces[$attacker];
-
-	my $from_board = $self->[CP_POS_W_PIECES + cp_pos_to_move($self)]
-		& $self->[CP_POS_B_PIECES + $attacker];
-
-	# Or use legalMoves?
-	my @legal_moves = $self->legalMoves or return;
-	my @cmoves = $use_pseudo_legal_moves
-		? $self->pseudoLegalMoves : @legal_moves;
-	return if !@cmoves;
-
-	my (%files, %ranks);
-	my $candidates = 0;
-	foreach my $cmove (@cmoves) {
-		my ($cfrom, $cto) = (cp_move_from($cmove), cp_move_to($cmove));
-		next if $cto != $to;
-
-		++$candidates;
-		my ($ffile, $frank) = $self->shiftToCoordinates($cfrom);
-		++$files{$ffile};
-		++$ranks{$frank};
-	}
-
-	my $to_mask = 1 << $to;
-	my $to_move = cp_pos_to_move $self;
-	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
-	my $ep_shift = cp_pos_ep_shift $self;
-	my @files = ('a' .. 'h');
-	my @ranks = ('1' .. '8');
-	my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
-
-	if ($candidates > 1) {
-		my $numfiles = keys %files;
-		my $numranks = keys %ranks;
-
-		if ($numfiles == $candidates) {
-			$san .= $files[$from_file];
-		} elsif ($numranks == $candidates) {
-			$san .= $ranks[$from_rank];
-		} else {
-			$san .= "$files[$from_file]$ranks[$from_rank]";
-		}
-	}
-
-	if (($to_mask & $her_pieces)
-	    || ($ep_shift && $attacker == CP_PAWN && $to == $ep_shift)) {
-		# Capture.  For pawn captures we always add the file unless it was
-		# already added.
-		if ($attacker == CP_PAWN && !length $san) {
-			$san .= $files[$from_file];
-		}
-		$san .= 'x';
-	}
-
-	$san .= $self->shiftToSquare($to);
-
-	my $copy = $self->copy;
-	if ($copy->doMove($move) && cp_pos_in_check $copy) {
-		my @moves = $copy->legalMoves;
-		if (!@moves) {
-			$san .= '#';
-		} else {
-			$san .= '+';
-		}
-	}
-
-	return $san;
-}
-
 sub movesInCoordinateNotation {
 	my (undef, @moves) = @_;
 
@@ -1856,19 +1765,6 @@ sub movesInCoordinateNotation {
 	}
 
 	return @moves;
-}
-
-sub equals {
-	my ($self, $other) = @_;
-
-	return if @$self != @$other;
-
-	for (my $i = 0; $i < @$self; ++$i) {
-		next if $i == CP_POS_EVASION_SQUARES && !$self->[CP_POS_IN_CHECK];
-		return if $self->[$i] != $other->[$i];
-	}
-
-	return $self;
 }
 
 sub parseMove {
@@ -1940,6 +1836,110 @@ sub __parseUCIMove {
 # that is not performance critical or does not require macros, should go
 # below this line.
 # __NO_MACROS__
+
+sub SAN {
+	my ($self, $move, $use_pseudo_legal_moves) = @_;
+
+	my ($from, $to, $promote, $attacker) = (
+		$self->moveFrom($move),
+		$self->moveTo($move),
+		$self->movePromote($move),
+		$self->moveAttacker($move),
+	);
+
+	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+		my $to_mask = 1 << $to;
+		if ($to_mask & CP_G_MASK) {
+			return 'O-O';
+		} else {
+			return 'O-O-O';
+		}
+	}
+
+	# Avoid extra hassle for queen moves.
+	my @pieces = ('', '', 'N', 'B', 'R', 'Q', 'K');
+
+	my $san = $pieces[$attacker];
+
+	my $from_board = $self->[CP_POS_W_PIECES + cp_pos_to_move($self)]
+		& $self->[CP_POS_B_PIECES + $attacker];
+
+	# Or use legalMoves?
+	my @legal_moves = $self->legalMoves or return;
+	my @cmoves = $use_pseudo_legal_moves
+		? $self->pseudoLegalMoves : @legal_moves;
+	return if !@cmoves;
+
+	my (%files, %ranks);
+	my $candidates = 0;
+	foreach my $cmove (@cmoves) {
+		my ($cfrom, $cto) = (cp_move_from($cmove), cp_move_to($cmove));
+		next if $cto != $to;
+
+		++$candidates;
+		my ($ffile, $frank) = $self->shiftToCoordinates($cfrom);
+		++$files{$ffile};
+		++$ranks{$frank};
+	}
+
+	my $to_mask = 1 << $to;
+	my $to_move = $self->toMove;
+	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
+	my $ep_shift = $self->enPassantShift;
+	my @files = ('a' .. 'h');
+	my @ranks = ('1' .. '8');
+	my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
+
+	if ($candidates > 1) {
+		my $numfiles = keys %files;
+		my $numranks = keys %ranks;
+
+		if ($numfiles == $candidates) {
+			$san .= $files[$from_file];
+		} elsif ($numranks == $candidates) {
+			$san .= $ranks[$from_rank];
+		} else {
+			$san .= "$files[$from_file]$ranks[$from_rank]";
+		}
+	}
+
+	if (($to_mask & $her_pieces)
+	    || ($ep_shift && $attacker == CP_PAWN && $to == $ep_shift)) {
+		# Capture.  For pawn captures we always add the file unless it was
+		# already added.
+		if ($attacker == CP_PAWN && !length $san) {
+			$san .= $files[$from_file];
+		}
+		$san .= 'x';
+	}
+
+	$san .= $self->shiftToSquare($to);
+
+	my $copy = $self->copy;
+	if ($copy->doMove($move) && cp_pos_in_check $copy) {
+		my @moves = $copy->legalMoves;
+		if (!@moves) {
+			$san .= '#';
+		} else {
+			$san .= '+';
+		}
+	}
+
+	return $san;
+}
+
+sub equals {
+	my ($self, $other) = @_;
+
+	return if @$self != @$other;
+
+	for (my $i = 0; $i < @$self; ++$i) {
+		next if $i == CP_POS_EVASION_SQUARES && !$self->[CP_POS_IN_CHECK];
+		return if $self->[$i] != $other->[$i];
+	}
+
+	return $self;
+}
 
 sub __parseSAN {
 	my ($self, $move) = @_;
