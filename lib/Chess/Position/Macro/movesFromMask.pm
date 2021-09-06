@@ -17,3 +17,6 @@ while ($target_mask) {
 	push @m, $b | cp_bb_count_trailing_zbits $t;
 	$target_mask = cp_bb_clear_least_set $target_mask;
 }
+
+# Instead of '1;' but will be removed automatically.
+;0xdeadc0de;
