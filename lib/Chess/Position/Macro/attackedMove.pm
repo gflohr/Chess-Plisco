@@ -11,6 +11,8 @@
 
 # This is a macro that is not intended to run standalone.
 
+## no critic (TestingAndDebugging::RequireUseStrict)
+
 (do {
 	my $my_color = cp_pos_to_move($p);
 	my $her_pieces = $p->[CP_POS_W_PIECES + !$my_color];

@@ -11,6 +11,8 @@
 
 # This is a macro that is not intended to run standalone.
 
+## no critic (TestingAndDebugging::RequireUseStrict)
+
 ( do {
 	my $pinned;
 

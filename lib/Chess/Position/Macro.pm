@@ -163,7 +163,7 @@ sub import {
 		__eof => 0,
 	};
 
-	filter_add(bless $self);
+	filter_add(bless $self); ## no critic
 }
 
 sub filter {
@@ -375,7 +375,7 @@ sub define_from_file {
 	my $filename = __FILE__;
 	$filename =~ s{\.pm$}{/$relname};
 
-	open my $fh, "<$filename"
+	open my $fh, '<', $filename
 		or die "cannot open '$filename' for reading: $!";
 	
 	my $code = join '', <$fh>;

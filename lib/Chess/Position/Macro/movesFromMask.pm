@@ -11,6 +11,8 @@
 
 # This is a macro that is not intended to run standalone.
 
+## no critic (TestingAndDebugging::RequireUseStrict)
+
 while ($target_mask) {
 	push @m, $b | cp_bb_count_trailing_zbits $t;
 	$target_mask = cp_bb_clear_least_set $target_mask;

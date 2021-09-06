@@ -21,6 +21,7 @@ my %WriteMakefileArgs = (
     "Filter::Util::Call" => 0,
     "Locale::TextDomain" => 0,
     "PPI::Document" => 0,
+    "Time::HiRes" => 0,
     "base" => 0,
     "constant" => 0,
     "integer" => 0,
@@ -28,6 +29,10 @@ my %WriteMakefileArgs = (
     "strict" => 0
   },
   "TEST_REQUIRES" => {
+    "Chess::PGN::Parse" => 0,
+    "Data::Dumper" => 0,
+    "File::Basename" => 0,
+    "File::Spec" => 0,
     "Test::More" => 0
   },
   "VERSION" => "0.1",
@@ -39,11 +44,16 @@ my %WriteMakefileArgs = (
 
 my %FallbackPrereqs = (
   "Carp" => 0,
+  "Chess::PGN::Parse" => 0,
+  "Data::Dumper" => 0,
   "Exporter" => 0,
+  "File::Basename" => 0,
+  "File::Spec" => 0,
   "Filter::Util::Call" => 0,
   "Locale::TextDomain" => 0,
   "PPI::Document" => 0,
   "Test::More" => 0,
+  "Time::HiRes" => 0,
   "base" => 0,
   "constant" => 0,
   "integer" => 0,
