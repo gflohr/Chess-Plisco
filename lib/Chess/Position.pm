@@ -573,6 +573,7 @@ sub newFromFEN {
 	my $queens = 0;
 	my $pawns = 0;
 
+	my $material = 0;
 	my $shift = 56;
 	my $rankno = 7;
 	foreach my $rank (@ranks) {
@@ -587,39 +588,49 @@ sub newFromFEN {
 			if ('P' eq $char) {
 				$w_pieces |= $mask;
 				$pawns |= $mask;
+				$material += CP_PAWN_VALUE;
 			} elsif ('p' eq $char) {
 				$b_pieces |= $mask;
 				$pawns |= $mask;
+				$material -= CP_PAWN_VALUE;
 			} elsif ('N' eq $char) {
 				$w_pieces |= $mask;
 				$knights |= $mask;
+				$material += CP_KNIGHT_VALUE;
 			} elsif ('n' eq $char) {
 				$b_pieces |= $mask;
 				$knights |= $mask;
+				$material -= CP_KNIGHT_VALUE;
 			} elsif ('B' eq $char) {
 				$w_pieces |= $mask;
 				$bishops |= $mask;
+				$material += CP_BISHOP_VALUE;
 			} elsif ('b' eq $char) {
 				$b_pieces |= $mask;
 				$bishops |= $mask;
+				$material -= CP_BISHOP_VALUE;
 			} elsif ('R' eq $char) {
 				$w_pieces |= $mask;
 				$rooks |= $mask;
+				$material += CP_ROOK_VALUE;
 			} elsif ('r' eq $char) {
 				$b_pieces |= $mask;
 				$rooks |= $mask;
+				$material -= CP_ROOK_VALUE;
+			} elsif ('Q' eq $char) {
+				$w_pieces |= $mask;
+				$queens |= $mask;
+				$material += CP_QUEEN_VALUE;
+			} elsif ('q' eq $char) {
+				$b_pieces |= $mask;
+				$queens |= $mask;
+				$material -= CP_QUEEN_VALUE;
 			} elsif ('K' eq $char) {
 				$w_pieces |= $mask;
 				$kings |= $mask;
 			} elsif ('k' eq $char) {
 				$b_pieces |= $mask;
 				$kings |= $mask;
-			} elsif ('Q' eq $char) {
-				$w_pieces |= $mask;
-				$queens |= $mask;
-			} elsif ('q' eq $char) {
-				$b_pieces |= $mask;
-				$queens |= $mask;
 			} else {
 				die __x("Illegal FEN: Illegal piece/number '{x}'.\n",
 						x => $char);
@@ -658,6 +669,8 @@ sub newFromFEN {
 	$self->[CP_POS_PAWNS] = $pawns;
 
 	my $pos_info = 0;
+	cp_pos_info_set_material($pos_info, $material);
+
 	if ('w' eq lc $to_move) {
 		cp_pos_info_set_to_move($pos_info, CP_WHITE);
 	} elsif ('b' eq lc $to_move) {
