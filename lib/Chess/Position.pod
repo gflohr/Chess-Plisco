@@ -31,6 +31,9 @@ The library features:
 
 =item magic bitboards for generation of sliding piece moves and attacks
 
+=item handling of moves in Standard-Algebraic Notation (SAN) as well as
+coordinate notation
+
 =item FEN (Forsyth-Edwards Notation) import and export
 
 =back
@@ -602,6 +605,26 @@ opponent attack is not considered a pin by this method.
 You can give the move either as an integer or in one of the supported move
 notations.
 
+=item B<rMagic(SHIFT, OCCUPANCY)>
+
+Returns a bitboard of all squares that a rook can reach from B<SHIFT>.
+B<OCCUPANCY> is a bitboard of all squares that are occupied by pieces.
+The first piece that the sliding piece would reach is considered a potential
+victim of a capture and is a valid target square.
+
+See L<Chess::Position::Tutorial/Understanding C<rMagic> and C<bMagic>> for
+more information.
+
+=item B<rMagic(SHIFT, OCCUPANCY)>
+
+Returns a bitboard of all squares that a bishop can reach from B<SHIFT>.
+B<OCCUPANCY> is a bitboard of all squares that are occupied by pieces.
+The first piece that the sliding piece would reach is considered a potential
+victim of a capture and is a valid target square.
+
+See L<Chess::Position::Tutorial/Understanding C<rMagic> and C<bMagic>> for
+more information.
+
 =back
 
 =head2 Bit(board) Fiddling Methods
@@ -745,81 +768,8 @@ these options:
 The macros (all starting with "cp_") are only available when you have loaded
 L<Chess::Position::Macro>, see there for more information.
 
-=over 4
-
-=item B<POS-E<gt>[CP_POS_WHITE_PIECES]>
-
-A bitboard of all white pieces on the board.  Same as L</whitePieces>.
-
-=item B<cp_pos_black_pieces(POS); POS-E<gt>[CP_POS_BLACK_PIECES]>
-
-A bitboard of all black pieces on the board.  Same as L</blackPieces>.
-
-=item B<cp_pos_kings(POS); POS-E<gt>[CP_POS_KINGS]>
-
-A bitboard of all kings (black and white) on the board.
-
-=item B<cp_pos_rooks(POS); POS-E<gt>[CP_POS_ROOKS]>
-
-A bitboard of all rooks (black and white) on the board.  There is no bitboard
-for queens.  The queens bitboard can be computed with the bitwise AND of the
-rooks and bishops bitboard.
-
-=item B<cp_pos_bishops(POS); POS-E<gt>[CP_POS_BISHOPS]>
-
-A bitboard of all bishops (black and white) on the board. There is no bitboard
-for queens.  The queens bitboard can be computed with the bitwise AND of the
-rooks and bishops bitboard.
-
-=item B<cp_pos_knights(POS); POS-E<gt>[CP_POS_KNIGHTS]>
-
-A bitboard of all knights (black and white) on the board.
-
-=item B<cp_pos_pawns(POS); POS-E<gt>[CP_POS_PAWNS]>
-
-A bitboard of all pawns (black and white) on the board.
-
-=item B<cp_pos_to_move(POS); POS-E<gt>[CP_POS_TO_MOVE]>
-
-The side to move, either 0 (aka B<CP_WHITE>) or 1 (aka B<CP_BLACK>).
-
-=item B<cp_pos_w_castling(POS); POS-E<gt>[CP_POS_CASTLING]>
-
-Bitmask for castling rights.
-
-=over 8
-
-=item 1 (0x1): white king-side castling
-
-=item 2 (0x2): white queen-side castling
-
-=item 3 (0x4): black king-side castling
-
-=item 4 (0x8): black queen-side castling
-
-=back
-
-=item B<cp_pos_ep_shift(POS); POS-E<gt>[CP_POS_EP_SHIFT]>
-
-The bit-shift offset of an en-passant target square or 0 if en-passant is
-not possible.
-
-Note: 0 is the shift of the h1 square but en-passant on h1 is not possible.
-It is therefore safe to use it as in boolean context here.
-
-=item B<cp_pos_w_king_shift(POS); POS-E<gt>[CP_POS_W_KING_SHIFT]>
-
-The bit-shift offset to the white king square.
-
-=item B<cp_pos_b_king_shift(POS); POS-E<gt>[CP_POS_B_KING_SHIFT]>
-
-The bit-shift offset to the black king square.
-
-=item B<cp_pos_in_check(POS); POS-E<gt>[CP_POS_IN_CHECK]>
-
-Set to the bitboard of pieces giving check, if the side to move is in check.
-
-=back
+All elements of the position array are documented below under
+L</Accessor Indexes (:accessors)>.
 
 =head1 EXPORT TAGS
 
@@ -834,9 +784,70 @@ You can import all constants with the export tag ":all".
 
 =head2 Accessor Indexes (:accessors)
 
-=head3 CP_POS_WHITE_PIECES
+The array indices were carefully so that the following conditions are met:
 
-The index of the white bitboard.
+=over 4
+
+=item All piece types (L</CP_PAWN>, L</CP_KNIGHT>, ..., L</CP_KING>) can be used as indexes into the instance in order to retrieve their respective bitboard
+
+=item The white bitboard comes directly before the black bitboard.
+
+=back
+
+The bitboard for the pieces of the side to move is therefore always at the
+location C<CP_POS_WHITE_PIECES + $pos->toMove>.
+
+=head3 B<POS-E<gt>[CP_POS_WHITE_PIECES]>
+
+A bitboard of all white pieces on the board. See also L</whitePieces>.
+
+=item B<POS-E<gt>[CP_POS_BLACK_PIECES]>
+
+A bitboard of all black pieces on the board.  See also L</blackPieces>.
+
+=item B<POS-E<gt>[CP_POS_KINGS]>
+
+A bitboard of all kings (black and white) on the board.  See also L</kings>.
+
+=item B<POS-E<gt>[CP_POS_QUEENS]>
+
+A bitboard of all rooks (black and white) on the board.  See also L</queens>.
+
+=item B<POS-E<gt>[CP_POS_ROOKS]>
+
+A bitboard of all rooks (black and white) on the board.  See also L</rooks>.
+
+=item B<POS-E<gt>[CP_POS_BISHOPS]>
+
+A bitboard of all bishops (black and white) on the board.  See also L</bishops>.
+
+=item B<POS-E<gt>[CP_POS_KNIGHTS]>
+
+A bitboard of all knights (black and white) on the board.  See also L</knights>.
+
+=item B<POS-E<gt>[CP_POS_PAWNS]>
+
+A bitboard of all pawns (black and white) on the board.  See also L</pawns>.
+
+=item B<POS-E<gt>[CP_POS_HALF_MOVES]>
+
+The number of half-moves made.  See also L</halfMoves>.
+
+=item B<POS-E<gt>[CP_POS_HALF_MOVE_CLOCK]>
+
+The current value of the half-move clock.  See also L</halfMoveClock>.
+
+=item B<POS-E<gt>[CP_POS_IN_CHECK]>
+
+Bitmask of pieces giving check.  See also L</inCheck>.
+
+=item B<POS-E<gt>[CP_POS_EVASION_SQUARES]>
+
+Bitboard of squares where a check can be blocked.  See also L</evasionSquares>.
+
+=item B<POS-E<gt>[CP_POS_INFO]>
+
+Additional properties of the position. See also L</info>.
 
 =head3 CP_POS_BLACK_PIECES
 
@@ -958,133 +969,25 @@ Example to get the character for a black knight:
 
 =head2 Board Constants (:board)
 
-=head3 CP_A_MASK =E<gt> 0x8080808080808080
+=head3 CP_A_MASK .. CP_H_MASK
 
-Bit masks for all squares on the "a" file.
+These are bitboard of all files ("a" to "h") of the chess board.
 
-=head3 CP_B_MASK =E<gt> 0x4040404040404040
+=head3 CP_1_MASK .. CP_8_MASK
 
-Bit masks for all squares on the "b" file.
+These are bitboard of all ranks ("1" to "8") of the chess board.
 
-=head3 CP_C_MASK =E<gt> 0x2020202020202020
+=head3 CP_FILE_A .. CP_FILE_H
 
-Bit masks for all squares on the "c" file.
+0-based numbers of all files ("a" to "h").
 
-=head3 CP_D_MASK =E<gt> 0x1010101010101010
+=head3 CP_RANK_1 .. CP_RANK_8
 
-Bit masks for all squares on the "d" file.
+0-based numbers of all ranks ("1" to "8").
 
-=head3 CP_E_MASK =E<gt> 0x0808080808080808
+=head3 CP_A1 .. CP_H8
 
-Bit masks for all squares on the "e" file.
-
-=head3 CP_F_MASK =E<gt> 0x0404040404040404
-
-Bit masks for all squares on the "f" file.
-
-=head3 CP_G_MASK =E<gt> 0x0202020202020202
-
-Bit masks for all squares on the "g" file.
-
-=head3 CP_H_MASK =E<gt> 0x0101010101010101
-
-Bit masks for all squares on the "h" file.
-
-=head3 CP_1_MASK =E<gt> 0x00000000000000ff
-
-Bit masks for all squares on the 1st rank.
-
-=head3 CP_2_MASK =E<gt> 0x000000000000ff00
-
-Bit masks for all squares on the 2nd rank.
-
-=head3 CP_3_MASK =E<gt> 0x0000000000ff0000
-
-Bit masks for all squares on the 3rd rank.
-
-=head3 CP_4_MASK =E<gt> 0x00000000ff000000
-
-Bit masks for all squares on the 4th rank.
-
-=head3 CP_5_MASK =E<gt> 0x000000ff00000000
-
-Bit masks for all squares on the 5th rank.
-
-=head3 CP_6_MASK =E<gt> 0x0000ff0000000000
-
-Bit masks for all squares on the 6th rank.
-
-=head3 CP_7_MASK =E<gt> 0x00ff000000000000
-
-Bit masks for all squares on the 7th rank.
-
-=head3 CP_8_MASK =E<gt> 0xff00000000000000
-
-Bit masks for all squares on the 8th rank.
-
-=head3 CP_FILE_A =E<gt> 0
-
-0-based number of the "a" file.
-
-=head3 CP_FILE_B =E<gt> 1
-
-0-based number of the "b" file.
-
-=head3 CP_FILE_C =E<gt> 2
-
-0-based number of the "c" file.
-
-=head3 CP_FILE_D =E<gt> 3
-
-0-based number of the "d" file.
-
-=head3 CP_FILE_E =E<gt> 4
-
-0-based number of the "e" file.
-
-=head3 CP_FILE_F =E<gt> 5
-
-0-based number of the "f" file.
-
-=head3 CP_FILE_G =E<gt> 6
-
-0-based number of the "g" file.
-
-=head3 CP_FILE_H =E<gt> 7
-
-0-based number of the "h" file.
-
-=head3 CP_RANK_1 =E<gt> 0
-
-0-based number of the 1st rank
-
-=head3 CP_RANK_2 =E<gt> 1
-
-0-based number
-
-=head3 CP_RANK_3 =E<gt> 2
-
-0-based number of the 3rd rank
-
-=head3 CP_RANK_4 =E<gt> 3
-
-0-based number of the 4th rank.
-
-=head3 CP_RANK_5 =E<gt> 4
-
-0-based number of the 5th rank.
-
-=head3 CP_RANK_6 =E<gt> 5
-
-0-based number of the 6th rank.
-
-=head3 CP_RANK_7 =E<gt> 6
-
-0-based number of the 7th rank.
-
-=head3 CP_RANK_8 =E<gt> 7
-
-0-based number of the 8th rank.
+Shifts for all squares of the chess board.
 
 =head2 Magic Moves Resp. Magic Bitboard Constants (:magicmoves)
 
@@ -1116,35 +1019,6 @@ Internal.
 =head3 CP_MAGICMOVESRDB
 
 Internal.
-
-=head1 OTHER
-
-=head2 TERMINOLOGY
-
-=head3 SHIFT
-
-A "shift" is a number from 0-63 that denotes how many places a lone 1 has to
-be bit-shifted to the left in order to create a mask for selecting a single
-square of the chess board.  The square "a8" has a shift of 63, the square "h1"
-has a shift of 0.
-
-You can think of it as the 0-based bit number.
-
-=head3 SHIFT MASK
-
-A shift mask is a lone 1 bit-shifted a number of places to the left, so that
-it can be used as a mask for selecting a single square of the chess board.
-
-=head3 SQUARE
-
-A square is one square resp. field of the chess board.  If used in method names,
-constants or variable names, it is a conventional specification like "e4" or
-"c5".
-
-=head3 COORDINATES
-
-Coordinates are a pair of two integers, a file (1st) and a rank (2nd).  Both
-of them have a valid range of 0-7.
 
 =head1 COPYRIGHT
 
