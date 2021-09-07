@@ -29,7 +29,7 @@ $undo_info = $pos->doMove($move), '1. ...h6';
 ok $undo_info, '1. ...h6';
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_6_MASK),
 	'1. ...h6, pawn should be on h6';
-ok $pos->undoMove($move, $undo_info);
+ok $pos->undoMove($undo_info);
 ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 	'undo 1. ...h6, pawn should be back on h7';
 
@@ -40,7 +40,7 @@ $move = $pos->parseMove('b1c3');
 ok $move, 'parse b1c3';
 $undo_info = $pos->doMove($move);
 ok $undo_info;
-ok $pos->undoMove($move, $undo_info);
+ok $pos->undoMove($undo_info);
 is "$pos", "$before";
 ok $pos->equals($before);
 
@@ -51,7 +51,7 @@ $move = $pos->parseMove('d1e2');
 ok $move, 'parse d1e2';
 $undo_info = $pos->doMove($move);
 ok $undo_info;
-ok $pos->undoMove($move, $undo_info);
+ok $pos->undoMove($undo_info);
 is "$pos", "$before";
 ok $pos->equals($before);
 
@@ -63,7 +63,7 @@ ok $move, 'parse c8h3';
 is(cp_move_attacker($move), CP_BISHOP);
 $undo_info = $pos->doMove($move);
 ok $undo_info;
-ok $pos->undoMove($move, $undo_info);
+ok $pos->undoMove($undo_info);
 is "$pos", "$before";
 ok $pos->equals($before);
 

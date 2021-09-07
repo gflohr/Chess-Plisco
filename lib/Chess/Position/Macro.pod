@@ -25,6 +25,26 @@ of macros respectively inline functions available that can be invoked without
 any subroutine call overhead.  In fact, all invocations of these macros are
 translated into constant expressions at compile-time.
 
+All the functionality available in the module is also available as instance
+or class methods of L<Chess::Position>.  You should only use the macros
+defined here if you have to squeeze out the last bit of performance from
+your code, for example, when writing a chess engine.  Otherwise, using the
+macros has only disadvantages:
+
+=over 4
+
+=item It increases the compile-time of your code significantly.
+
+=item Syntax checks on your code may fail.
+
+=item Seemingly correct syntax may lead to syntax errors.
+
+=item Your code becomes less readable.
+
+=back
+
+If performance outweighs these problems in your use case, read on!
+
 The source filter is probably not perfect but is able to translate at least
 the source code of L<Chess::Position>.  If you have trouble like unexpected
 syntax errors in your own code, you can use the function C<preprocess()> (see
@@ -33,14 +53,6 @@ below), to get a translation of your source file, and find the problem.
 Please note that not all translation errors are considered a bug of the
 source filter.  If the problem can be avoided by re-formulating your code,
 a fix will probably be refused.
-
-You may also think that the biggest bug of this module is its mere existance
-because it is a dirty hack.  Welcome to the world of chess programming, where
-performance is always more important than beauty or elegance.  And if you
-do not like the approach taken here, simply do not use the module.  You can
-use L<Chess::Position> without L<Chess::Position::Macro>, only that your code
-will maybe become slower, more error-prone, and more likely to break with
-future versions of L<Chess::Position>.
 
 =head1 MOTIVATION
 
@@ -101,6 +113,30 @@ with C<use Chess::Position ':all'>.
 Almost all of the macros run a lot faster with C<use integer> and some of them
 I<only> work with C<use integer>.  Therefore, you should always enable that
 pragma for your code.
+
+=head2 Use More Parentheses
+
+Remember that the macros ar expanded by a rather dumb search and replace.  That
+can lead to problems with parentheses. Say you have a line like this in a test
+written with L<Test::More>
+
+    is cp_pos_material($pos), 0, "material test";
+
+But this may be expanded into something like:
+
+    is (($pos->[CP_POS_INFO]) >> 19), 0, "material test";
+
+And this is not what you meant.  Now, C<is()> is called with just one
+argument instead of 3 like you expected.
+
+If the parentheses were omitted in the macro definition, strange precedence
+problems in the expanded code would occur instead.  In other words, it is
+not possible to fix both problems at once.  In doubt, macros are wrapped
+into parentheses and it is therefore usually safer to also use parentheses,
+when you want to use macros as arguments to subroutines.  The correct test
+code would look like this:
+
+    is(cp_pos_material($pos), 0, "material test");
 
 =head2 Do not Create References to Macros
 

@@ -49,8 +49,7 @@ GAME: while ($pgn->read_game) {
 
 	$pgn->parse_game;
 
-	my @moves;
-	my @undoInfos;
+	my @undo_infos;
 	my @fen = ($pos->toFEN);
 	my @positions = ($pos->copy);
 
@@ -65,16 +64,15 @@ GAME: while ($pgn->read_game) {
 			last;
 		}
 
-		my $undoInfo = $pos->doMove($move);
-		if (!$undoInfo) {
+		my $undo_info = $pos->doMove($move);
+		if (!$undo_info) {
 			report_failure $pgn, $pos,
 				"\ncannot apply move '$san'\n", $halfmove;
 			last;
 		} else {
-			ok $undoInfo, "do move $san for position $pos";
+			ok $undo_info, "do move $san for position $pos";
 		}
-		push @moves, $move;
-		push @undoInfos, $undoInfo;
+		push @undoInfos, $undo_info;
 		push @fen, $pos->toFEN;
 		push @positions, $pos->copy;
 	}
@@ -82,10 +80,9 @@ GAME: while ($pgn->read_game) {
 	pop @fen;
 	pop @positions;
 
-	while (@moves) {
-		my $move = pop @moves;
-		my $undoInfo = pop @undoInfos;
-		$pos->undoMove($move, $undoInfo);
+	while (@undo_infos) {
+		my $undo_info = pop @undo_infos;
+		$pos->undoMove($undo_info);
 		my $wanted_fen = pop @fen;
 		my $got_fen = $pos->toFEN;
 		my $halfmove = 1 + @moves;
