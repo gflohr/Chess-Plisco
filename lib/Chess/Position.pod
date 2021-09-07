@@ -994,7 +994,8 @@ Shifts for all squares of the chess board.
 These are all large data tables that are used internally for the magic
 bitboards that generate the attack masks for the sliding pieces (queens,
 bishops, and rooks).  See the source if you are curious.  Otherwise just import
-them if you want to use the macros C<cp_mm_bmagic()> and C<cp_mm_rmagic()>.
+them if you want to use the macros C<cp_mm_bmagic()> and C<cp_mm_rmagic()>
+from L<Chess::Position::Macro>.
 
 =head3 CP_MAGICMOVES_B_MAGICS
 
