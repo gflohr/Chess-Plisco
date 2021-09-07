@@ -795,7 +795,9 @@ The array indices were carefully so that the following conditions are met:
 =back
 
 The bitboard for the pieces of the side to move is therefore always at the
-location C<CP_POS_WHITE_PIECES + $pos->toMove>.
+location C<CP_POS_WHITE_PIECES + $pos->toMove>.  Or in other words, the
+constants C<CP_POS_PAWNS> and C<CP_PAWN> (likewise for the other piece types)
+are guaranteed to be the same and to point to the corresponding piece bitboard.
 
 =head3 B<POS-E<gt>[CP_POS_WHITE_PIECES]>
 

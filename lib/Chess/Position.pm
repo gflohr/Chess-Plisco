@@ -560,8 +560,8 @@ sub pseudoLegalMoves {
 
 	my $pos_info = cp_pos_info $self;
 	my $to_move = cp_pos_info_to_move $pos_info;
-	my $my_pieces = $self->[$to_move];
-	my $her_pieces = $self->[!$to_move];
+	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
 	my $empty = ~$occupancy;
 
@@ -891,11 +891,11 @@ sub doMove {
 	# Move all pieces involved.
 	if ($victim != CP_NO_PIECE) {
 		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $victim_mask;
-		$self->[CP_POS_BLACK_PIECES + $victim] ^= $victim_mask;
+		$self->[$victim] ^= $victim_mask;
 	}
 
 	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
-	$self->[CP_POS_BLACK_PIECES + $piece] ^= $move_mask;
+	$self->[$piece] ^= $move_mask;
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -905,7 +905,7 @@ sub doMove {
 
 	if ($promote) {
 		$self->[CP_POS_PAWNS] ^= $to_mask;
-		$self->[CP_POS_PAWNS - 1 + $promote] ^= $to_mask;
+		$self->[$promote] ^= $to_mask;
 	}
 
 	my @undo_info = ($move, $victim, $victim_mask, @state);
@@ -949,14 +949,14 @@ sub undoMove {
 	if ($promote) {
 		my $remove_mask = 1 << $to;
 		$self->[CP_POS_PAWNS] |= 1 << $from;
-		$self->[CP_POS_BLACK_PIECES + $promote] ^= $remove_mask;
+		$self->[$promote] ^= $remove_mask;
 	} else {
-		$self->[CP_POS_BLACK_PIECES + $piece] ^= $move_mask;
+		$self->[$piece] ^= $move_mask;
 	}
 
 	if ($victim) {
 		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $victim_mask;
-		$self->[CP_POS_PAWNS - 1 + $victim] |= $victim_mask;
+		$self->[$victim] |= $victim_mask;
 	}
 
 	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
@@ -1795,7 +1795,7 @@ sub perftByUndo {
 		my $undo_info = $self->doMove($move) or next;
 
 		if ($depth > 1) {
-			$nodes += $self->perft($depth - 1);
+			$nodes += $self->perftByUndo($depth - 1);
 		} else {
 			++$nodes;
 		}
@@ -1816,7 +1816,7 @@ sub perftByCopy {
 		$copy->doMove($move) or next;
 
 		if ($depth > 1) {
-			$nodes += $class->perftPosition($copy, $depth - 1);
+			$nodes += $class->perftByCopy($copy, $depth - 1);
 		} else {
 			++$nodes;
 		}
@@ -1893,7 +1893,7 @@ sub perftByCopyWithOutput {
 		my $subnodes;
 
 		if ($depth > 1) {
-			$subnodes = $class->perftPosition($copy, $depth - 1);
+			$subnodes = $class->perftByCopy($copy, $depth - 1);
 		} else {
 			$subnodes = 1;
 		}
