@@ -23,6 +23,3 @@ while ($target_mask) {
 		$b | (CP_KNIGHT << 12);
 	$target_mask = cp_bb_clear_least_set $target_mask;
 }
-
-# Instead of '1;' but will be removed automatically.
-;0xdeadc0de;

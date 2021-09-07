@@ -25,6 +25,3 @@
 			| (cp_mm_bmagic($shift, $occupancy) & ($queens | cp_pos_bishops($p)))
 			| (cp_mm_rmagic($shift, $occupancy) & ($queens | cp_pos_rooks($p))));
 })
-
-# Instead of '1;' but will be removed automatically.
-;0xdeadc0de;

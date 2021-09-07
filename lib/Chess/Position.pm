@@ -330,10 +330,7 @@ sub new {
 	cp_pos_info_set_ep_shift($info, 0);
 	cp_pos_info($self) = $info;
 
-	cp_pos_in_check($self) = 0;
-	cp_pos_evasion_squares($self) = 0;
-
-	$self->update;
+	$self->__update;
 
 	return $self;
 }
@@ -517,17 +514,16 @@ sub newFromFEN {
 		}
 	}
 
+	my $to_move = cp_pos_info_to_move($pos_info);
 	if ('-' eq $ep_square) {
 		cp_pos_info_set_ep_shift($pos_info, 0);
-	} elsif (cp_pos_info_to_move($pos_info) == CP_WHITE
-	         && $ep_square =~ /^[a-h]6$/) {
+	} elsif ($to_move == CP_WHITE && $ep_square =~ /^[a-h]6$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_B_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
 			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
-	} elsif (cp_pos_info_to_move($pos_info) == CP_BLACK
-	         && $ep_square =~ /^[a-h]3$/) {
+	} elsif ($to_move == CP_BLACK && $ep_square =~ /^[a-h]3$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_W_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
@@ -552,10 +548,7 @@ sub newFromFEN {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
 	}
 
-	cp_pos_in_check($self) = 0;
-	cp_pos_evasion_squares($self) = 0;
-
-	$self->update;
+	$self->__update;
 
 	return $self;
 }
@@ -731,20 +724,18 @@ sub pseudoLegalMoves {
 	return @moves;
 }
 
-sub update {
+# FIXME! Make this a macro!
+sub __update {
 	my ($self) = @_;
 
 	# Update king's shift.
 	my $pos_info = cp_pos_info($self);
-	my $w_kings = cp_pos_kings($self) & cp_pos_w_pieces($self);
-	my $w_king_shift = cp_bb_count_isolated_trailing_zbits($w_kings);
-	cp_pos_info_set_w_king_shift($pos_info, $w_king_shift);
-	my $b_kings = cp_pos_kings($self) & cp_pos_b_pieces($self);
-	my $b_king_shift = cp_bb_count_isolated_trailing_zbits($b_kings);
-	cp_pos_info_set_b_king_shift($pos_info, $b_king_shift);
-
 	my $to_move = cp_pos_info_to_move($pos_info);
-	my $king_shift = $to_move ? $b_king_shift : $w_king_shift;
+	my $kings = cp_pos_kings($self)
+		& ($to_move ? cp_pos_b_pieces($self) : cp_pos_w_pieces($self));
+	my $king_shift = cp_bb_count_isolated_trailing_zbits($kings);
+	cp_pos_info_set_king_shift($pos_info, $king_shift);
+
 	my $checkers = cp_pos_in_check($self) = _cp_pos_color_attacked $self, $to_move, $king_shift;
 
 	if ($checkers) {
@@ -776,8 +767,6 @@ sub update {
 		} else {
 			cp_pos_info_set_evasion($pos_info, CP_EVASION_ALL);
 			my $attacker_shift = cp_bb_count_isolated_trailing_zbits $checkers;
-			my $kso = $to_move ? 17 : 11;
-			my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
 			my ($attack_type, undef, $attack_ray) =
 				@{$common_lines[$king_shift]->[$attacker_shift]};
 			if ($attack_ray) {
@@ -789,8 +778,6 @@ sub update {
 	}
 
 	cp_pos_info($self) = $pos_info;
-
-	return $self;
 }
 
 sub attacked {
@@ -810,10 +797,9 @@ sub pinnedMove {
 
 	my $to_move = cp_pos_to_move $self;
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
-	my $kso = 11 + 6 * $to_move;
-	my $king_shift = (cp_pos_info($self) & (0x3f << $kso)) >> $kso;
 
-	return _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
+	return _cp_pos_pinned_move $self, $from, $to, $to_move,
+		cp_pos_king_shift $self;
 }
 
 sub doMove {
@@ -828,8 +814,7 @@ sub doMove {
 	my $from_mask = 1 << $from;
 	my $to_mask = 1 << $to;
 	my $move_mask = (1 << $from) | $to_mask;
-	my $kso = 11 + 6 * $to_move;
-	my $king_shift = ($pos_info & (0x3f << $kso)) >> $kso;
+	my $king_shift = cp_pos_info_king_shift($pos_info);
 
 	# A move can be illegal for these reasons:
 	#
@@ -964,13 +949,13 @@ sub doMove {
 	cp_pos_info_set_to_move($pos_info, !$to_move);
 
 	# The material balance is stored in the most signicant bits.  It is
-	# already left-shifted 25 bites in the lookup table so that we can
+	# already left-shifted 19 bit in the lookup table so that we can
 	# simply add it.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($victim << 4)];
 
 	cp_pos_info($self) = $pos_info;
 
-	$self->update;
+	$self->__update;
 
 	return \@undo_info;
 }
@@ -1060,22 +1045,16 @@ sub enPassantShift {
 	return cp_pos_ep_shift($self);
 }
 
-sub whiteKingShift {
+sub kingShift {
 	my ($self) = @_;
 
-	return cp_pos_sw_king_shift($self);
-}
-
-sub blackKingShift {
-	my ($self) = @_;
-
-	return cp_pos_b_king_shift($self);
+	return cp_pos_king_shift($self);
 }
 
 sub evasion {
 	my ($self) = @_;
 
-	return cp_pos_b_king_shift($self);
+	return cp_pos_evasion($self);
 }
 
 sub material {
@@ -2437,13 +2416,13 @@ my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
 @material_deltas = (0) x (1 + (1 | (CP_QUEEN << 1) | (CP_QUEEN << 4)));
 foreach my $victim (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
-	$material_deltas[CP_WHITE | ($victim << 4)] = ($piece_values[$victim] << 25);
-	$material_deltas[CP_BLACK | ($victim << 4)] = (-$piece_values[$victim] << 25);
+	$material_deltas[CP_WHITE | ($victim << 4)] = ($piece_values[$victim] << 19);
+	$material_deltas[CP_BLACK | ($victim << 4)] = (-$piece_values[$victim] << 19);
 	foreach my $promote (CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
 		$material_deltas[CP_WHITE | ($promote << 1) | ($victim << 4)] =
-			($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 25;
+			($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
 		$material_deltas[CP_BLACK | ($promote << 1) | ($victim << 4)] =
-			-($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 25;
+			-($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
 	}
 }
 

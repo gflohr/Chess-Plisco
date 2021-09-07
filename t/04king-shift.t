@@ -11,16 +11,22 @@
 
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 9;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
 my $pos = Chess::Position->new;
 ok $pos, 'created';
-is(cp_pos_w_king_shift($pos), CP_E1, 'initial white');
-is(cp_pos_b_king_shift($pos), CP_E8, 'initial black');
+is($pos->kingShift, CP_E1, 'initial white');
+my $move = $pos->parseMove('e4');
+ok $move, 'move e4';
+ok $pos->doMove($move), 'doMove e4';
+is($pos->kingShift, CP_E8, 'after 1. e4');
+
+$pos = Chess::Position->new('8/8/4k3/5P2/8/8/8/K7 w - - 0 1');
+ok $pos, 'created';
+is($pos->kingShift, CP_A1, 'white king on a1');
 
 $pos = Chess::Position->new('8/8/4k3/5P2/8/8/8/K7 b - - 0 1');
 ok $pos, 'created';
-is(cp_pos_w_king_shift($pos), CP_A1, 'white king on a1');
-is(cp_pos_b_king_shift($pos), CP_E6, 'black king on e6');
+is($pos->kingShift, CP_E6, 'black king on e6');

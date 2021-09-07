@@ -48,10 +48,9 @@ _define cp_pos_info_b_ks_castle => '$i', '$i & (1 << 2)';
 _define cp_pos_info_b_qs_castle => '$i', '$i & (1 << 3)';
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
 _define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
-_define cp_pos_info_w_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
-_define cp_pos_info_b_king_shift => '$i', '(($i & (0x3f << 17)) >> 17)';
-_define cp_pos_info_evasion => '$i', '(($i & (0x3 << 23)) >> 23)';
-_define cp_pos_info_material => '$i', '($i >> 25)';
+_define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
+_define cp_pos_info_evasion => '$i', '(($i & (0x3 << 17)) >> 17)';
+_define cp_pos_info_material => '$i', '($i >> 19)';
 
 _define cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | $c)';
@@ -67,14 +66,12 @@ _define cp_pos_info_set_to_move => '$i', '$c',
 	'($i = ($i & ~(1 << 4)) | ($c << 4))';
 _define cp_pos_info_set_ep_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 5)) | ($s << 5))';
-_define cp_pos_info_set_w_king_shift => '$i', '$s',
+_define cp_pos_info_set_king_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 11)) | ($s << 11))';
-_define cp_pos_info_set_b_king_shift => '$i', '$s',
-	'($i = ($i & ~(0x3f << 17)) | ($s << 17))';
 _define cp_pos_info_set_evasion => '$i', '$e',
-	'($i = ($i & ~(0x3 << 23)) | ($e << 23))';
+	'($i = ($i & ~(0x3 << 17)) | ($e << 17))';
 _define cp_pos_info_set_material => '$i', '$m',
-	'($i = (($i & 0x1ffffff) | ($m << 25)))';
+	'($i = (($i & 0x7fffffff) | ($m << 19)))';
 
 _define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
 _define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
@@ -83,8 +80,7 @@ _define cp_pos_b_ks_castle => '$p', '(cp_pos_info_b_ks_castle(cp_pos_info($p)))'
 _define cp_pos_b_qs_castle => '$p', '(cp_pos_info_b_qs_castle(cp_pos_info($p)))';
 _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 _define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
-_define cp_pos_w_king_shift => '$p', '(cp_pos_info_w_king_shift(cp_pos_info($p)))';
-_define cp_pos_b_king_shift => '$p', '(cp_pos_info_b_king_shift(cp_pos_info($p)))';
+_define cp_pos_king_shift => '$p', '(cp_pos_info_king_shift(cp_pos_info($p)))';
 _define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
 _define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
 
@@ -102,10 +98,8 @@ _define cp_pos_set_to_move => '$p', '$c',
 	'(cp_pos_info_set_to_move(cp_pos_info($p), $c))';
 _define cp_pos_set_ep_shift => '$p', '$s',
 	'(cp_pos_info_set_ep_shift(cp_pos_info($p), $s))';
-_define cp_pos_set_w_king_shift => '$p', '$s',
-	'(cp_pos_info_set_w_king_shift(cp_pos_info($p), $s))';
-_define cp_pos_set_b_king_shift => '$p', '$s',
-	'(cp_pos_info_set_b_king_shift(cp_pos_info($p), $s))';
+_define cp_pos_set_king_shift => '$p', '$s',
+	'(cp_pos_info_set_king_shift(cp_pos_info($p), $s))';
 _define cp_pos_set_evasion => '$p', '$e',
 	'(cp_pos_info_set_evasion(cp_pos_info($p), $e))';
 _define cp_pos_set_material => '$p', '$m',
@@ -379,8 +373,6 @@ sub _define_from_file {
 		or die "cannot open '$filename' for reading: $!";
 	
 	my $code = join '', <$fh>;
-
-	$code =~ s/;0xdeadcode;//;
 
 	return _define $name, @args, $code;
 }

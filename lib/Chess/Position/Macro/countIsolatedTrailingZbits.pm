@@ -21,6 +21,3 @@
 	$n = ($n & 0xffff) + ($n >> 16);
 	$n = ($n & 0xff) + ($n >> 8);
 })
-
-# Instead of '1;' but will be removed automatically.
-;0xdeadc0de;
