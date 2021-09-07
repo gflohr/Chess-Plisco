@@ -154,7 +154,6 @@ use constant CP_6_MASK => 0x0000ff0000000000;
 use constant CP_7_MASK => 0x00ff000000000000;
 use constant CP_8_MASK => 0xff00000000000000;
 
-
 use constant CP_FILE_A => (0);
 use constant CP_FILE_B => (1);
 use constant CP_FILE_C => (2);
@@ -962,6 +961,18 @@ sub undoMove {
 
 	# FIXME! Copy as well?
 	--(cp_pos_half_moves($self));
+}
+
+sub bMagic {
+	my ($self, $shift, $occupancy) = @_;
+
+	return cp_mm_bmagic $shift, $occupancy;
+}
+
+sub rMagic {
+	my ($self, $shift, $occupancy) = @_;
+
+	return cp_mm_rmagic $shift, $occupancy;
 }
 
 # Position info methods.

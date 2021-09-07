@@ -780,3 +780,197 @@ pieces giving check.  Alternatively, you can use the macro C<cp_pos_in_check>.
 
 The bitboard at C<CP_POS_EVASION_SQUARES> has bits set for all pieces giving
 check.
+
+=head2 Various Tricks
+
+=head3 Calculating the Number of Pieces
+
+The locations of pieces are usually represented as bitboards.  You therefore
+have to count the number of bits set on the bitboard.  This is conventionally
+called a population count or just "popcount".
+
+Example:
+
+    $occupancy = $pos->whitePieces | $pos->blackPieces;
+    # or $occupancy = cp_pos_white_pieces($pos) | cp_pos_black_pieces($pos);
+    $number_of_pieces = $pos->bitboardPopcount($pos->occupancy);
+    # or $number_of_pieces = cp_bb_popcount $occupancy;
+
+=head3 Is a Pawn Move a capture?
+
+If the distance between the start and the destination square of a pawn move
+is odd, it is a capture.  Keeping in mind that odd numbers (positive and
+negative) have the least significant bit set, and even numbers do not, you
+can do:
+
+    ($piece, $from, $to) =
+        ($pos->movePiece($move), $pos->moveFrom($move), $pos->moveTo($move));
+    if ($piece == CP_PAWN && ($from - $to) & 0x1) {
+        # Pawn capture.
+    }
+
+Alternatively with macros:
+
+    ($piece, $from, $to) =
+        (cp_move_piece($move), cp_move_from($move), $cp_move_to($move));
+    if ($piece == CP_PAWN && ($from - $to) & 0x1) {
+        # En-passant.
+    }
+
+=head3 Is a Move an En-Passant Capture?
+
+With or without macros this can be done as follows:
+
+    ($piece, $from, $to) =
+        ($pos->movePiece($move), $pos->moveFrom($move), $pos->moveTo($move));
+    $ep_shift = $pos->enPassantShift;
+    if ($ep_shift && $piece == CP_PAWN
+        && ($from - $to) & 0x && $to == $ep_shift) {
+        # En-passant.
+    }
+
+Alternatively with macros:
+
+    ($piece, $from, $to) =
+        (cp_move_piece($move), cp_move_from($move), $cp_move_to($move));
+    $ep_shift = cp_pos_ep_shift $pos;
+    if ($ep_shift && $piece == CP_PAWN
+        && ($from - $to) & 0x && $to == $ep_shift) {
+        # En-passant.
+    }
+
+It is crucial to check that en-passant is actually possible.  Otherwise you
+will miss an important edge case.  A black pawn can possibly capture a piece
+on "h1".  But the shift of "h1" is 0 and you must therefore check that the
+en-passant shift of the current position is not 0.
+
+=head3 Is a Move a Castling?
+
+Castlings are all king moves from "e1" to "c1" or "g1", or on the other side
+of the board from "e8" to "c8" or "g8".  But instead of checking all four
+cases it is enough to check whether the distance between the start and
+destination square is two or minus two.  And that can be done a lot faster:
+
+    ($piece, $from, $to) =
+        ($pos->movePiece($move), $pos->moveFrom($move), $pos->moveTo($move));
+    if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+        # It is a castling.
+    }
+
+    # Or with macros:
+    ($piece, $from, $to) =
+        (cp_move_piece($move), cp_move_from($move), $cp_move_to($move));
+    if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+        # It is a castling.
+    }
+
+=head3 Toggling Color
+
+C<CP_WHITE> is defined as 0 and C<CP_BLACK> is defined as 1.  Therefore,
+toggling a color is as easy as:
+
+    $color = !$color; # because CP_WHITE == !CP_BLACK
+
+=head3 Accessing the Bitboard for a Certain Piece
+
+If you want to get the bitboard for a certain kind of piece, you do not have
+to compare it against all six possible types.  Remember that an instance
+of L<Chess::Position> is an array reference, and the constants
+C<CP_PAWN>, C<CP_KNIGHT>, ..., <CP_KING> are chosen so that you can use them
+directly as an index into the object itself:
+
+    $piece = CP_ROOK; # or $piece = $pos->movePiece($move);
+    $bitboard = $pos->[$piece];
+
+The variable C<$bitboard> now contains the correct bitboard for the piece.
+
+=head3 Accessing Own Pieces and Opponent's Pieces
+
+You will often want that your code works for both black and white.  The
+straight-forward way to do this uses a condition:
+
+    if ($pos->toMove == CP_WHITE) {
+        $my_pieces = $pos->whitePieces;
+        $their_pieces = $pos->blackPieces;
+    } else {
+        $my_pieces = $pos->whitePieces;
+        $their_pieces = $pos->blackPieces;
+    }
+
+But the array slots for the white and black pieces are adjacent and this is
+guaranteed not to change in the future.  And C<CP_WHITE> is defined as 0
+and C<CP_BLACK> as 1.  The above code can therefore be shorted a lot:
+
+    $my_pieces = $pos->[CP_POS_WHITE_PIECES + $pos->toMove];
+    $their_pieces = $pos->[CP_POS_WHITE_PIECES + !$pos->toMove];
+
+Remember that a negated 0 is a 1, and a negated 1 is a 0, see
+L</Toggling Color> above.
+
+=head3 Understanding C<rMagic> and C<bMagic>
+
+Both methods are called with two arguments, the shift of the starting square,
+and the occupancy of the board.
+
+Imagine that there is a white bishop on "e4", and the other pieces (black and
+white) are located as follows (capital letters standing for white pieces,
+lowercase letters standing for black pieces):
+
+      a b c d e f g h
+    8 r . k . . b . r 8
+    7 . p . . . . . . 7
+    6 . . n . . n . . 6
+    5 . . . . . . . . 5
+    4 . . . . B . . . 4
+    3 . . . . . . . . 3
+    2 . P P . . . . P 2
+    1 . . K . . N B R 1
+      a b c d e f g h
+
+How can that bishop move? It can reach d3 but not c2 because that is occupied
+by a pawn of the same color.  It can reach d5 B<and> c6 because c6 is
+occupied by an opponent's piece.  The other squares are f5, g6, h7, f3, and
+g2.
+
+But L</bMagic> cannot give you that result directly.  Try it out:
+
+    $fen = 'r1k2b1r/1p6/2n2n2/8/4B3/8/1PP4P/2K2NBR w - - 0 1';
+    $pos = Chess::Position->new($fen);
+    $targets = $pos->bMagic(CP_E4, $pos->occupancy);
+    print $pos->dumpBitboard($targets);
+
+It prints out:
+
+      a b c d e f g h
+    8 . . . . . . . . 8
+    7 . . . . . . . x 7
+    6 . . x . . . x . 6
+    5 . . . x . x . . 5
+    4 . . . . . . . . 4
+    3 . . . x . x . . 3
+    2 . . x . . . x . 2
+    1 . . . . . . . x 1
+      a b c d e f g h
+
+Almost correct but the white pawn on c2 is included which is not possible
+because the bishop cannot capture its own pawn.  In order to get the correct
+result you have to mask out the pieces of the same color:
+
+    $fen = 'r1k2b1r/1p6/2n2n2/8/4B3/8/1PP4P/2K2NBR w - - 0 1';
+    $pos = Chess::Position->new($fen);
+    $targets = $pos->bMagic(CP_E4, $pos->occupied)
+	    & ~$pos->[CP_POS_WHITE_PIECES + $pos->toMove];
+    print $pos->dumpBitboard($targets);
+
+Now the result is correct:
+
+      a b c d e f g h
+    8 . . . . . . . . 8
+    7 . . . . . . . x 7
+    6 . . x . . . x . 6
+    5 . . . x . x . . 5
+    4 . . . . . . . . 4
+    3 . . . x . x . . 3
+    2 . . . . . . x . 2
+    1 . . . . . . . x 1
+      a b c d e f g h
