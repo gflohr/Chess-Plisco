@@ -18,6 +18,7 @@ BEGIN {
 	}
 }
 
+use Test::More;
 use Test::Pod::Coverage 1.08;
 use Pod::Coverage::TrustPod;
 
@@ -26,3 +27,5 @@ pod_coverage_ok('Chess::Position::Macro', {
 	coverage_class => 'Pod::Coverage::TrustPod',
 	also_private => [qr/^filter$/]
 });
+
+done_testing;

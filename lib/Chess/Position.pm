@@ -742,13 +742,22 @@ sub attacked {
 }
 
 sub attackedMove {
-	my ($self, $from, $to) = @_;
+	my ($self, $move) = @_;
 
+	if ($move =~ /[a-z]/i) {
+		$move = $self->parseMove($move) or return;
+	}
+
+	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
 	return _cp_pos_attacked_move $self, $from, $to;
 }
 
 sub pinnedMove {
 	my ($self, $move) = @_;
+
+	if ($move =~ /[a-z]/i) {
+		$move = $self->parseMove($move) or return;
+	}
 
 	my $to_move = cp_pos_to_move $self;
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
@@ -1764,7 +1773,7 @@ sub __parseSAN {
 	return $self->__parseUCIMove($1, $2, $3);
 }
 
-sub perft {
+sub perftByUndo {
 	my ($self, $depth) = @_;
 
 	my $nodes = 0;
@@ -1784,7 +1793,7 @@ sub perft {
 	return $nodes;
 }
 
-sub perftPosition {
+sub perftByCopy {
 	my ($class, $pos, $depth) = @_;
 
 	my $nodes = 0;
@@ -1803,7 +1812,7 @@ sub perftPosition {
 	return $nodes;
 }
 
-sub perftWithOutput {
+sub perftByUndoWithOutput {
 	my ($self, $depth, $fh) = @_;
 
 	return if $depth <= 0;
@@ -1849,7 +1858,7 @@ sub perftWithOutput {
 	return $nodes;
 }
 
-sub perftPositionWithOutput {
+sub perftByCopyWithOutput {
 	my ($class, $pos, $depth, $fh) = @_;
 
 	return if $depth <= 0;
