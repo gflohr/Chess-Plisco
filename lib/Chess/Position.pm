@@ -2064,6 +2064,21 @@ sub pieceAtShift {
 	}
 }
 
+sub moveLegal {
+	my ($self, $move) = @_;
+
+	if ($move =~ /[a-z]/i) {
+		$move = $self->parseMove($move) or return;
+	}
+
+	my @legal_moves = $self->legalMoves;
+	foreach my $legal_move (@legal_moves) {
+		return $self if $legal_move == $move;
+	}
+
+	return;
+}
+
 sub dumpAll {
 	my ($self) = @_;
 
