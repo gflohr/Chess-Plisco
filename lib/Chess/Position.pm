@@ -45,18 +45,38 @@ use Chess::Position::Macro;
 
 use base qw(Exporter);
 
-use constant DEBUG_PERFT => 0;
+# Colors.
+use constant CP_WHITE => 0;
+use constant CP_BLACK => 1;
 
-# Accessor indices.
-use constant CP_POS_WHITE_PIECES => 0;
-use constant CP_POS_BLACK_PIECES => 1;
-use constant CP_POS_PAWNS => 2;
-use constant CP_POS_KNIGHTS => 3;
-use constant CP_POS_BISHOPS => 4;
-use constant CP_POS_ROOKS => 5;
-use constant CP_POS_QUEENS => 6;
-use constant CP_POS_KINGS => 7;
-use constant CP_POS_HALF_MOVES => 8;
+# Piece constants.
+use constant CP_NO_PIECE => 0;
+use constant CP_PAWN => 1;
+use constant CP_KNIGHT => 2;
+use constant CP_BISHOP => 3;
+use constant CP_ROOK => 4;
+use constant CP_QUEEN => 5;
+use constant CP_KING => 6;
+use constant CP_PAWN_VALUE => 100;
+use constant CP_KNIGHT_VALUE => 300;
+use constant CP_BISHOP_VALUE => 300;
+use constant CP_ROOK_VALUE => 500;
+use constant CP_QUEEN_VALUE => 900;
+
+# Accessor indices.  The layout is selected in such a way that piece types
+# can be used directly as indices in order to get the corresponding bitboard,
+# and getting the pieces for the side to move and the side not to move can
+# be simplified by just adding the color or the negated color to the index
+# of the white pieces.  This must not change in future versions!
+use constant CP_POS_HALF_MOVES => 0;
+use constant CP_POS_PAWNS => CP_PAWN;
+use constant CP_POS_KNIGHTS => CP_KNIGHT;
+use constant CP_POS_BISHOPS => CP_BISHOP;
+use constant CP_POS_ROOKS => CP_ROOK;
+use constant CP_POS_QUEENS => CP_QUEEN;
+use constant CP_POS_KINGS => CP_KING;
+use constant CP_POS_WHITE_PIECES => 7;
+use constant CP_POS_BLACK_PIECES => CP_POS_WHITE_PIECES + CP_BLACK;
 use constant CP_POS_HALF_MOVE_CLOCK => 9;
 use constant CP_POS_INFO => 10;
 use constant CP_POS_EVASION_SQUARES => 11;
@@ -171,24 +191,6 @@ use constant CP_RANK_5 => (4);
 use constant CP_RANK_6 => (5);
 use constant CP_RANK_7 => (6);
 use constant CP_RANK_8 => (7);
-
-# Colors.
-use constant CP_WHITE => 0;
-use constant CP_BLACK => 1;
-
-# Piece constants.
-use constant CP_NO_PIECE => 0;
-use constant CP_PAWN => 1;
-use constant CP_KNIGHT => 2;
-use constant CP_BISHOP => 3;
-use constant CP_ROOK => 4;
-use constant CP_QUEEN => 5;
-use constant CP_KING => 6;
-use constant CP_PAWN_VALUE => 100;
-use constant CP_KNIGHT_VALUE => 300;
-use constant CP_BISHOP_VALUE => 300;
-use constant CP_ROOK_VALUE => 500;
-use constant CP_QUEEN_VALUE => 900;
 
 use constant CP_PIECE_CHARS => [
 	['', 'P', 'N', 'B', 'R', 'Q', 'K'],
@@ -1400,7 +1402,7 @@ sub knights {
 }
 
 sub pawns {
-	shift->[CP_POS_KNIGHTS];
+	shift->[CP_POS_PAWNS];
 }
 
 sub occupied {
