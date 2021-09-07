@@ -121,28 +121,28 @@ foreach my $test (@tests) {
 	}
 
 	foreach my $move ($pos->pseudoLegalMoves) {
-		# Check the correct attacker.
+		# Check the correct piece.
 		my $from_mask = 1 << (cp_move_from $move);
-		my $got_attacker = cp_move_attacker $move;
-		my $attacker;
+		my $got_piece = cp_move_piece $move;
+		my $piece;
 		if ($from_mask & cp_pos_pawns($pos)) {
-			$attacker = CP_PAWN;
+			$piece = CP_PAWN;
 		} elsif ($from_mask & cp_pos_knights($pos)) {
-			$attacker = CP_KNIGHT;
+			$piece = CP_KNIGHT;
 		} elsif ($from_mask & cp_pos_bishops($pos)) {
-			$attacker = CP_BISHOP;
+			$piece = CP_BISHOP;
 		} elsif ($from_mask & cp_pos_rooks($pos)) {
-			$attacker = CP_ROOK;
+			$piece = CP_ROOK;
 		} elsif ($from_mask & cp_pos_queens($pos)) {
-			$attacker = CP_QUEEN;
+			$piece = CP_QUEEN;
 		} elsif ($from_mask & cp_pos_kings($pos)) {
-			$attacker = CP_KING;
+			$piece = CP_KING;
 		} else {
-			die "Move $move attacker is $got_attacker, but no match with bitboards\n";
+			die "Move $move piece is $got_piece, but no match with bitboards\n";
 		}
 
 		my $movestr = cp_move_coordinate_notation $move;
-		is(cp_move_attacker($move), $attacker, "correct attacker for $movestr");
+		is(cp_move_piece($move), $piece, "correct piece for $movestr");
 	}
 }
 

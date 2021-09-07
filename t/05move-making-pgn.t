@@ -56,7 +56,7 @@ GAME: while ($pgn->read_game) {
 	my $sans = $pgn->moves;
 
 	foreach my $san (@$sans) {
-		my $halfmove = 1 + @moves;
+		my $halfmove = 1 + @undo_infos;
 		my $move = $pos->parseMove($san);
 		if (!$move) {
 			report_failure $pgn, $pos,
@@ -72,7 +72,7 @@ GAME: while ($pgn->read_game) {
 		} else {
 			ok $undo_info, "do move $san for position $pos";
 		}
-		push @undoInfos, $undo_info;
+		push @undo_infos, $undo_info;
 		push @fen, $pos->toFEN;
 		push @positions, $pos->copy;
 	}
@@ -85,7 +85,7 @@ GAME: while ($pgn->read_game) {
 		$pos->undoMove($undo_info);
 		my $wanted_fen = pop @fen;
 		my $got_fen = $pos->toFEN;
-		my $halfmove = 1 + @moves;
+		my $halfmove = 1 + @undo_infos;
 		if ($wanted_fen ne $got_fen) {
 			report_failure $pgn, $pos,
 				"\nwanted FEN: '$wanted_fen'\n   got FEN: '$got_fen'\n", $halfmove;

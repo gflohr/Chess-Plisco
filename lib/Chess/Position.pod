@@ -13,19 +13,24 @@ Chess::Position - A comprehensive chess library for Perl
 
 B<Chess-Position> is a comprehensive chess library for Perl, aiming at being
 as fast and efficient as possible for a scripting language.  It is also
-somewhat opinionated but this is not an end in itself but owed to it intention
-to be fast and efficient.  In doubt, flexibility is sacrificed for performance
-and efficiency.
+somewhat opinionated but this is not an end in itself but owed to its intention
+of being fast and efficient.  In doubt, flexibility is sacrificed for
+performance and efficiency.
 
 The library features:
 
 =over 4
 
 =item bitboards for board representation
+
 =item macros/inline functions for often used computations
+
 =item pseudo-legal move generation
+
 =item legality checks for moves
+
 =item magic bitboards for generation of sliding piece moves and attacks
+
 =item FEN (Forsyth-Edwards Notation) import and export
 
 =back
@@ -33,9 +38,9 @@ The library features:
 For a gentler introduction, please see L<Chess::Position::Tutorial>.  The rest
 of this document contains reference documentation only.
 
-You are also strongly advised to have a look at L<Chess::Position::Macro>
-which documnents macros resp. inline functions that are helpful for working
-with L<Chess::Position> and related objects.
+If performance is key for you, you are strongly advised to have a look at
+L<Chess::Position::Macro> which documents macros resp. inline functions that
+speed up tasks that can be done with L<Chess::Position> significantly.
 
 The class exports a number of constants that can either be imported
 individually, by export tag, or all at once by the export tag ':all'.  All
@@ -63,7 +68,7 @@ further explanation:
 
 =item I<Square>
 
-A square is one square of the chess board as a string like "e4" or "f7".
+A square is a square of the chess board as a string like "e4" or "f7".
 
 =item I<Coordinates>
 
@@ -95,6 +100,21 @@ When an argument is called "notation", it is a supported notation of a chess
 move, either Standard-Algebraic Notation SAN or coordinate notation.
 
 =back
+
+=head2 Limitations
+
+B<Chess::Position> requires 64-bit support for Perl.  It will not run on
+32-bit Perls.
+
+=head2 Similar Software
+
+L<Chess::Rep> and L<Chess::Play> provide similar functionality.  Both compile
+a lot faster than B<Chess::Position> but once compiled, a perft test of
+B<Chess::Position> runs more than 30 times faster than one of L<Chess::Play>
+and more than 100 times faster than one of L<Chess::Rep>.
+
+At the time of this writing, B<Chess::Position> also outperforms
+L<python-chess|https://python-chess.readthedocs.io/en/latest/> by about 50 %.
 
 =head1 CONSTRUCTORS
 
@@ -135,7 +155,8 @@ other operators are overloaded.
 Note that the Forsyth-Edwards Notation does not cover all aspects of a chess
 position, especially the history of moves.  String-wise equality of two
 instances of a B<Chess::Position> does therefore not imply that the two
-positions are identical.
+positions are identical.  Use the method L</equal> for a strict equality
+check.
 
 =head1 METHODS
 
@@ -230,45 +251,47 @@ made their first move, it is 1. After black has made their first move, it is
 
 =item B<halfMoveClock>
 
-Return the number of reversible moves immediately leading to the current
+Returns the number of reversible moves immediately leading to the current
 position.  The following moves are irreversible:
 
 =over 4
 
-=item Pawn moves.
+=item Pawn moves
 
 Reason: A pawn cannot move backwards.
 
-=item Captures.
+=item Captures
 
 Reason: Captured pieces are gone for good.
 
-=item the first king move of each side
+=item First king move of each side
 
 Reason: The side to move loses the castling rights.
 
-=item the first move of each rook of each side
+=item First move of each rook of each side
 
 Reason: The side to move loses at least one of their castling rights.
 
-=item castlings
+=item Castlings
 
 Reason: The side to move loses the castling rights.  This is also implied by
 the fact that they are necessarily the first king move.
 
 =back
 
-The half-move-clock because both players can claim a draw, when the half-move
-clock has reached 50.
+The half-move-clock is important because both players can claim a draw, when
+the half-move clock has reached 50.
 
 =item B<inCheck>
 
 Returns false if the side to move is not in check, a truthy value otherwise.
-The truthy value returns is also a bitboard of all pieces giving check.
+The truthy value returned is a bitboard of all pieces giving check.
 
 =item B<evasion>
 
 If the side to move is in check, returns the required check evasion strategy:
+
+=over 4
 
 =item L</CP_EVASION_KING_MOVE>
 
@@ -289,7 +312,8 @@ piece must be moved between the king and the attacking piece.
 
 If a check can be evaded by moving a piece between the king and the attacking
 piece of the opponent, this bitboard gives all squares where the check can be
-blocked. 
+blocked.  These are all squares between the king and the attacking piece,
+including the square where the attacking is standing.
 
 =item B<enPassantShift>
 
@@ -350,13 +374,13 @@ Returns a bitmap of castling rights for the current position:
 
 =over 4
 
-=item 0x1 if white can still castle king-side
+=item 0x1 is set if white can still castle king-side
 
-=item 0x2 if white can still castle queen-side
+=item 0x2 is set if white can still castle queen-side
 
-=item 0x4 if black can still castle king-side
+=item 0x4 is set if black can still castle king-side
 
-=item 0x8 if black can still castle queen-side
+=item 0x8 is set if black can still castle queen-side
 
 =back
 
@@ -410,7 +434,7 @@ Extracts the shift (0-63) of the destination square.
 Extracts the piece that a pawn is promoted to if the move is a promotion.
 Returns either L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>, or L</CP_KNIGHT>.
 
-=item B<moveAttacker(MOVE)>
+=item B<movePiece(MOVE)>
 
 Extracts the piece that does the move.  Returns one of L</CP_KING>,
 L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>, L</CP_KNIGHT>, or L</CP_PAWN>.
@@ -427,8 +451,8 @@ Parses the move given in B<NOTATION> and applies it to the position if the
 move is valid and legal.  Otherwise false is returned.  You can also pass
 the move as an integer as returned by L</parseMove>.
 
-The method returns state that can later be used to undo the move and reset
-the position to the state it had before the move was applied.
+The method returns state information that can later be used to undo the move
+and reset the position to the state it had before the move was applied.
 
 Engines should use the method L</doMove> instead because it is faster.
 
@@ -468,8 +492,6 @@ This method is fast and is the one that should be used by engines.
 
 Converts B<SQUARE> to a shift.
 
-It does the same as L<Chess::Position::Macro/cp_square_to_shift>.
-
 This is a class method.
 
 =item B<squareToCoordinates(SQUARE)>
@@ -477,15 +499,11 @@ This is a class method.
 Converts B<SQUARE> to coordinates.  It returns a list, not a an array reference.
 Be sure to call it in array context!
 
-It does the same as L<Chess::Position::Macro/cp_square_to_coordinates>.
-
 This is a class method.
 
 =item B<shiftToSquare(SHIFT)>
 
 Converts B<SHIFT> to a square.
-
-It does the same as L<Chess::Position::Macro/cp_shift_to_square>.
 
 This is a class method.
 
@@ -494,23 +512,17 @@ This is a class method.
 Converts a shift to coordinates.  It returns a list, not a an array reference.
 Be sure to call it in array context!
 
-It does the same as L<Chess::Position::Macro/cp_square_to_coordinates>.
-
 This is a class method.
 
 =item B<coordinatesToSquare(FILE, RANK)>
 
 Converts coordinates to a square.
 
-It does the same as L<Chess::Position::Macro/cp_coordinates_to_square>.
-
 This is a class method.
 
 =item B<coordinatesToShift(FILE, RANK)>
 
 Converts coordinates to a shift.
-
-It does the same as L<Chess::Position::Macro/cp_coordinates_to_shift>.
 
 This is a class method.
 
@@ -524,6 +536,30 @@ a particular location on the chess board.
 =over 4
 
 =item B<pieceAtSquare(SQUARE)>
+
+In array context returns a pair of a piece and a color.  In scalar context,
+only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
+L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>, L</CP_KING>, or L</CP_NO_PIECE> if
+the square is empty.
+
+The color is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
+C<undef> is returned instead of a color.
+
+This method is relatively expensive!
+
+=item B<pieceAtCoordinates(FILE, RANK)>
+
+In array context returns a pair of a piece and a color.  In scalar context,
+only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
+L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>, L</CP_KING>, or L</CP_NO_PIECE> if
+the square is empty.
+
+The color is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
+C<undef> is returned instead of a color.
+
+This method is relatively expensive!
+
+=item B<pieceAtShift(SHIFT)>
 
 In array context returns a pair of a piece and a color.  In scalar context,
 only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
@@ -571,9 +607,11 @@ in coordinate notation.
 
 You can access individual properties either by using index constants or by
 using accessor macros from L<Chess::Position::Macro>.  All accessor macros
-can be assigned to; they are L-values.
+can be assigned to; they are L-values.  But you are strongly advised
+to modify properties of a B<Chess::Position> instance only with the methods
+documented here.
 
-For example getting or setting the bitboard of all white pieces, you have
+For getting or setting the bitboard of all white pieces, you have
 these options:
 
     $whites_pieces = $pos->[CP_W_PIECES];
@@ -583,15 +621,18 @@ these options:
     cp_w_pieces $pos = $white_pieces;
     cp_w_pieces($pos) = $white_pieces;
 
+The macros (all starting with "cp_") are only available when you have loaded
+L<Chess::Position::Macro>, see there for more information.
+
 =over 4
 
-=item B<cp_pos_white_pieces(POS); POS-E<gt>[CP_POS_WHITE_PIECES]>
+=item B<POS-E<gt>[CP_POS_WHITE_PIECES]>
 
-A bitboard of all white pieces on the board.
+A bitboard of all white pieces on the board.  Same as L</whitePieces>.
 
 =item B<cp_pos_black_pieces(POS); POS-E<gt>[CP_POS_BLACK_PIECES]>
 
-A bitboard of all black pieces on the board.
+A bitboard of all black pieces on the board.  Same as L</blackPieces>.
 
 =item B<cp_pos_kings(POS); POS-E<gt>[CP_POS_KINGS]>
 
@@ -672,11 +713,11 @@ You can import all constants with the export tag ":all".
 
 =head2 Accessor Indexes (:accessors)
 
-=head3 CP_POS_W_PIECES
+=head3 CP_POS_WHITE_PIECES
 
 The index of the white bitboard.
 
-=head3 CP_POS_B_PIECES
+=head3 CP_POS_BLACK_PIECES
 
 The index of the black bitboard.
 

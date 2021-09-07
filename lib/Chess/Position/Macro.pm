@@ -27,8 +27,8 @@ sub _expand_placeholder;
 
 my %defines;
 
-_define cp_pos_w_pieces => '$p', '$p->[CP_POS_W_PIECES]';
-_define cp_pos_b_pieces => '$p', '$p->[CP_POS_B_PIECES]';
+_define cp_pos_w_pieces => '$p', '$p->[CP_POS_WHITE_PIECES]';
+_define cp_pos_b_pieces => '$p', '$p->[CP_POS_BLACK_PIECES]';
 _define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
 _define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
 _define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
@@ -42,10 +42,10 @@ _define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 
 _define cp_pos_info_castling => '$i', '$i & 0xf';
-_define cp_pos_info_w_ks_castle => '$i', '$i & (1 << 0)';
-_define cp_pos_info_w_qs_castle => '$i', '$i & (1 << 1)';
-_define cp_pos_info_b_ks_castle => '$i', '$i & (1 << 2)';
-_define cp_pos_info_b_qs_castle => '$i', '$i & (1 << 3)';
+_define cp_pos_info_white_king_side_castle => '$i', '$i & (1 << 0)';
+_define cp_pos_info_white_queen_side_castle => '$i', '$i & (1 << 1)';
+_define cp_pos_info_black_king_side_castle => '$i', '$i & (1 << 2)';
+_define cp_pos_info_black_queen_side_castle => '$i', '$i & (1 << 3)';
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
 _define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
 _define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
@@ -54,13 +54,13 @@ _define cp_pos_info_material => '$i', '($i >> 19)';
 
 _define cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | $c)';
-_define cp_pos_info_set_w_ks_castling => '$i', '$c',
+_define cp_pos_info_set_white_king_side_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 0)) | ($c << 0))';
-_define cp_pos_info_set_w_qs_castling => '$i', '$c',
+_define cp_pos_info_set_white_queen_side_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 1)) | ($c << 1))';
-_define cp_pos_info_set_b_ks_castling => '$i', '$c',
+_define cp_pos_info_set_black_king_side_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 2)) | ($c << 2))';
-_define cp_pos_info_set_b_qs_castling => '$i', '$c',
+_define cp_pos_info_set_black_queen_side_castling => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | ($c << 3))';
 _define cp_pos_info_set_to_move => '$i', '$c',
 	'($i = ($i & ~(1 << 4)) | ($c << 4))';
@@ -76,10 +76,10 @@ _define cp_pos_info_set_material => '$i', '$m',
 _define_from_file _cp_pos_info_update => '$p', '$i' => 'infoUpdate.pm';
 
 _define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
-_define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
-_define cp_pos_w_qs_castle => '$p', '(cp_pos_info_w_qs_castle(cp_pos_info($p)))';
-_define cp_pos_b_ks_castle => '$p', '(cp_pos_info_b_ks_castle(cp_pos_info($p)))';
-_define cp_pos_b_qs_castle => '$p', '(cp_pos_info_b_qs_castle(cp_pos_info($p)))';
+_define cp_pos_white_king_side_castle => '$p', '(cp_pos_info_white_king_side_castle(cp_pos_info($p)))';
+_define cp_pos_white_queen_side_castle => '$p', '(cp_pos_info_white_queen_side_castle(cp_pos_info($p)))';
+_define cp_pos_black_king_side_castle => '$p', '(cp_pos_info_black_king_side_castle(cp_pos_info($p)))';
+_define cp_pos_black_queen_side_castle => '$p', '(cp_pos_info_black_queen_side_castle(cp_pos_info($p)))';
 _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 _define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
 _define cp_pos_king_shift => '$p', '(cp_pos_info_king_shift(cp_pos_info($p)))';
@@ -88,14 +88,14 @@ _define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
 
 _define cp_pos_set_castling => '$p', '$c',
 	'(cp_pos_info_set_castling(cp_pos_info($p), $c))';
-_define cp_pos_set_w_ks_castling => '$p', '$c',
-	'(cp_pos_info_set_w_ks_castling(cp_pos_info($p), $c))';
-_define cp_pos_set_w_qs_castling => '$p', '$c',
-	'(cp_pos_info_set_w_qs_castling(cp_pos_info($p), $c))';
-_define cp_pos_set_b_ks_castling => '$p', '$c',
-	'(cp_pos_info_set_b_ks_castling(cp_pos_info($p), $c))';
-_define cp_pos_set_b_qs_castling => '$p', '$c',
-	'(cp_pos_info_set_b_qs_castling(cp_pos_info($p), $c))';
+_define cp_pos_set_white_king_side_castling => '$p', '$c',
+	'(cp_pos_info_set_white_king_side_castling(cp_pos_info($p), $c))';
+_define cp_pos_set_white_queen_side_castling => '$p', '$c',
+	'(cp_pos_info_set_white_queen_side_castling(cp_pos_info($p), $c))';
+_define cp_pos_set_black_king_side_castling => '$p', '$c',
+	'(cp_pos_info_set_black_king_side_castling(cp_pos_info($p), $c))';
+_define cp_pos_set_black_queen_side_castling => '$p', '$c',
+	'(cp_pos_info_set_black_queen_side_castling(cp_pos_info($p), $c))';
 _define cp_pos_set_to_move => '$p', '$c',
 	'(cp_pos_info_set_to_move(cp_pos_info($p), $c))';
 _define cp_pos_set_ep_shift => '$p', '$s',
@@ -115,8 +115,8 @@ _define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
 _define cp_move_set_from => '$m', '$v', '(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
 _define cp_move_promote => '$m', '(($m >> 12) & 0x7)';
 _define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
-_define cp_move_attacker => '$m', '(($m >> 15) & 0x7)';
-_define cp_move_set_attacker => '$m', '$a', '(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
+_define cp_move_piece => '$m', '(($m >> 15) & 0x7)';
+_define cp_move_set_piece => '$m', '$a', '(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 
 # Bitboard macros.
@@ -134,10 +134,10 @@ _define cp_mm_rmagic => '$s', '$o',
 	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & ((1 << (64 - 52)) - 1)]';
 
 # Conversion between different notions of a square.
-_define cp_coords_to_shift => '$f', '$r', '(($r << 3) + $f)';
-_define cp_shift_to_coords => '$s', '($s & 0x7, $s >> 3)';
-_define cp_coords_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
-_define cp_square_to_coords => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
+_define cp_coordinates_to_shift => '$f', '$r', '(($r << 3) + $f)';
+_define cp_shift_to_coordinates => '$s', '($s & 0x7, $s >> 3)';
+_define cp_coordinates_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
+_define cp_square_to_coordinates => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
 _define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + ord($s) - 97';
 _define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 

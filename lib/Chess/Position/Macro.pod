@@ -243,22 +243,22 @@ Get or set the king-side castling rights bitmask from the L<Chess::Position> B<P
 
 L-value: yes.
 
-=item B<cp_pos_w_ks_castling(POS)>
+=item B<cp_pos_white_king_side_castling(POS)>
 
 True if white can castle on the king-side in the L<Chess::Position> B<POS>.
 
 L-value: no
-=item B<cp_pos_w_qs_castling(POS)>
+=item B<cp_pos_white_queen_side_castling(POS)>
 
 True if white can castle on the queen-side in the L<Chess::Position> B<POS>.
 
 L-value: no
-=item B<cp_pos_b_ks_castling(POS)>
+=item B<cp_pos_black_king_side_castling(POS)>
 
 True if black can castle on the king-side in the L<Chess::Position> B<POS>.
 
 L-value: no
-=item B<cp_pos_b_qs_castling(POS)>
+=item B<cp_pos_black_queen_side_castling(POS)>
 
 True if black can castle on the queen-side in the L<Chess::Position> B<POS>.
 
@@ -375,28 +375,28 @@ L-value: no.
 
 =over 4
 
-=item B<cp_coords_to_shift(FILE, RANK)>
+=item B<cp_coordinates_to_shift(FILE, RANK)>
 
 Calculate a bit shift offset (0-63) for the square that B<FILE> (0-7) and
 B<RANK> (0-7) point to.
 
 L-value: no.
 
-=item B<cp_shift_to_coords(SHIFT)>
+=item B<cp_shift_to_coordinates(SHIFT)>
 
 Calculate the file (0-7) and rank (0-7) for the bit shift offset B<SHIFT>
 (0-63).
 
 L-value: no.
 
-=item B<cp_coords_to_square(FILE, RANK)>
+=item B<cp_coordinates_to_square(FILE, RANK)>
 
 Calculate the square in coordinate notation ("e4", "c5", ...) for
 B<FILE> (0-7) and B<RANK> (0-7).
 
 L-value: no.
 
-=item B<cp_square_to_coords(SQUARE)>
+=item B<cp_square_to_coordinates(SQUARE)>
 
 Calculate the file (0-7) and rank (0-7) for the B<SQUARE> in coordinate
 notation ("e4", "c5", ...).

@@ -48,8 +48,8 @@ use base qw(Exporter);
 use constant DEBUG_PERFT => 0;
 
 # Accessor indices.
-use constant CP_POS_W_PIECES => 0;
-use constant CP_POS_B_PIECES => 1;
+use constant CP_POS_WHITE_PIECES => 0;
+use constant CP_POS_BLACK_PIECES => 1;
 use constant CP_POS_PAWNS => 2;
 use constant CP_POS_KNIGHTS => 3;
 use constant CP_POS_BISHOPS => 4;
@@ -323,10 +323,10 @@ sub new {
 	cp_pos_half_moves($self) = 0;
 
 	my $info = 0;
-	cp_pos_info_set_w_ks_castling($info, 1);
-	cp_pos_info_set_w_qs_castling($info, 1);
-	cp_pos_info_set_b_ks_castling($info, 1);
-	cp_pos_info_set_b_qs_castling($info, 1);
+	cp_pos_info_set_white_king_side_castling($info, 1);
+	cp_pos_info_set_white_queen_side_castling($info, 1);
+	cp_pos_info_set_black_king_side_castling($info, 1);
+	cp_pos_info_set_black_queen_side_castling($info, 1);
 	cp_pos_info_set_to_move($info, CP_WHITE);
 	cp_pos_info_set_ep_shift($info, 0);
 	cp_pos_info($self) = $info;
@@ -449,8 +449,8 @@ sub newFromFEN {
 
 	my $self = bless [], $class;
 
-	$self->[CP_POS_W_PIECES] = $w_pieces;
-	$self->[CP_POS_B_PIECES] = $b_pieces;
+	$self->[CP_POS_WHITE_PIECES] = $w_pieces;
+	$self->[CP_POS_BLACK_PIECES] = $b_pieces;
 	$self->[CP_POS_KINGS] = $kings;
 	$self->[CP_POS_QUEENS] = $queens;
 	$self->[CP_POS_ROOKS] = $rooks;
@@ -477,41 +477,41 @@ sub newFromFEN {
 				state => $castling);
 	}
 
-	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_W_PIECES])
+	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_WHITE_PIECES])
 	      == CP_1_MASK | CP_E_MASK)) {
 		$castling =~ s/KQ//;
 	}
-	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_B_PIECES])
+	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_BLACK_PIECES])
 	      == CP_8_MASK | CP_E_MASK)) {
 		$castling =~ s/kq//;
 	}
 
 	if ($castling =~ /K/) {
-		if ($self->[CP_POS_W_PIECES]
+		if ($self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_1_MASK & CP_H_MASK) {
-			cp_pos_info_set_w_ks_castling($pos_info, 1);
+			cp_pos_info_set_white_king_side_castling($pos_info, 1);
 		}
 	}
 	if ($castling =~ /Q/) {
-		if ($self->[CP_POS_W_PIECES]
+		if ($self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_1_MASK & CP_A_MASK) {
-			cp_pos_info_set_w_qs_castling($pos_info, 1);
+			cp_pos_info_set_white_queen_side_castling($pos_info, 1);
 		}
 	}
 	if ($castling =~ /k/) {
-		if ($self->[CP_POS_B_PIECES]
+		if ($self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_8_MASK & CP_H_MASK) {
-			cp_pos_info_set_b_ks_castling($pos_info, 1);
+			cp_pos_info_set_black_king_side_castling($pos_info, 1);
 		}
 	}
 	if ($castling =~ /q/) {
-		if ($self->[CP_POS_B_PIECES]
+		if ($self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_8_MASK & CP_A_MASK) {
-			cp_pos_info_set_b_qs_castling($pos_info, 1);
+			cp_pos_info_set_black_queen_side_castling($pos_info, 1);
 		}
 	}
 
@@ -520,13 +520,13 @@ sub newFromFEN {
 		cp_pos_info_set_ep_shift($pos_info, 0);
 	} elsif ($to_move == CP_WHITE && $ep_square =~ /^[a-h]6$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
-		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_B_PIECES]
+		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
 			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	} elsif ($to_move == CP_BLACK && $ep_square =~ /^[a-h]3$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
-		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_W_PIECES]
+		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
 			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
@@ -761,9 +761,9 @@ sub doMove {
 	my ($self, $move) = @_;
 
 	my $pos_info = cp_pos_info $self;
-	my ($from, $to, $promote, $attacker) =
+	my ($from, $to, $promote, $piece) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
-		 cp_move_attacker($move));
+		 cp_move_piece($move));
 
 	my $to_move = cp_pos_info_to_move($pos_info);
 	my $from_mask = 1 << $from;
@@ -786,9 +786,9 @@ sub doMove {
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
 	my $ep_shift = cp_pos_info_ep_shift $pos_info;
-	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
-	if ($attacker == CP_KING) {
+	if ($piece == CP_KING) {
 		# Does the king move into check?
 		return if _cp_pos_attacked_move $self, $from, $to;
 
@@ -803,18 +803,18 @@ sub doMove {
 			# The move is legal.  Move the rook.
 			my $rook_move_mask = $castling_rook_move_masks[$to];
 			$self->[CP_POS_ROOKS] ^= $rook_move_mask;
-			$self->[CP_POS_W_PIECES + $to_move] ^= $rook_move_mask;
+			$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
 		}
 
 		# Remove the castling rights.
 		$new_castling &= ~(0x3 << ($to_move << 1));
 	} elsif ($in_check) {
-		# Early exits for check.  First handle the case that the attacker is
+		# Early exits for check.  First handle the case that the piece is
 		# a pawn that gets captured en passant.
 		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
 			# Exception: En passant capture if the capture pawn is the one
 			# that gives check.
-			if (!($attacker == CP_PAWN && $to == $ep_shift
+			if (!($piece == CP_PAWN && $to == $ep_shift
 			      && ($ep_pawn_masks[$ep_shift] & $in_check))) {
 				return;
 			}
@@ -846,7 +846,7 @@ sub doMove {
 		$victim_mask = 1 << $to;
 	}
 
-	if ($attacker == CP_PAWN) {
+	if ($piece == CP_PAWN) {
 		# Check en passant.
 		if ($ep_shift && $to == $ep_shift) {
 			$victim_mask = $ep_pawn_masks[$ep_shift];
@@ -880,12 +880,12 @@ sub doMove {
 
 	# Move all pieces involved.
 	if ($victim != CP_NO_PIECE) {
-		$self->[CP_POS_W_PIECES + !$to_move] ^= $victim_mask;
-		$self->[CP_POS_B_PIECES + $victim] ^= $victim_mask;
+		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $victim_mask;
+		$self->[CP_POS_BLACK_PIECES + $victim] ^= $victim_mask;
 	}
 
-	$self->[CP_POS_W_PIECES + $to_move] ^= $move_mask;
-	$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
+	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
+	$self->[CP_POS_BLACK_PIECES + $piece] ^= $move_mask;
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -918,34 +918,34 @@ sub undoMove {
 
 	my ($move, $victim, $victim_mask, @state) = @$undo_info;
 
-	my ($from, $to, $promote, $attacker) =
+	my ($from, $to, $promote, $piece) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
-		 cp_move_attacker($move));
+		 cp_move_piece($move));
 
 	my $move_mask = (1 << $from) | (1 << $to);
 	my $to_move = !cp_pos_to_move $self;
 
 	# Castling?
-	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+	if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
 		# Restore the rook.
 		my $rook_move_mask = $castling_rook_move_masks[$to];
 
-		$self->[CP_POS_W_PIECES + $to_move] ^= $rook_move_mask;
+		$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
 		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
 	}
 
-	$self->[CP_POS_W_PIECES + $to_move ] ^= $move_mask;
+	$self->[CP_POS_WHITE_PIECES + $to_move ] ^= $move_mask;
 
 	if ($promote) {
 		my $remove_mask = 1 << $to;
 		$self->[CP_POS_PAWNS] |= 1 << $from;
-		$self->[CP_POS_B_PIECES + $promote] ^= $remove_mask;
+		$self->[CP_POS_BLACK_PIECES + $promote] ^= $remove_mask;
 	} else {
-		$self->[CP_POS_B_PIECES + $attacker] ^= $move_mask;
+		$self->[CP_POS_BLACK_PIECES + $piece] ^= $move_mask;
 	}
 
 	if ($victim) {
-		$self->[CP_POS_W_PIECES + !$to_move] |= $victim_mask;
+		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $victim_mask;
 		$self->[CP_POS_PAWNS - 1 + $victim] |= $victim_mask;
 	}
 
@@ -965,25 +965,25 @@ sub castlingRights {
 sub whiteKingSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_w_ks_castle($self);
+	return cp_pos_white_king_side_castle($self);
 }
 
 sub whiteQueenSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_w_qs_castle($self);
+	return cp_pos_white_queen_side_castle($self);
 }
 
 sub blackKingSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_b_ks_castle($self);
+	return cp_pos_black_king_side_castle($self);
 }
 
 sub blackQueenSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_b_qs_castle($self);
+	return cp_pos_black_queen_side_castle($self);
 }
 
 sub toMove {
@@ -1035,10 +1035,10 @@ sub movePromote {
 	return cp_move_promote $move;
 }
 
-sub moveAttacker {
+sub movePiece {
 	my (undef, $move) = @_;
 
-	return cp_move_attacker $move;
+	return cp_move_piece $move;
 }
 
 sub coordinateNotation {
@@ -1058,27 +1058,27 @@ sub parseMove {
 		$move = $self->__parseSAN($notation) or return;
 	}
 
-	my $attacker;
+	my $piece;
 	my $from_mask = 1 << (cp_move_from $move);
 
 	if ($from_mask & cp_pos_pawns($self)) {
-		$attacker = CP_PAWN;
+		$piece = CP_PAWN;
 	} elsif ($from_mask & cp_pos_knights($self)) {
-		$attacker = CP_KNIGHT;
+		$piece = CP_KNIGHT;
 	} elsif ($from_mask & cp_pos_bishops($self)) {
-		$attacker = CP_BISHOP;
+		$piece = CP_BISHOP;
 	} elsif ($from_mask & cp_pos_rooks($self)) {
-		$attacker = CP_ROOK;
+		$piece = CP_ROOK;
 	} elsif ($from_mask & cp_pos_queens($self)) {
-		$attacker = CP_QUEEN;
+		$piece = CP_QUEEN;
 	} elsif ($from_mask & cp_pos_kings($self)) {
-		$attacker = CP_KING;
+		$piece = CP_KING;
 	} else {
 		require Carp;
 		Carp::croak(__"Illegal move: start square is empty.\n");
 	}
 
-	cp_move_set_attacker($move, $attacker);
+	cp_move_set_piece($move, $piece);
 
 	return $move;
 }
@@ -1118,7 +1118,7 @@ sub __parseUCIMove {
 # __NO_MACROS__
 
 my @export_accessors = qw(
-	CP_POS_W_PIECES CP_POS_B_PIECES
+	CP_POS_WHITE_PIECES CP_POS_BLACK_PIECES
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALF_MOVE_CLOCK CP_POS_HALF_MOVES
@@ -1319,11 +1319,11 @@ sub copy {
 }
 
 sub whitePieces {
-	shift->[CP_POS_W_PIECES];
+	shift->[CP_POS_WHITE_PIECES];
 }
 
 sub blackPieces {
-	shift->[CP_POS_B_PIECES];
+	shift->[CP_POS_BLACK_PIECES];
 }
 
 sub kings {
@@ -1353,13 +1353,13 @@ sub pawns {
 sub occupied {
 	my ($self) = @_;
 
-	return $self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES];
+	return $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
 }
 
 sub vacant {
 	my ($self) = @_;
 
-	return ~($self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES]);
+	return ~($self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES]);
 }
 
 sub halfMoves {
@@ -1385,8 +1385,8 @@ sub inCheck {
 sub toFEN {
 	my ($self) = @_;
 
-	my $w_pieces = $self->[CP_POS_W_PIECES];
-	my $b_pieces = $self->[CP_POS_B_PIECES];
+	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
+	my $b_pieces = $self->[CP_POS_BLACK_PIECES];
 	my $pieces = $w_pieces | $b_pieces;
 	my $pawns = $self->[CP_POS_PAWNS];
 	my $bishops = $self->[CP_POS_BISHOPS];
@@ -1518,14 +1518,14 @@ sub dumpBitboard {
 sub SAN {
 	my ($self, $move, $use_pseudo_legal_moves) = @_;
 
-	my ($from, $to, $promote, $attacker) = (
+	my ($from, $to, $promote, $piece) = (
 		$self->moveFrom($move),
 		$self->moveTo($move),
 		$self->movePromote($move),
-		$self->moveAttacker($move),
+		$self->movePiece($move),
 	);
 
-	if ($attacker == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+	if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
 		my $to_mask = 1 << $to;
 		if ($to_mask & CP_G_MASK) {
 			return 'O-O';
@@ -1537,10 +1537,10 @@ sub SAN {
 	# Avoid extra hassle for queen moves.
 	my @pieces = ('', '', 'N', 'B', 'R', 'Q', 'K');
 
-	my $san = $pieces[$attacker];
+	my $san = $pieces[$piece];
 
-	my $from_board = $self->[CP_POS_W_PIECES + cp_pos_to_move($self)]
-		& $self->[CP_POS_B_PIECES + $attacker];
+	my $from_board = $self->[CP_POS_WHITE_PIECES + cp_pos_to_move($self)]
+		& $self->[CP_POS_BLACK_PIECES + $piece];
 
 	# Or use legalMoves?
 	my @legal_moves = $self->legalMoves or return;
@@ -1562,7 +1562,7 @@ sub SAN {
 
 	my $to_mask = 1 << $to;
 	my $to_move = $self->toMove;
-	my $her_pieces = $self->[CP_POS_W_PIECES + !$to_move];
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $ep_shift = $self->enPassantShift;
 	my @files = ('a' .. 'h');
 	my @ranks = ('1' .. '8');
@@ -1582,10 +1582,10 @@ sub SAN {
 	}
 
 	if (($to_mask & $her_pieces)
-	    || ($ep_shift && $attacker == CP_PAWN && $to == $ep_shift)) {
+	    || ($ep_shift && $piece == CP_PAWN && $to == $ep_shift)) {
 		# Capture.  For pawn captures we always add the file unless it was
 		# already added.
-		if ($attacker == CP_PAWN && !length $san) {
+		if ($piece == CP_PAWN && !length $san) {
 			$san .= $files[$from_file];
 		}
 		$san .= 'x';
@@ -1915,8 +1915,8 @@ sub consistent {
 
 	my $consistent = 1;
 
-	my $w_pieces = $self->[CP_POS_W_PIECES];
-	my $b_pieces = $self->[CP_POS_B_PIECES];
+	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
+	my $b_pieces = $self->[CP_POS_BLACK_PIECES];
 
 	if ($w_pieces & $b_pieces) {
 		warn "White and black pieces overlap.\n";
@@ -2052,9 +2052,9 @@ sub pieceAtShift {
 
 	my $mask = 1 << $shift;
 	my ($piece, $color) = (CP_NO_PIECE);
-	if ($mask & $self->[CP_POS_W_PIECES]) {
+	if ($mask & $self->[CP_POS_WHITE_PIECES]) {
 		$color = CP_WHITE;
-	} elsif ($mask & $self->[CP_POS_B_PIECES]) {
+	} elsif ($mask & $self->[CP_POS_BLACK_PIECES]) {
 		$color = CP_BLACK;
 	}
 
@@ -2129,8 +2129,8 @@ sub dumpAll {
 
 	my $output = '';
 
-	my $w_pieces = $self->dumpBitboard($self->[CP_POS_W_PIECES]);
-	my $b_pieces = $self->dumpBitboard($self->[CP_POS_B_PIECES]);
+	my $w_pieces = $self->dumpBitboard($self->[CP_POS_WHITE_PIECES]);
+	my $b_pieces = $self->dumpBitboard($self->[CP_POS_BLACK_PIECES]);
 	my @w_pieces = map { $pad19->() } split /\n/, $w_pieces;
 	my @b_pieces = map { $pad19->() } split /\n/, $b_pieces;
 	$output .= "  White               Black\n";

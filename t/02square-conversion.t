@@ -120,12 +120,12 @@ foreach my $test (@tests) {
 		"cp_shift_to_square $square");
 	is(cp_square_to_shift($square), $shift,
 		"cp_square_to_shift $square");
-	is(cp_coords_to_square($file, $rank), $square,
-		"cp_coords_to_square $square");
-	is(cp_coords_to_shift($file, $rank), $shift,
-		"cp_coords_to_shift $square");
-	is_deeply([cp_shift_to_coords($shift)], [$file, $rank],
-		"cp_shift_to_coords $shift");
-	is_deeply([cp_square_to_coords($square)], [$file, $rank],
-		"cp_square_to_coords $shift");
+	is(cp_coordinates_to_square($file, $rank), $square,
+		"cp_coordinates_to_square $square");
+	is(cp_coordinates_to_shift($file, $rank), $shift,
+		"cp_coordinates_to_shift $square");
+	is_deeply([cp_shift_to_coordinates($shift)], [$file, $rank],
+		"cp_shift_to_coordinates $shift");
+	is_deeply([cp_square_to_coordinates($square)], [$file, $rank],
+		"cp_square_to_coordinates $shift");
 }
