@@ -1112,6 +1112,39 @@ sub __parseUCIMove {
 	return $move;
 }
 
+sub bitboardPopcount {
+	my (undef, $bitboard) = @_;
+
+	my $count;
+	cp_bb_popcount $bitboard, $count;
+
+	return $count;
+}
+
+sub bitboardClearLeastSet {
+	my (undef, $bitboard) = @_;
+
+	return cp_bb_clear_least_set $bitboard;
+}
+
+sub bitboardClearButLeastSet {
+	my (undef, $bitboard) = @_;
+
+	return cp_bb_clear_but_least_set $bitboard;
+}
+
+sub bitboardCountIsolatedTrailingZbits {
+	my (undef, $bitboard) = @_;
+
+	return cp_bb_count_isolated_trailing_zbits $bitboard;
+}
+
+sub bitboardCountTrailingZbits {
+	my (undef, $bitboard) = @_;
+
+	return cp_bb_count_trailing_zbits $bitboard;
+}
+
 # Macros below this line will not be expanded.  In other words, everything
 # that is not performance critical or does not require macros, should go
 # below this line.

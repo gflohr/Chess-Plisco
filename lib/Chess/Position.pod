@@ -573,6 +573,44 @@ This method is relatively expensive!
 
 =back
 
+=head2 Bit(board) Fiddling Methods
+
+=over 4
+
+=item B<bitboardPopcount(BITBOARD)>
+
+Counts and returns the bits sets in B<BITBOARD>.
+
+This does the same as the builtin function C<__builtin_popcountll> of the C
+compilers llvm and gcc.
+
+=item B<bitboardClearLeastSet(BITBOARD)>
+
+Clears the least signicant bit that is set in B<BITBOARD>.
+
+=item B<bitboardClearButLeastSet(BITBOARD)>
+
+Clears all set bits in B<BITBOARD> except for the least significant one that
+is set.
+
+=item B<bitboardCountTrailingZbits(BITBOARD)>
+
+Counts all trailing zero bits, that is all bits that are not set starting with
+the least significant bit (bit number 0).
+
+=item B<bitboardCountIsolatedTrailingZbits(BITBOARD)>
+
+Counts all trailing zero bits, that is all bits that are not set starting with
+the least significant bit (bit number 0).  In other words,
+this method gives you the shift of the set bit in B<BITBOARD>.  It only
+works if exactlye one bit is set in B<BITBOARD>, otherwise the behavior is
+undefined.  
+
+This does the same as the builtin function C<__builtin_ctzll> of the C
+compilers llvm and gcc.
+
+=back
+
 =head2 Methods for Debugging and Diagnostics
 
 =over 4
