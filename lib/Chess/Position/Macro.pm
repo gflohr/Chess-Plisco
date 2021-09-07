@@ -73,6 +73,8 @@ _define cp_pos_info_set_evasion => '$i', '$e',
 _define cp_pos_info_set_material => '$i', '$m',
 	'($i = (($i & 0x7fffffff) | ($m << 19)))';
 
+_define_from_file _cp_pos_info_update => '$p', '$i' => 'infoUpdate.pm';
+
 _define cp_pos_castling => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
 _define cp_pos_w_ks_castle => '$p', '(cp_pos_info_w_ks_castle(cp_pos_info($p)))';
 _define cp_pos_w_qs_castle => '$p', '(cp_pos_info_w_qs_castle(cp_pos_info($p)))';

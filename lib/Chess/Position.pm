@@ -40,6 +40,7 @@ use integer;
 use overload '""' => sub { shift->toFEN };
 
 use Locale::TextDomain qw('Chess-Position');
+use Scalar::Util qw(reftype);
 use Chess::Position::Macro;
 
 use base qw(Exporter);
@@ -330,7 +331,7 @@ sub new {
 	cp_pos_info_set_ep_shift($info, 0);
 	cp_pos_info($self) = $info;
 
-	$self->__update;
+	_cp_pos_info_update $self, $info;
 
 	return $self;
 }
@@ -548,7 +549,7 @@ sub newFromFEN {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
 	}
 
-	$self->__update;
+	_cp_pos_info_update $self, $pos_info;
 
 	return $self;
 }
@@ -730,52 +731,6 @@ sub __update {
 
 	# Update king's shift.
 	my $pos_info = cp_pos_info($self);
-	my $to_move = cp_pos_info_to_move($pos_info);
-	my $kings = cp_pos_kings($self)
-		& ($to_move ? cp_pos_b_pieces($self) : cp_pos_w_pieces($self));
-	my $king_shift = cp_bb_count_isolated_trailing_zbits($kings);
-	cp_pos_info_set_king_shift($pos_info, $king_shift);
-
-	my $checkers = cp_pos_in_check($self) = _cp_pos_color_attacked $self, $to_move, $king_shift;
-
-	if ($checkers) {
-		# Check evasion strategy.  If in-check, the options are:
-		#
-		# 1. Move the king.
-		# 2. Hit the piece that gives check unless multiple pieces give check.
-		# 3. Move a piece in front of the king for protection unless a knight
-		#    gives check or two pieces give check simultaneously.
-		#
-		# That leads to 3 different levels for the evasion strategy.  Option 1
-		# is always valid. Option 2 only if only one piece gives check.  Option
-		# 3 if only one piece gives check and the piece is bishop or rook.
-		#
-		# Pawn checks can be treated like knight checks because the pawn
-		# always has direct contact with the king.
-		#
-		# For both options 2 and 3 we define an evasion bitboard of valid
-		# target squares.  This information is then used in the legality check
-		# for non-king moves to see whether the move prevents a check.  There
-		# is no need to distinguish between the two cases in the legality check.
-		# The difference is just the popcount of the evasion bitboard.
-
-		if ($checkers & ($checkers - 1)) {
-			cp_pos_info_set_evasion($pos_info, CP_EVASION_KING_MOVE);
-		} elsif ($checkers & (cp_pos_knights($self) | (cp_pos_pawns($self)))) {
-			cp_pos_info_set_evasion($pos_info, CP_EVASION_CAPTURE);
-			cp_pos_evasion_squares($self) = $checkers;
-		} else {
-			cp_pos_info_set_evasion($pos_info, CP_EVASION_ALL);
-			my $attacker_shift = cp_bb_count_isolated_trailing_zbits $checkers;
-			my ($attack_type, undef, $attack_ray) =
-				@{$common_lines[$king_shift]->[$attacker_shift]};
-			if ($attack_ray) {
-				cp_pos_evasion_squares($self) = $attack_ray;
-			} else {
-				cp_pos_evasion_squares($self) = $checkers;
-			}
-		}
-	}
 
 	cp_pos_info($self) = $pos_info;
 }
@@ -943,7 +898,7 @@ sub doMove {
 		$self->[CP_POS_PAWNS - 1 + $promote] ^= $to_mask;
 	}
 
-	my @undo_info = ($victim, $victim_mask, @state);
+	my @undo_info = ($move, $victim, $victim_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
 	cp_pos_info_set_to_move($pos_info, !$to_move);
@@ -953,17 +908,15 @@ sub doMove {
 	# simply add it.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($victim << 4)];
 
-	cp_pos_info($self) = $pos_info;
-
-	$self->__update;
+	_cp_pos_info_update $self, $pos_info;
 
 	return \@undo_info;
 }
 
 sub undoMove {
-	my ($self, $move, $undoInfo) = @_;
+	my ($self, $undo_info) = @_;
 
-	my ($victim, $victim_mask, @state) = @$undoInfo;
+	my ($move, $victim, $victim_mask, @state) = @$undo_info;
 
 	my ($from, $to, $promote, $attacker) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1003,7 +956,7 @@ sub undoMove {
 }
 
 # Position info methods.
-sub castling {
+sub castlingRights {
 	my ($self) = @_;
 
 	return cp_pos_castling $self;
@@ -1088,7 +1041,7 @@ sub moveAttacker {
 	return cp_move_attacker $move;
 }
 
-sub moveCoordinateNotation {
+sub coordinateNotation {
 	my (undef, $move) = @_;
 
 	return cp_move_coordinate_notation $move;
@@ -1365,6 +1318,70 @@ sub copy {
 	bless [@$self], ref $self;
 }
 
+sub whitePieces {
+	shift->[CP_POS_W_PIECES];
+}
+
+sub blackPieces {
+	shift->[CP_POS_B_PIECES];
+}
+
+sub kings {
+	shift->[CP_POS_KINGS];
+}
+
+sub queens {
+	shift->[CP_POS_QUEENS];
+}
+
+sub rooks {
+	shift->[CP_POS_ROOKS];
+}
+
+sub bishops {
+	shift->[CP_POS_BISHOPS];
+}
+
+sub knights {
+	shift->[CP_POS_KNIGHTS];
+}
+
+sub pawns {
+	shift->[CP_POS_KNIGHTS];
+}
+
+sub occupied {
+	my ($self) = @_;
+
+	return $self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES];
+}
+
+sub vacant {
+	my ($self) = @_;
+
+	return ~($self->[CP_POS_W_PIECES] | $self->[CP_POS_B_PIECES]);
+}
+
+sub halfMoves {
+	shift->[CP_POS_HALF_MOVES];
+}
+
+sub halfMoveClock {
+	shift->[CP_POS_HALF_MOVE_CLOCK];
+}
+
+sub info {
+	shift->[CP_POS_INFO];
+}
+
+sub evasionSquares {
+	shift->[CP_POS_EVASION_SQUARES];
+}
+
+sub inCheck {
+	shift->[CP_POS_IN_CHECK];
+}
+
 sub toFEN {
 	my ($self) = @_;
 
@@ -1438,7 +1455,7 @@ sub toFEN {
 
 	$fen .= ($self->toMove == CP_WHITE) ? ' w ' : ' b ';
 
-	my $castling = $self->castling;
+	my $castling = $self->castlingRights;
 
 	if ($castling) {
 		my $castle = '';
@@ -1471,7 +1488,7 @@ sub legalMoves {
 	foreach my $move ($self->pseudoLegalMoves) {
 		my $undo_info = $self->doMove($move) or next;
 		push @legal, $move;
-		$self->undoMove($move, $undo_info);
+		$self->undoMove($undo_info);
 	}
 
 	return @legal;
@@ -1728,7 +1745,7 @@ sub perft {
 			++$nodes;
 		}
 
-		$self->undoMove($move, $undo_info);
+		$self->undoMove($undo_info);
 	}
 
 	return $nodes;
@@ -1783,7 +1800,7 @@ sub perftWithOutput {
 
 		$fh->print("$subnodes\n");
 
-		$self->undoMove($move, $undo_info);
+		$self->undoMove($undo_info);
 	}
 
 	no integer;
@@ -2079,6 +2096,25 @@ sub moveLegal {
 	return;
 }
 
+sub applyMove {
+	my ($self, $move) = @_;
+
+	if ($move =~ /[a-z]/i) {
+		$move = $self->parseMove($move) or return;
+	}
+
+	return $self->doMove($move);
+}
+
+sub unapplyMove {
+	my ($self, $state) = @_;
+
+	return if !ref $state;
+	return if 'ARRAY' ne reftype $state;
+
+	return $self->undoMove($state);
+}
+
 sub dumpAll {
 	my ($self) = @_;
 
@@ -2161,10 +2197,8 @@ sub dumpInfo {
 		$output .= '-';
 	}
 
-	$output .= "\nWhite king: ";
-	$output .= $self->shiftToSquare($self->whiteKingShift);
-	$output .= "\nBlack king: ";
-	$output .= $self->shiftToSquare($self->blackKingShift);
+	$output .= "\nKing to move: ";
+	$output .= $self->shiftToSquare($self->kingShift);
 	$output .= "\n";
 
 	my $checkers = $self->[CP_POS_IN_CHECK];
@@ -2199,7 +2233,7 @@ sub movesInCoordinateNotation {
 	my ($class, @moves) = @_;
 
 	foreach my $move (@moves) {
-		$move = $class->moveCoordinateNotation($move);
+		$move = $class->coordinateNotation($move);
 	}
 
 	return @moves;
@@ -2442,7 +2476,7 @@ foreach my $victim (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEE
 }
 
 # Magic moves.
-sub initmagicmoves_occ {
+sub __initmagicmoves_occ {
 	my ($squares, $linocc) = @_;
 
 	my $ret = 0;
@@ -2455,7 +2489,7 @@ sub initmagicmoves_occ {
 	return $ret;
 }
 
-sub initmagicmoves_Rmoves {
+sub __initmagicmoves_Rmoves {
 	my ($square, $occ) = @_;
 
 	my $ret = 0;
@@ -2505,7 +2539,7 @@ sub initmagicmoves_Rmoves {
 	return $ret;
 }
 
-sub initmagicmoves_Bmoves {
+sub __initmagicmoves_Bmoves {
 	my ($square, $occ) = @_;
 	my $ret = 0;
 	my $bit;
@@ -2580,7 +2614,7 @@ sub initmagicmoves_Bmoves {
 }
 
 # Init magicmoves.
-my @initmagicmoves_bitpos64_database = (
+my @__initmagicmoves_bitpos64_database = (
 	63,  0, 58,  1, 59, 47, 53,  2,
 	60, 39, 48, 27, 54, 33, 42,  3,
 	61, 51, 37, 40, 49, 18, 28, 20,
@@ -2604,15 +2638,15 @@ for (my $i = 0; $i < 64; ++$i) {
 
 	while ($temp) {
 		my $bit = $temp & -$temp;
-		$squares[$numsquares++] = $initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
+		$squares[$numsquares++] = $__initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
 		$temp ^= $bit;
 	}
 	for ($temp = 0; $temp < (1 << $numsquares); ++$temp) {
-		my $tempocc = initmagicmoves_occ(\@squares, $temp);
+		my $tempocc = __initmagicmoves_occ(\@squares, $temp);
 		my $j = (($tempocc) * $magicmoves_b_magics[$i]);
 		my $k = ($j >> MINIMAL_B_BITS_SHIFT) & $b_bits_shift_mask;
 		$magicmovesbdb[$i]->[$k]
-				= initmagicmoves_Bmoves($i, $tempocc);
+				= __initmagicmoves_Bmoves($i, $tempocc);
 	}
 }
 
@@ -2622,15 +2656,15 @@ for (my $i = 0; $i < 64; ++$i) {
 	my $temp = $magicmoves_r_mask[$i];
 	while ($temp) {
 			my $bit = $temp & -$temp;
-			$squares[$numsquares++] = $initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
+			$squares[$numsquares++] = $__initmagicmoves_bitpos64_database[$mask58 & (($bit * 0x07EDD5E59A4E28C2) >> 58)];
 			$temp ^= $bit;
 	}
 	for ($temp = 0; $temp < 1 << $numsquares; ++$temp) {
-		my $tempocc = initmagicmoves_occ(\@squares, $temp);
+		my $tempocc = __initmagicmoves_occ(\@squares, $temp);
 
 		my $j = (($tempocc) * $magicmoves_r_magics[$i]);
 		my $k = ($j >> MINIMAL_R_BITS_SHIFT) & $r_bits_shift_mask;
-		$magicmovesrdb[$i][$k] = initmagicmoves_Rmoves($i, $tempocc);
+		$magicmovesrdb[$i][$k] = __initmagicmoves_Rmoves($i, $tempocc);
 	}
 }
 

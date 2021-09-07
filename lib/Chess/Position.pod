@@ -42,11 +42,59 @@ individually, by export tag, or all at once by the export tag ':all'.  All
 constants are prefixed with 'CP_' and you will have little reason to not
 import all constants.
 
-=head1 INTERNALS
+=head2 Internals
 
 An instance of a B<Chess::Position> is a blessed array reference.  You can
 access its properties through accessor macros or by using constants for
 the array indices.
+
+A move in B<Chess::Position> is a regular scalar, more precisely an unsigned
+integer. You can access its properties with the move methods described below.
+
+It is guaranteed that every legal chess move is represented by an non-zero
+integer.  It is therefore safe to use moves in boolean context.
+
+=head2 Terminology
+
+For the sake of brevity, this document uses the following terms without
+further explanation:
+
+=over 4
+
+=item I<Square>
+
+A square is one square of the chess board as a string like "e4" or "f7".
+
+=item I<Coordinates>
+
+Coordinates are a pair of a file (0-7) and a rank (0-7).
+
+=item I<Shift>
+
+A "shift" is an integer in the range of 0-63 where 0 is the shift for "a1" and
+63 is the shift for "h8".
+
+=item I<Bitboard>
+
+A bitboard is an unsigned 64-bit integer.  Each bit stands for one square of
+the chess board.
+
+=item I<Mask>
+
+A mask is a bitboard with exactly one bit set.  The mask representing "e4" is
+a 1 shifted left 28 bits, because the shift for "e4" is 28.
+
+=item I<Move>
+
+When an argument is called "move", it is really an integer representing a chess
+move.
+
+=item I<Notation>
+
+When an argument is called "notation", it is a supported notation of a chess
+move, either Standard-Algebraic Notation SAN or coordinate notation.
+
+=back
 
 =head1 CONSTRUCTORS
 
@@ -64,13 +112,18 @@ constructor C<newFromFEN>.
 =item B<newFromFEN(FEN)>
 
 Creates a new B<Chess::Position> instance from a string containing the
-Forsyth-Edwards Notation (FEN) of a chess position.
+Forsyth-Edwards Notation (FEN) of a chess position.  The only difference to
+C<new()> is that the string argument is required. 
 
 This constructor may throw an exception if the described position does not meet
 the requirements of the library.
 
 All legal chess positions meet the requirements of the library.  But positions
 that are not legal and may cause the library to malfunction, are rejected.
+
+=item B<copy(POSITION)>
+
+Clones B<POSITION>.
 
 =back
 
@@ -80,13 +133,29 @@ In string context, the position is encoded in Forsyth-Edwards Notation.  No
 other operators are overloaded.
 
 Note that the Forsyth-Edwards Notation does not cover all aspects of a chess
-position, especially the history of moves.  Stringwise equality of two
+position, especially the history of moves.  String-wise equality of two
 instances of a B<Chess::Position> does therefore not imply that the two
 positions are identical.
 
 =head1 METHODS
 
+=head2 General Methods
+
 =over 4
+
+=item B<toFEN>
+
+Renders the position to Forsyth-Edwards Notation.  Alternatively, you can just
+use the object as a string:
+
+    $position = Chess::Position->new;
+    say $position->toFEN;
+    say "$position"; # Does the same as above.
+
+=item B<legalMoves>
+
+Returns a list of legal moves for the current position.  A move is just an
+integer.
 
 =item B<pseudoLegalMoves>
 
@@ -99,26 +168,404 @@ Only the lower 16 bits of the move are set, that means the start and destination
 square, a possible promotion piece and the en passant flag in case the move
 is an en passant capture.
 
+=item B<equals(POSITION)>
+
+Returns true if the current position is equivalent to B<POSITION>.
+
+=back
+
+=head2 Methods for Accessing Position Properties
+
+=over 4
+
+=item B<whitePieces>
+
+Returns the bitboard of all white pieces.
+
+=item B<blackPieces>
+
+Returns the bitboard of all black pieces.
+
+=item B<occupied>
+
+Returns the bitboard of all squares that are occupied by any piece.
+
+=item B<vacant>
+
+Returns the bitboard of all squares that are not occupied by any piece.
+
+=item B<kings>
+
+Returns the bitboard of all kings (black and white).
+
+=item B<queens>
+
+Returns the bitboard of all queens (black and white).
+
+=item B<rooks>
+
+Returns the bitboard of all rooks (black and white).
+
+=item B<bishops>
+
+Returns the bitboard of all bishops (black and white).
+
+=item B<knights>
+
+Returns the bitboard of all knights (black and white).
+
+=item B<pawns>
+
+Returns the bitboard of all pawns (black and white).
+
+=item B<toMove>
+
+Returns the side to move, either L</CP_BLACK> or L</CP_WHITE>.
+
+=item B<halfMoves>
+
+Returns the number of half-moves made.  Initially, this is 0.  After white has
+made their first move, it is 1. After black has made their first move, it is
+2, and so on.
+
+=item B<halfMoveClock>
+
+Return the number of reversible moves immediately leading to the current
+position.  The following moves are irreversible:
+
+=over 4
+
+=item Pawn moves.
+
+Reason: A pawn cannot move backwards.
+
+=item Captures.
+
+Reason: Captured pieces are gone for good.
+
+=item the first king move of each side
+
+Reason: The side to move loses the castling rights.
+
+=item the first move of each rook of each side
+
+Reason: The side to move loses at least one of their castling rights.
+
+=item castlings
+
+Reason: The side to move loses the castling rights.  This is also implied by
+the fact that they are necessarily the first king move.
+
+=back
+
+The half-move-clock because both players can claim a draw, when the half-move
+clock has reached 50.
+
+=item B<inCheck>
+
+Returns false if the side to move is not in check, a truthy value otherwise.
+The truthy value returns is also a bitboard of all pieces giving check.
+
+=item B<evasion>
+
+If the side to move is in check, returns the required check evasion strategy:
+
+=item L</CP_EVASION_KING_MOVE>
+
+The king must move.  This is the case, when multiple pieces give check.
+
+=item L</CP_EVASION_CAPTURE>
+
+Either the king must move or the piece giving check must be captured.
+
+=item L</CP_EVASION_ALL>
+
+Either the king must move, the piece giving check must be captured, or another
+piece must be moved between the king and the attacking piece.
+
+=back
+
+=item B<evasionSquares>
+
+If a check can be evaded by moving a piece between the king and the attacking
+piece of the opponent, this bitboard gives all squares where the check can be
+blocked. 
+
+=item B<enPassantShift>
+
+If en-passant is possible, returns the shift of the square where the capturing
+pawn has to move.  If en-passant is not possible, 0 is returned.  0 happens to
+be the shift of "a1" but "a1" is not a valid en-passant square.  It is
+therefore safe to use this method in boolean context.
+
+=item B<material>
+
+Gives the material balance from the perspective of the white player.  That
+means that all white pieces have a positive value, and all black pieces have
+a negative value.
+
+The values are:
+
+=over 4
+
+=item L</CP_QUEEN_VALUE> for each queen
+
+=item L</CP_ROOK_VALUE> for each rook
+
+=item L</CP_BISHOP_VALUE> for each bishop
+
+=item L</CP_KNIGHT_VALUE> for each knight
+
+=item L</CP_PAWN_VALUE> for each pawn
+
+=back
+
+These constants can be overridden by inheriting from B<Chess::Position>.
+
+Note: Kings do not count!
+
+=item B<whiteKingSideCastlingRight>
+
+Returns a truthy value if white still has the right to castle king-side
+("O-O"), false otherwise.
+
+=item B<whiteQueenSideCastlingRight>
+
+Returns a truthy value if white still has the right to castle queen-side,
+("O-O-O"), false otherwise.
+
+=item B<blackKingSideCastlingRight>
+
+Returns a truthy value if black still has the right to castle king-side
+("O-O"), false otherwise.
+
+=item B<blackQueenSideCastlingRight>
+
+Returns a truthy value if black still has the right to castle queen-side,
+("O-O-O"), false otherwise.
+
+=item B<castlingRights>
+
+Returns a bitmap of castling rights for the current position:
+
+=over 4
+
+=item 0x1 if white can still castle king-side
+
+=item 0x2 if white can still castle queen-side
+
+=item 0x4 if black can still castle king-side
+
+=item 0x8 if black can still castle queen-side
+
+=back
+
+=item B<kingShift>
+
+Return the shift of the square of the king of the side to move.  This
+information is needed internally.
+
+=item B<info>
+
+Returns an integer encoding various other aspects of the position.  You do not
+need this because there are dedicated methods available for all these
+properties.
+
+=back
+
+=head2 Move Methods
+
+=over 4
+
+=item B<parseMove(NOTATION)>
+
+Parses the string B<NOTATION> into an integer representing the move or returns
+false, if the B<NOTATION> cannot be parsed or is an illegal move.
+
+B<NOTATION> can either be a move in Standard Algebraic Notation (SAN) or in
+coordinate notation.  Coordinate notation is the format used by most chess
+engine and is the concatenation of the start and destination square and a
+possible promotion piece, for example "e2e4" or "f2f1q".
+
+=item B<SAN(MOVE)>
+
+Renders the integer B<MOVE> into Standard-Algebraic Notation SAN, for example
+"e4", "Bxc4", "O-O", or "fxe1=Q".
+
+=item B<coordinateNotation(MOVE)>
+
+Renders the integer B<MOVE> into coordinate notation, for example "e2e4" or
+"f2f1q".
+
+=item B<moveFrom(MOVE)>
+
+Extracts the shift (0-63) of the starting square.
+
+=item B<moveTo(MOVE)>
+
+Extracts the shift (0-63) of the destination square.
+
+=item B<movePromote(MOVE)>
+
+Extracts the piece that a pawn is promoted to if the move is a promotion.
+Returns either L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>, or L</CP_KNIGHT>.
+
+=item B<moveAttacker(MOVE)>
+
+Extracts the piece that does the move.  Returns one of L</CP_KING>,
+L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>, L</CP_KNIGHT>, or L</CP_PAWN>.
+
+=item B<moveLegal(MOVE|NOTATION)>
+
+Returns a truthy value, when the argument is a valid and legal move.  The move
+can be given either as an integer returned by L</parseMove> or as a string
+that is accepted by L</parseMove>.
+
+=item B<applyMove(MOVE|NOTATION)>
+
+Parses the move given in B<NOTATION> and applies it to the position if the
+move is valid and legal.  Otherwise false is returned.  You can also pass
+the move as an integer as returned by L</parseMove>.
+
+The method returns state that can later be used to undo the move and reset
+the position to the state it had before the move was applied.
+
+Engines should use the method L</doMove> instead because it is faster.
+
+=item B<unapplyMove(STATE)>
+
+If B<STATE> is state information returned by L</applyMove>, takes back the
+move that was given as an argument to L</applyMove>.
+
+Engines should use the method L</undoMove> instead because it is faster.
+
+=item B<doMove(MOVE)>
+
+Applies the move represented by the integer(!) B<MOVE> to the position.  If
+the move is legal, the method returns state information that can be used to
+undo the move with L</undoMove>.
+
+The method returns false, if the move is illegal.  Note that this is not a
+complete legality check but works only for those moves that
+L</pseudoLegalMoves> has returned for the current position.
+
+This method is fast and is the one that should be used by engines.
+
+=item B<undoMove(STATE)>
+
+If B<STATE> is state information returned by L</doMove>, takes back the
+move that was given as an argument to L</doMove>.
+
+This method is fast and is the one that should be used by engines.
+
+=back
+
+=head2 Methods for Converting Locations
+
+=over 4
+
+=item B<squareToShift(SQUARE)>
+
+Converts B<SQUARE> to a shift.
+
+It does the same as L<Chess::Position::Macro/cp_square_to_shift>.
+
+This is a class method.
+
+=item B<squareToCoordinates(SQUARE)>
+
+Converts B<SQUARE> to coordinates.  It returns a list, not a an array reference.
+Be sure to call it in array context!
+
+It does the same as L<Chess::Position::Macro/cp_square_to_coordinates>.
+
+This is a class method.
+
+=item B<shiftToSquare(SHIFT)>
+
+Converts B<SHIFT> to a square.
+
+It does the same as L<Chess::Position::Macro/cp_shift_to_square>.
+
+This is a class method.
+
+=item B<shiftToCoordinates(SHIFT)>
+
+Converts a shift to coordinates.  It returns a list, not a an array reference.
+Be sure to call it in array context!
+
+It does the same as L<Chess::Position::Macro/cp_square_to_coordinates>.
+
+This is a class method.
+
+=item B<coordinatesToSquare(FILE, RANK)>
+
+Converts coordinates to a square.
+
+It does the same as L<Chess::Position::Macro/cp_coordinates_to_square>.
+
+This is a class method.
+
+=item B<coordinatesToShift(FILE, RANK)>
+
+Converts coordinates to a shift.
+
+It does the same as L<Chess::Position::Macro/cp_coordinates_to_shift>.
+
+This is a class method.
+
+=back
+
+=head2 Methods for Inspecting a Square
+
+The following methods answer the question which piece of which color occupies
+a particular location on the chess board.
+
+=over 4
+
+=item B<pieceAtSquare(SQUARE)>
+
+In array context returns a pair of a piece and a color.  In scalar context,
+only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
+L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>, L</CP_KING>, or L</CP_NO_PIECE> if
+the square is empty.
+
+The color is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
+C<undef> is returned instead of a color.
+
+This method is relatively expensive!
+
+=back
+
+=head2 Methods for Debugging and Diagnostics
+
+=over 4
+
+=item B<consistent>
+
+Does an extensive consistency check on the position and throws an exception
+if any inconsistency is encountered.
+
 =item B<dumpBitboard(BITBOARD)>
 
 Generate a string representation of B<BITBOARD> in ASCII art.
 
-=item B<update>
-
-Updates the internal state of the position.  You only have to call that if
-you modify the position yourself.
-
-The method updates in partticular:
-
-=over 4
-
-=item the in-check flag
-
-=item the checkers bitboard of the pieces that give check
-
 =back
 
-=back
+=item B<dumpAll>
+
+Generates a string representation of all bitboards in ASCII art plus some
+additional information.
+
+=item B<dumpInfo(INFO)>
+
+Returns a string with the decoded position information as retured by
+L</info>.
+
+=item B<movesInCoordinateNotation(MOVES)>
+
+Takes an array of moves (as integers) and converts it into an array of moves
+in coordinate notation.
 
 =head1 PROPERTIES
 
