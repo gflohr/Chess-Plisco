@@ -82,7 +82,7 @@ sub make_move {
 		cp_move_set_promote($move, $pieces{$promote});
 	}
 
-	cp_move_set_attacker($move, $pos->pieceAtSquare($from_square));
+	cp_move_set_piece($move, $pos->pieceAtSquare($from_square));
 
 	return $move;
 }

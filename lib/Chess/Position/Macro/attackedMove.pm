@@ -16,8 +16,8 @@
 (do {
 	# FIXME! Pass the color in to the macro!
 	my $my_color = cp_pos_to_move($p);
-	my $her_pieces = $p->[CP_POS_W_PIECES + !$my_color];
-	my $occupancy = ($p->[CP_POS_W_PIECES + $my_color] | $her_pieces) & ~(1 << $from);
+	my $her_pieces = $p->[CP_POS_WHITE_PIECES + !$my_color];
+	my $occupancy = ($p->[CP_POS_WHITE_PIECES + $my_color] | $her_pieces) & ~(1 << $from);
 	my $queens = cp_pos_queens($p);
 	$her_pieces
 		& (($pawn_masks[$my_color]->[2]->[$to] & cp_pos_pawns($p))

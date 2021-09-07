@@ -50,9 +50,9 @@
 			cp_pos_evasion_squares($p) = $checkers;
 		} else {
 			cp_pos_info_set_evasion($i, CP_EVASION_ALL);
-			my $attacker_shift = cp_bb_count_isolated_trailing_zbits $checkers;
+			my $piece_shift = cp_bb_count_isolated_trailing_zbits $checkers;
 			my ($attack_type, undef, $attack_ray) =
-				@{$common_lines[$king_shift]->[$attacker_shift]};
+				@{$common_lines[$king_shift]->[$piece_shift]};
 			if ($attack_ray) {
 				cp_pos_evasion_squares($p) = $attack_ray;
 			} else {

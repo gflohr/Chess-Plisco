@@ -60,7 +60,7 @@ $pos = Chess::Position->new('rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b k
 $before = $pos->copy;
 $move = $pos->parseMove('c8h3');
 ok $move, 'parse c8h3';
-is(cp_move_attacker($move), CP_BISHOP);
+is(cp_move_piece($move), CP_BISHOP);
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($undo_info);
