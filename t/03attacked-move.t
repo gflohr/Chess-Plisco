@@ -45,13 +45,11 @@ foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	my $move = $pos->parseMove($test->{move});
 	ok $move, "parse $test->{move}";
-	my $from = cp_move_from $move;
-	my $to = cp_move_to $move;
 
 	if ($test->{attacked}) {
-		ok $pos->attackedMove($from, $to), $test->{name};
+		ok $pos->attackedMove($move), $test->{name};
 	} else {
-		ok !$pos->attackedMove($from, $to), $test->{name};
+		ok !$pos->attackedMove($move), $test->{name};
 	}
 }
 
