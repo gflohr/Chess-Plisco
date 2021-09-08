@@ -27,8 +27,8 @@ sub _expand_placeholder;
 
 my %defines;
 
-_define cp_pos_w_pieces => '$p', '$p->[CP_POS_WHITE_PIECES]';
-_define cp_pos_b_pieces => '$p', '$p->[CP_POS_BLACK_PIECES]';
+_define cp_pos_white_pieces => '$p', '$p->[CP_POS_WHITE_PIECES]';
+_define cp_pos_black_pieces => '$p', '$p->[CP_POS_BLACK_PIECES]';
 _define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
 _define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
 _define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
