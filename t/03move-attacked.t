@@ -47,9 +47,9 @@ foreach my $test (@tests) {
 	ok $move, "parse $test->{move}";
 
 	if ($test->{attacked}) {
-		ok $pos->attackedMove($move), $test->{name};
+		ok $pos->moveAttacked($move), $test->{name};
 	} else {
-		ok !$pos->attackedMove($move), $test->{name};
+		ok !$pos->moveAttacked($move), $test->{name};
 	}
 }
 

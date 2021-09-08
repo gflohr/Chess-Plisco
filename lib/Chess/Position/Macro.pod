@@ -191,74 +191,56 @@ it does not have any advantage over the regular L<constant> pragma of Perl.
 
 =item B<cp_pos_white_pieces(POS)>
 
-Get or set the bitboard for all white pieces from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/whitePieces>.
 
 =item B<cp_pos_black_pieces(POS)>
 
-Get or set the bitboard for all black pieces from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/blackPieces>.
 
 =item B<cp_pos_kings(POS)>
 
-Get or set the bitboard for all kings from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/kings>.
 
 =item B<cp_pos_rooks(POS)>
 
-Get or set the bitboard for all rooks from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/rooks>.
 
 =item B<cp_pos_bishops(POS)>
 
-Get or set the bitboard for all bishops from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/bishops>.
 
 =item B<cp_pos_knights(POS)>
 
-Get or set the bitboard for all knights from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/knights>.
 
 =item B<cp_pos_pawns(POS)>
 
-Get or set the bitboard for all pawns from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/pawns>.
 
 =item B<cp_pos_to_move(POS)>
 
-Get or set the side to move from the L<Chess::Position> B<POS>.
+Same as L<Chess::Position/toMove>.
 
-L-value: yes.
+=item B<cp_pos_castling_rights(POS)>
 
-=item B<cp_pos_castling(POS)>
+Same as L<Chess::Position/castling>.
 
-Get or set the king-side castling rights bitmask from the L<Chess::Position> B<POS>.
-
-L-value: yes.
-
-=item B<cp_pos_white_king_side_castling(POS)>
+=item B<cp_pos_white_king_side_castling_right(POS)>
 
 True if white can castle on the king-side in the L<Chess::Position> B<POS>.
 
 L-value: no
-=item B<cp_pos_white_queen_side_castling(POS)>
+=item B<cp_pos_white_queen_side_castling_right(POS)>
 
 True if white can castle on the queen-side in the L<Chess::Position> B<POS>.
 
 L-value: no
-=item B<cp_pos_black_king_side_castling(POS)>
+=item B<cp_pos_black_king_side_castling_right(POS)>
 
 True if black can castle on the king-side in the L<Chess::Position> B<POS>.
 
 L-value: no
-=item B<cp_pos_black_queen_side_castling(POS)>
+=item B<cp_pos_black_queen_side_castling_right(POS)>
 
 True if black can castle on the queen-side in the L<Chess::Position> B<POS>.
 

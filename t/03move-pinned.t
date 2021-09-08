@@ -114,8 +114,8 @@ foreach my $test (@tests) {
 	ok $move, "$test->{name}: parse $test->{move}";
 
 	if ($test->{pinned}) {
-		ok $pos->pinnedMove($move), $test->{name};
+		ok $pos->movePinned($move), $test->{name};
 	} else {
-		ok !$pos->pinnedMove($move), $test->{name};
+		ok !$pos->movePinned($move), $test->{name};
 	}
 }

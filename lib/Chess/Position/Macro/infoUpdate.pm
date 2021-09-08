@@ -18,7 +18,7 @@
 	my $kings = cp_pos_kings($p)
 		& ($c ? cp_pos_black_pieces($p) : cp_pos_white_pieces($p));
 	my $king_shift = cp_bb_count_isolated_trailing_zbits($kings);
-	cp_pos_info_set_king_shift($i, $king_shift);
+	_cp_pos_info_set_king_shift($i, $king_shift);
 
 	my $checkers = cp_pos_in_check($p) = _cp_pos_color_attacked $p, $c, $king_shift;
 
@@ -44,12 +44,12 @@
 		# The difference is just the popcount of the evasion bitboard.
 
 		if ($checkers & ($checkers - 1)) {
-			cp_pos_info_set_evasion($i, CP_EVASION_KING_MOVE);
+			_cp_pos_info_set_evasion($i, CP_EVASION_KING_MOVE);
 		} elsif ($checkers & (cp_pos_knights($p) | (cp_pos_pawns($p)))) {
-			cp_pos_info_set_evasion($i, CP_EVASION_CAPTURE);
+			_cp_pos_info_set_evasion($i, CP_EVASION_CAPTURE);
 			cp_pos_evasion_squares($p) = $checkers;
 		} else {
-			cp_pos_info_set_evasion($i, CP_EVASION_ALL);
+			_cp_pos_info_set_evasion($i, CP_EVASION_ALL);
 			my $piece_shift = cp_bb_count_isolated_trailing_zbits $checkers;
 			my ($attack_type, undef, $attack_ray) =
 				@{$common_lines[$king_shift]->[$piece_shift]};
