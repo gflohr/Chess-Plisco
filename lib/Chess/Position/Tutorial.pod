@@ -717,10 +717,10 @@ The castling state is encoded with other state information in one single
 integer as a bit mask.  It is highly recommended that you use the macros
 from L<Chess::Position::Macro> for it:
 
-    $white_can_castle_king_side  = cp_pos_white_king_side_castle $pos;
-    $white_can_castle_queen_side = cp_pos_white_queen_side_castle $pos;
-    $black_can_castle_king_side  = cp_pos_black_king_side_castle $pos;
-    $black_can_castle_queen_side = cp_pos_black_queen_side_castle $pos;
+    $white_can_castle_king_side  = cp_pos_white_king_side_castling_right $pos;
+    $white_can_castle_queen_side = cp_pos_white_queen_side_castling_right $pos;
+    $black_can_castle_king_side  = cp_pos_black_king_side_castling_right $pos;
+    $black_can_castle_queen_side = cp_pos_black_queen_side_castling_right $pos;
 
 =head3 En Passant
 

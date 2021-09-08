@@ -324,12 +324,12 @@ sub new {
 	cp_pos_half_moves($self) = 0;
 
 	my $info = 0;
-	cp_pos_info_set_white_king_side_castling($info, 1);
-	cp_pos_info_set_white_queen_side_castling($info, 1);
-	cp_pos_info_set_black_king_side_castling($info, 1);
-	cp_pos_info_set_black_queen_side_castling($info, 1);
-	cp_pos_info_set_to_move($info, CP_WHITE);
-	cp_pos_info_set_ep_shift($info, 0);
+	_cp_pos_info_set_white_king_side_castling_right($info, 1);
+	_cp_pos_info_set_white_queen_side_castling_right($info, 1);
+	_cp_pos_info_set_black_king_side_castling_right($info, 1);
+	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
+	_cp_pos_info_set_to_move($info, CP_WHITE);
+	_cp_pos_info_set_ep_shift($info, 0);
 	cp_pos_info($self) = $info;
 
 	_cp_pos_info_update $self, $info;
@@ -460,12 +460,12 @@ sub newFromFEN {
 	$self->[CP_POS_PAWNS] = $pawns;
 
 	my $pos_info = 0;
-	cp_pos_info_set_material($pos_info, $material);
+	_cp_pos_info_set_material($pos_info, $material);
 
 	if ('w' eq lc $to_move) {
-		cp_pos_info_set_to_move($pos_info, CP_WHITE);
+		_cp_pos_info_set_to_move($pos_info, CP_WHITE);
 	} elsif ('b' eq lc $to_move) {
-		cp_pos_info_set_to_move($pos_info, CP_BLACK);
+		_cp_pos_info_set_to_move($pos_info, CP_BLACK);
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
@@ -491,45 +491,45 @@ sub newFromFEN {
 		if ($self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_1_MASK & CP_H_MASK) {
-			cp_pos_info_set_white_king_side_castling($pos_info, 1);
+			_cp_pos_info_set_white_king_side_castling_right($pos_info, 1);
 		}
 	}
 	if ($castling =~ /Q/) {
 		if ($self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_1_MASK & CP_A_MASK) {
-			cp_pos_info_set_white_queen_side_castling($pos_info, 1);
+			_cp_pos_info_set_white_queen_side_castling_right($pos_info, 1);
 		}
 	}
 	if ($castling =~ /k/) {
 		if ($self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_8_MASK & CP_H_MASK) {
-			cp_pos_info_set_black_king_side_castling($pos_info, 1);
+			_cp_pos_info_set_black_king_side_castling_right($pos_info, 1);
 		}
 	}
 	if ($castling =~ /q/) {
 		if ($self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
 		    & CP_8_MASK & CP_A_MASK) {
-			cp_pos_info_set_black_queen_side_castling($pos_info, 1);
+			_cp_pos_info_set_black_queen_side_castling_right($pos_info, 1);
 		}
 	}
 
 	my $to_move = cp_pos_info_to_move($pos_info);
 	if ('-' eq $ep_square) {
-		cp_pos_info_set_ep_shift($pos_info, 0);
+		_cp_pos_info_set_ep_shift($pos_info, 0);
 	} elsif ($to_move == CP_WHITE && $ep_square =~ /^[a-h]6$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
+			_cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	} elsif ($to_move == CP_BLACK && $ep_square =~ /^[a-h]3$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
+			_cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	}
 
@@ -742,7 +742,7 @@ sub attacked {
 	return _cp_pos_color_attacked $self, cp_pos_to_move($self), $shift;
 }
 
-sub attackedMove {
+sub moveAttacked {
 	my ($self, $move) = @_;
 
 	if ($move =~ /[a-z]/i) {
@@ -750,10 +750,10 @@ sub attackedMove {
 	}
 
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
-	return _cp_pos_attacked_move $self, $from, $to;
+	return _cp_pos_move_attacked $self, $from, $to;
 }
 
-sub pinnedMove {
+sub movePinned {
 	my ($self, $move) = @_;
 
 	if ($move =~ /[a-z]/i) {
@@ -763,7 +763,7 @@ sub pinnedMove {
 	my $to_move = cp_pos_to_move $self;
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
 
-	return _cp_pos_pinned_move $self, $from, $to, $to_move,
+	return _cp_pos_move_pinned $self, $from, $to, $to_move,
 		cp_pos_king_shift $self;
 }
 
@@ -791,7 +791,7 @@ sub doMove {
 	#
 	# Checks number two and three are done below, and only for king moves.
 	# Check number 4 is done below for en passant moves.
-	return if _cp_pos_pinned_move $self, $from, $to, $to_move, $king_shift;
+	return if _cp_pos_move_pinned $self, $from, $to, $to_move, $king_shift;
 
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
@@ -800,7 +800,7 @@ sub doMove {
 
 	if ($piece == CP_KING) {
 		# Does the king move into check?
-		return if _cp_pos_attacked_move $self, $from, $to;
+		return if _cp_pos_move_attacked $self, $from, $to;
 
 		# Castling?
 		if ((($from - $to) & 0x3) == 0x2) {
@@ -876,16 +876,16 @@ sub doMove {
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			cp_pos_info_set_ep_shift($pos_info, $from + (($to - $from) >> 1));
+			_cp_pos_info_set_ep_shift($pos_info, $from + (($to - $from) >> 1));
 		} else {
-			cp_pos_info_set_ep_shift($pos_info, 0);
+			_cp_pos_info_set_ep_shift($pos_info, 0);
 		}
 	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
-		cp_pos_info_set_ep_shift($pos_info, 0);
+		_cp_pos_info_set_ep_shift($pos_info, 0);
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
-		cp_pos_info_set_ep_shift($pos_info, 0);
+		_cp_pos_info_set_ep_shift($pos_info, 0);
 	}
 
 	# Move all pieces involved.
@@ -901,7 +901,7 @@ sub doMove {
 	# it safes branches.  There is one edge case, where a pawn captures a
 	# rook that is on its initial position.  In that case, the castling
 	# rights may have to be updated.
-	cp_pos_info_set_castling $pos_info, $new_castling;
+	_cp_pos_info_set_castling $pos_info, $new_castling;
 
 	if ($promote) {
 		$self->[CP_POS_PAWNS] ^= $to_mask;
@@ -911,7 +911,7 @@ sub doMove {
 	my @undo_info = ($move, $victim, $victim_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
-	cp_pos_info_set_to_move($pos_info, !$to_move);
+	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
 	# The material balance is stored in the most signicant bits.  It is
 	# already left-shifted 19 bit in the lookup table so that we can
@@ -981,31 +981,31 @@ sub rMagic {
 sub castlingRights {
 	my ($self) = @_;
 
-	return cp_pos_castling $self;
+	return cp_pos_castling_rights $self;
 }
 
 sub whiteKingSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_white_king_side_castle($self);
+	return cp_pos_white_king_side_castling_right($self);
 }
 
 sub whiteQueenSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_white_queen_side_castle($self);
+	return cp_pos_white_queen_side_castling_right($self);
 }
 
 sub blackKingSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_black_king_side_castle($self);
+	return cp_pos_black_king_side_castling_right($self);
 }
 
 sub blackQueenSideCastlingRight {
 	my ($self) = @_;
 
-	return cp_pos_black_queen_side_castle($self);
+	return cp_pos_black_queen_side_castling_right($self);
 }
 
 sub toMove {
