@@ -37,6 +37,7 @@ package Chess::Position;
 
 use strict;
 use integer;
+no warnings qw(portable);
 use overload '""' => sub { shift->toFEN };
 
 use Locale::TextDomain qw('Chess-Position');
@@ -340,13 +341,13 @@ sub new {
 sub newFromFEN {
 	my ($class, $fen) = @_;
 
-	my ($pieces, $to_move, $castling, $ep_square, $hmc, $moveno)
+	my ($pieces, $color, $castling, $ep_square, $hmc, $moveno)
 			= split /[ \t]+/, $fen;
 	$ep_square = '-' if !defined $ep_square;
 	$hmc = 0 if !defined $hmc;
 	$moveno = 1 if !defined $moveno;
 
-	if (!(defined $pieces && defined $to_move && defined $castling)) {
+	if (!(defined $pieces && defined $color && defined $castling)) {
 		die __"Illegal FEN: Incomplete.\n";
 	}
 
@@ -354,7 +355,6 @@ sub newFromFEN {
 	die __"Illegal FEN: FEN does not have exactly eight ranks.\n"
 		if @ranks != 8;
 	
-	my $shift = 63;
 	my $w_pieces = 0;
 	my $b_pieces = 0;
 	my $kings = 0;
@@ -462,9 +462,9 @@ sub newFromFEN {
 	my $pos_info = 0;
 	_cp_pos_info_set_material($pos_info, $material);
 
-	if ('w' eq lc $to_move) {
+	if ('w' eq lc $color) {
 		_cp_pos_info_set_to_move($pos_info, CP_WHITE);
-	} elsif ('b' eq lc $to_move) {
+	} elsif ('b' eq lc $color) {
 		_cp_pos_info_set_to_move($pos_info, CP_BLACK);
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
@@ -479,11 +479,11 @@ sub newFromFEN {
 	}
 
 	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_WHITE_PIECES])
-	      == CP_1_MASK | CP_E_MASK)) {
+	      == (CP_1_MASK | CP_E_MASK))) {
 		$castling =~ s/KQ//;
 	}
 	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_BLACK_PIECES])
-	      == CP_8_MASK | CP_E_MASK)) {
+	      == (CP_8_MASK | CP_E_MASK))) {
 		$castling =~ s/kq//;
 	}
 

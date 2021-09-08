@@ -314,7 +314,7 @@ sub _expand_placeholder {
 sub preprocess {
 	my ($content) = @_;
 
-	my ($code, $tail) = split /^# *__NO_MACRO__.*$/, $content;
+	my ($code, $tail) = split /\n# *__NO_MACRO__.*\n/, $content;
 
 	my $source = PPI::Document->new(\$code);
 
