@@ -16,7 +16,7 @@
 (do {
 	my $c = cp_pos_info_to_move($i);
 	my $kings = cp_pos_kings($p)
-		& ($c ? cp_pos_b_pieces($p) : cp_pos_w_pieces($p));
+		& ($c ? cp_pos_black_pieces($p) : cp_pos_white_pieces($p));
 	my $king_shift = cp_bb_count_isolated_trailing_zbits($kings);
 	cp_pos_info_set_king_shift($i, $king_shift);
 

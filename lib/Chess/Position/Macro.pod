@@ -8,7 +8,7 @@ Chess::Position::Macro - Macros/inline functions for Chess::Position
     use Chess::Position qw(:all);
     use Chess::Position::Macro;
 
-    my $white_pieces = cp_pos_w_pieces(Chess::Position->new);
+    my $white_pieces = cp_pos_white_pieces(Chess::Position->new);
 
     my $bitboard = '0x8080808080808080';
     my $popcount;
@@ -189,13 +189,13 @@ it does not have any advantage over the regular L<constant> pragma of Perl.
 
 =over 4
 
-=item B<cp_pos_w_pieces(POS)>
+=item B<cp_pos_white_pieces(POS)>
 
 Get or set the bitboard for all white pieces from the L<Chess::Position> B<POS>.
 
 L-value: yes.
 
-=item B<cp_pos_b_pieces(POS)>
+=item B<cp_pos_black_pieces(POS)>
 
 Get or set the bitboard for all black pieces from the L<Chess::Position> B<POS>.
 

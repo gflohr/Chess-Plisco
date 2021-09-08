@@ -308,8 +308,8 @@ sub new {
 	return $class->newFromFEN($fen) if defined $fen && length $fen;
 
 	my $self = bless [], $class;
-	cp_pos_w_pieces($self) = CP_1_MASK | CP_2_MASK;
-	cp_pos_b_pieces($self) = CP_8_MASK | CP_7_MASK,
+	cp_pos_white_pieces($self) = CP_1_MASK | CP_2_MASK;
+	cp_pos_black_pieces($self) = CP_8_MASK | CP_7_MASK,
 	cp_pos_kings($self) = (CP_1_MASK | CP_8_MASK) & CP_E_MASK;
 	cp_pos_queens($self) = (CP_D_MASK & CP_1_MASK)
 			| (CP_D_MASK & CP_8_MASK);
@@ -862,7 +862,7 @@ sub doMove {
 			$victim_mask = $ep_pawn_masks[$ep_shift];
 
 			# Removing the pawn may discover a check.
-			my $occupancy = (cp_pos_w_pieces($self) | cp_pos_b_pieces($self))
+			my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self))
 					& ((~$move_mask) ^ $victim_mask);
 			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
 				& (cp_pos_bishops($self) | cp_pos_queens($self))) {

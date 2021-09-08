@@ -212,8 +212,8 @@ C<Chess::Position> instances or use constants for the indexes:
  # Equivalent!
  $w_pieces = $pos[CP_POS_WHITE_PIECES];
  $pos[CP_POS_WHITE_PIECES] = $_pieces;
- $w_pieces = cp_pos_w_pieces $pos;
- cp_pos_w_pieces $pos = $w_pieces;
+ $w_pieces = cp_pos_white_pieces $pos;
+ cp_pos_white_pieces $pos = $w_pieces;
 
 =head3 Pieces
 
@@ -408,7 +408,7 @@ scope of a block:
 =head3 Do not Create References to Macros
 
 Macros are not Perl subroutines. They are more or less stupidly replaced
-with chunks of code. Things like C<my $sub = \&cp_pos_w_pieces> may or
+with chunks of code. Things like C<my $sub = \&cp_pos_white_pieces> may or
 may not cause a syntax error but they will never do what you expect.
 
 =head3 Be Prepared for Errors
@@ -432,7 +432,7 @@ Task: Count the number of white pawns on the board.
  use Chess::Position::Macro;
  
  my $pos = Chess::Position->new;
- my $white_pawns = cp_pos_w_pieces($pos) & cp_pos_pawns($pos);
+ my $white_pawns = cp_pos_white_pieces($pos) & cp_pos_pawns($pos);
  my $count;
  cp_bb_popcount $white_pawns, $count;
  print "There are $count white pawns on the board.\n";
@@ -453,7 +453,7 @@ Iterating over a bitboard can be done in an intuitive and straightforward way:
     use Chess::Position qw(:all);
     use Chess::Position::Macro;
 
-    my $white_pawn_mask = cp_pos_w_pieces($pos) & cp_pos_pawns($pos);
+    my $white_pawn_mask = cp_pos_white_pieces($pos) & cp_pos_pawns($pos);
 
     foreach my $shift (0 .. 63) {
         my $shift_mask = 1 << $shift;
@@ -478,7 +478,7 @@ faster:
     use Chess::Position::Macro;
 
     my $pos = Chess::Position->new;
-    my $white_pawn_mask = cp_pos_w_pieces($pos) & cp_pos_pawns($pos);
+    my $white_pawn_mask = cp_pos_white_pieces($pos) & cp_pos_pawns($pos);
 
     while ($white_pawn_mask) {
         my $shift = cp_bb_count_trailing_zbits $shift_mask;
