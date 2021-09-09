@@ -146,7 +146,7 @@ _define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
 _define_from_file _cp_promotion_moves_from_mask => '$t', '@m', '$b',
 	'promotionMovesFromMask.pm';
 _define_from_file _cp_pos_move_pinned =>
-	'$p', '$from', '$to', '$to_move', '$ks', 'movePinned.pm';
+	'$p', '$from', '$to', '$ks', '$mp', '$hp', 'movePinned.pm';
 _define_from_file _cp_pos_color_attacked => '$p', '$c', '$shift', 'attacked.pm';
 _define_from_file _cp_pos_move_attacked => '$p', '$from', '$to', 'moveAttacked.pm';
 _define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
