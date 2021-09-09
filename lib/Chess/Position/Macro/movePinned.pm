@@ -31,7 +31,7 @@
 						&& ($rmagic & $hp
 							& (cp_pos_queens($p) | cp_pos_rooks($p)));
 			} else {
-				my $bmagic = cp_mm_bmagic($from, ($mp | $her_pieces)) & $hp;
+				my $bmagic = cp_mm_bmagic($from, ($mp | $hp)) & $ray_mask;
 				$pinned = ($bmagic & (1 << $ks))
 						&& ($bmagic & $hp
 							& (cp_pos_queens($p) | cp_pos_bishops($p)));
