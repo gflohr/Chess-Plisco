@@ -282,7 +282,7 @@ my @castling_rook_move_masks;
 
 # Information for castlings, part 1. For a1, h1, a8, and h8 remove these
 # castling rights.
-my @castling_rook_masks;
+my @castling_rights_rook_masks;
 
 # Change in material.  Looked up via a combined mask of color to move,
 # victim and promotion piece.
@@ -778,6 +778,7 @@ sub doMove {
 	my $to_mask = 1 << $to;
 	my $move_mask = (1 << $from) | $to_mask;
 	my $king_shift = cp_pos_info_king_shift($pos_info);
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
 	# A move can be illegal for these reasons:
 	#
@@ -794,7 +795,6 @@ sub doMove {
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
 	my $ep_shift = cp_pos_info_ep_shift $pos_info;
-	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
 	if ($piece == CP_KING) {
 		# Does the king move into check?
@@ -832,8 +832,8 @@ sub doMove {
 	# Remove castling rights if a rook moves from its original square or it
 	# gets captured.  We simplify that by simply checking whether either the
 	# start or the destination square is a1, h1, a8, or h8.
-	$new_castling &= ~$castling_rook_masks[$from];
-	$new_castling &= ~$castling_rook_masks[$to];
+	$new_castling &= $castling_rights_rook_masks[$from];
+	$new_castling &= $castling_rights_rook_masks[$to];
 
 	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
 
@@ -2508,12 +2508,11 @@ $castling_rook_move_masks[CP_C8] = CP_8_MASK & (CP_A_MASK | CP_D_MASK);
 $castling_rook_move_masks[CP_G8] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
 
 # The indices are the original squares of the rooks.
-@castling_rook_masks = (0) x 64;
-# FIXME! Or these values right away.
-$castling_rook_masks[CP_H1] = 0x1;
-$castling_rook_masks[CP_A1] = 0x2;
-$castling_rook_masks[CP_H8] = 0x4;
-$castling_rook_masks[CP_A8] = 0x8;
+@castling_rights_rook_masks = (-1) x 64;
+$castling_rights_rook_masks[CP_H1] = ~0x1;
+$castling_rights_rook_masks[CP_A1] = ~0x2;
+$castling_rights_rook_masks[CP_H8] = ~0x4;
+$castling_rights_rook_masks[CP_A8] = ~0x8;
 
 my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
