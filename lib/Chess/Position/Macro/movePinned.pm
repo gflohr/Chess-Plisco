@@ -25,17 +25,15 @@
 		# pinned.  That also covers the case that the piece that moves captures
 		# the piece that pins.
 		if (!((1 << $to) & $ray_mask)) {
-			my $her_pieces = $p->[CP_POS_WHITE_PIECES + !$to_move];
-
 			if ($is_rook) {
-				my $rmagic = cp_mm_rmagic($from, ($p->[CP_POS_WHITE_PIECES + $to_move] | $her_pieces)) & $ray_mask;
+				my $rmagic = cp_mm_rmagic($from, ($mp | $hp)) & $ray_mask;
 				$pinned = ($rmagic & (1 << $ks))
-						&& ($rmagic & $her_pieces
+						&& ($rmagic & $hp
 							& (cp_pos_queens($p) | cp_pos_rooks($p)));
 			} else {
-				my $bmagic = cp_mm_bmagic($from, ($p->[CP_POS_WHITE_PIECES + $to_move] | $her_pieces)) & $ray_mask;
+				my $bmagic = cp_mm_bmagic($from, ($mp | $her_pieces)) & $hp;
 				$pinned = ($bmagic & (1 << $ks))
-						&& ($bmagic & $her_pieces
+						&& ($bmagic & $hp
 							& (cp_pos_queens($p) | cp_pos_bishops($p)));
 			}
 		}

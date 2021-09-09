@@ -759,10 +759,12 @@ sub movePinned {
 	}
 
 	my $to_move = cp_pos_to_move $self;
+	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
 
-	return _cp_pos_move_pinned $self, $from, $to, $to_move,
-		cp_pos_king_shift $self;
+	return _cp_pos_move_pinned $self, $from, $to,
+		cp_pos_king_shift($self), $my_pieces, $her_pieces;
 }
 
 sub doMove {
@@ -778,6 +780,7 @@ sub doMove {
 	my $to_mask = 1 << $to;
 	my $move_mask = (1 << $from) | $to_mask;
 	my $king_shift = cp_pos_info_king_shift($pos_info);
+	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
 	# A move can be illegal for these reasons:
@@ -790,7 +793,8 @@ sub doMove {
 	#
 	# Checks number two and three are done below, and only for king moves.
 	# Check number 4 is done below for en passant moves.
-	return if _cp_pos_move_pinned $self, $from, $to, $to_move, $king_shift;
+	return if _cp_pos_move_pinned $self, $from, $to, $king_shift,
+		$my_pieces, $her_pieces;
 
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
