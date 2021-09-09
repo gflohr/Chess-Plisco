@@ -478,40 +478,38 @@ sub newFromFEN {
 				state => $castling);
 	}
 
-	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_WHITE_PIECES])
-	      == (CP_1_MASK | CP_E_MASK))) {
+	my ($piece_type, $piece_color);
+
+	($piece_type, $piece_color) = $self->pieceAtShift(CP_E1);
+	if (!($piece_type && $piece_type == CP_KING && $piece_color == CP_WHITE)) {
 		$castling =~ s/KQ//;
 	}
-	if (!(($self->[CP_POS_KINGS] & $self->[CP_POS_BLACK_PIECES])
-	      == (CP_8_MASK | CP_E_MASK))) {
+	($piece_type, $piece_color) = $self->pieceAtShift(CP_E8);
+	if (!($piece_type && $piece_type == CP_KING && $piece_color == CP_BLACK)) {
 		$castling =~ s/kq//;
 	}
 
 	if ($castling =~ /K/) {
-		if ($self->[CP_POS_WHITE_PIECES]
-		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
-		    & CP_1_MASK & CP_H_MASK) {
+		($piece_type, $piece_color) = $self->pieceAtShift(CP_H1);
+		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_WHITE) {
 			_cp_pos_info_set_white_king_side_castling_right($pos_info, 1);
 		}
 	}
 	if ($castling =~ /Q/) {
-		if ($self->[CP_POS_WHITE_PIECES]
-		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
-		    & CP_1_MASK & CP_A_MASK) {
+		($piece_type, $piece_color) = $self->pieceAtShift(CP_A1);
+		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_WHITE) {
 			_cp_pos_info_set_white_queen_side_castling_right($pos_info, 1);
 		}
 	}
 	if ($castling =~ /k/) {
-		if ($self->[CP_POS_BLACK_PIECES]
-		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
-		    & CP_8_MASK & CP_H_MASK) {
+		($piece_type, $piece_color) = $self->pieceAtShift(CP_H8);
+		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_BLACK) {
 			_cp_pos_info_set_black_king_side_castling_right($pos_info, 1);
 		}
 	}
 	if ($castling =~ /q/) {
-		if ($self->[CP_POS_BLACK_PIECES]
-		    & $self->[CP_POS_ROOKS] & ~$self->[CP_POS_BISHOPS]
-		    & CP_8_MASK & CP_A_MASK) {
+		($piece_type, $piece_color) = $self->pieceAtShift(CP_A8);
+		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_BLACK) {
 			_cp_pos_info_set_black_queen_side_castling_right($pos_info, 1);
 		}
 	}
@@ -1063,7 +1061,7 @@ sub movePiece {
 	return cp_move_piece $move;
 }
 
-sub coordinateNotation {
+sub moveCoordinateNotation {
 	my (undef, $move) = @_;
 
 	return cp_move_coordinate_notation $move;
@@ -1523,7 +1521,7 @@ sub toFEN {
 		$fen .= '- ';
 	}
 
-	if (cp_pos_ep_shift $self) {
+	if ($self->enPassantShift) {
 		$fen .= $self->shiftToSquare($self->enPassantShift);
 	} else {
 		$fen .= '-';
@@ -1594,7 +1592,7 @@ sub SAN {
 
 	my $san = $pieces[$piece];
 
-	my $from_board = $self->[CP_POS_WHITE_PIECES + cp_pos_to_move($self)]
+	my $from_board = $self->[CP_POS_WHITE_PIECES + $self->toMove]
 		& $self->[CP_POS_BLACK_PIECES + $piece];
 
 	# Or use legalMoves?
@@ -1606,7 +1604,7 @@ sub SAN {
 	my (%files, %ranks);
 	my $candidates = 0;
 	foreach my $cmove (@cmoves) {
-		my ($cfrom, $cto) = (cp_move_from($cmove), cp_move_to($cmove));
+		my ($cfrom, $cto) = ($self->moveFrom($cmove), $self->moveTo($cmove));
 		next if $cto != $to;
 
 		++$candidates;
@@ -1649,7 +1647,7 @@ sub SAN {
 	$san .= $self->shiftToSquare($to);
 
 	my $copy = $self->copy;
-	if ($copy->doMove($move) && cp_pos_in_check $copy) {
+	if ($copy->doMove($move) && $copy->inCheck) {
 		my @moves = $copy->legalMoves;
 		if (!@moves) {
 			$san .= '#';
@@ -1756,7 +1754,7 @@ sub __parseSAN {
 	}
 
 	# Get the legal moves.
-	my @legal = $self->movesInCoordinateNotation($self->legalMoves);
+	my @legal = $self->movesCoordinateNotation($self->legalMoves);
 
 	# Prefix every move with the piece that moves.
 	my @pieces = qw(X P N B R Q K);
@@ -1839,7 +1837,7 @@ sub perftByUndoWithOutput {
 	foreach my $move (@moves) {
 		my $undo_info = $self->doMove($move) or next;
 
-		my $movestr = cp_move_coordinate_notation $move;
+		my $movestr = $self->moveCoordinateNotation($move);
 
 		$fh->print("$movestr: ");
 
@@ -1886,7 +1884,7 @@ sub perftByCopyWithOutput {
 		my $copy = bless [@$pos], 'Chess::Position';
 		$copy->doMove($move) or next;
 
-		my $movestr = cp_move_coordinate_notation $move;
+		my $movestr = $copy->moveCoordinateNotation($move);
 
 		$fh->print("$movestr: ");
 
@@ -2284,11 +2282,11 @@ sub dumpInfo {
 	return $output;
 }
 
-sub movesInCoordinateNotation {
+sub movesCoordinateNotation {
 	my ($class, @moves) = @_;
 
 	foreach my $move (@moves) {
-		$move = $class->coordinateNotation($move);
+		$move = $class->moveCoordinateNotation($move);
 	}
 
 	return @moves;
@@ -2448,8 +2446,8 @@ foreach my $m1 (
 	my $m2 = $m1;
 	my @shifts;
 	while ($m2) {
-		push @shifts, cp_bb_count_trailing_zbits $m2;
-		$m2 = cp_bb_clear_least_set $m2;
+		push @shifts, bitboardCountTrailingZbits(undef, $m2);
+		$m2 = bitboardClearLeastSet(undef, $m2);
 	}
 
 	foreach my $i (@shifts) {
@@ -2482,8 +2480,8 @@ foreach my $m1 (
 	my $m2 = $m1;
 	my @shifts;
 	while ($m2) {
-		push @shifts, cp_bb_count_trailing_zbits $m2;
-		$m2 = cp_bb_clear_least_set $m2;
+		push @shifts, bitboardCountTrailingZbits(undef, $m2);
+		$m2 = bitboardClearLeastSet(undef, $m2);
 	}
 
 	foreach my $i (@shifts) {
@@ -2511,6 +2509,7 @@ $castling_rook_move_masks[CP_G8] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
 
 # The indices are the original squares of the rooks.
 @castling_rook_masks = (0) x 64;
+# FIXME! Or these values right away.
 $castling_rook_masks[CP_H1] = 0x1;
 $castling_rook_masks[CP_A1] = 0x2;
 $castling_rook_masks[CP_H8] = 0x4;
