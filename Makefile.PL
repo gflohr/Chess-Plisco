@@ -22,19 +22,15 @@ use strict;
 
 use Config;
 
-if ($Config{ivsize} < 80) {
+if ($Config{ivsize} < 8) {
 	die "OS unsupported: no support for 64-bit integers.\n";
 }
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Representation of a chess position with move generator, legality checker etc.",
   "AUTHOR" => "Guido Flohr <guido.flohr\@cantanea.com>",
-  "BUILD_REQUIRES" => {
-    "Module::Build" => "0.28"
-  },
   "CONFIGURE_REQUIRES" => {
-    "ExtUtils::MakeMaker" => 0,
-    "Module::Build" => "0.28"
+    "ExtUtils::MakeMaker" => 0
   },
   "DISTNAME" => "Chess-Position",
   "LICENSE" => "unrestricted",
@@ -51,7 +47,8 @@ my %WriteMakefileArgs = (
     "constant" => 0,
     "integer" => 0,
     "overload" => 0,
-    "strict" => 0
+    "strict" => 0,
+    "warnings" => 0
   },
   "TEST_REQUIRES" => {
     "Chess::PGN::Parse" => 0,
@@ -75,7 +72,6 @@ my %FallbackPrereqs = (
   "File::Spec" => 0,
   "Filter::Util::Call" => 0,
   "Locale::TextDomain" => 0,
-  "Module::Build" => "0.28",
   "PPI::Document" => 0,
   "Scalar::Util" => 0,
   "Test::More" => 0,
@@ -84,7 +80,8 @@ my %FallbackPrereqs = (
   "constant" => 0,
   "integer" => 0,
   "overload" => 0,
-  "strict" => 0
+  "strict" => 0,
+  "warnings" => 0
 );
 
 unless ( eval { ExtUtils::MakeMaker->VERSION('6.63_03') } ) {
