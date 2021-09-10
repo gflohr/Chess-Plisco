@@ -314,7 +314,17 @@ sub _expand_placeholder {
 sub preprocess {
 	my ($content) = @_;
 
-	my ($code, $tail) = split /\n# *__NO_MACROS__.*\n/, $content;
+	my ($head, $code, $tail);
+
+	if ($content =~ /(.*\n)# *__BEGIN_MACROS__.*?\n(.*\n)# *__END_MACROS__.*?\n(.*)/s) {
+		($head, $code, $tail) = ($1, $2, $3);
+		$head .= "\n";
+		$tail = "\n$tail";
+	} else {
+		$head = '';
+		$code = $content;
+		$tail = '';
+	}
 
 	my $source = PPI::Document->new(\$code);
 
@@ -333,7 +343,7 @@ sub preprocess {
 		_expand $parent, $invocation;
 	}
 
-	return $source->content . $tail;
+	return $head . $source->content . $tail;
 }
 
 sub _define {

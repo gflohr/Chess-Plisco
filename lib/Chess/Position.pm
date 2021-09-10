@@ -303,6 +303,9 @@ use constant CP_MAGICMOVES_R_MASK => \@magicmoves_r_mask;
 use constant CP_MAGICMOVESBDB => \@magicmovesbdb;
 use constant CP_MAGICMOVESRDB => \@magicmovesrdb;
 
+# Do not remove this line!
+# __BEGIN_MACROS__
+
 sub new {
 	my ($class, $fen) = @_;
 
@@ -763,8 +766,7 @@ sub movePinned {
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
 
-	return _cp_pos_move_pinned $self, $from, $to,
-		cp_pos_king_shift($self), $my_pieces, $her_pieces;
+	return _cp_pos_move_pinned $self, $from, $to, cp_pos_king_shift($self), $my_pieces, $her_pieces;
 }
 
 sub doMove {
@@ -793,8 +795,7 @@ sub doMove {
 	#
 	# Checks number two and three are done below, and only for king moves.
 	# Check number 4 is done below for en passant moves.
-	return if _cp_pos_move_pinned $self, $from, $to, $king_shift,
-		$my_pieces, $her_pieces;
+	return if _cp_pos_move_pinned $self, $from, $to, $king_shift, $my_pieces, $her_pieces;
 
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
@@ -1169,10 +1170,8 @@ sub bitboardCountTrailingZbits {
 	return cp_bb_count_trailing_zbits $bitboard;
 }
 
-# Macros below this line will not be expanded.  In other words, everything
-# that is not performance critical or does not require macros, should go
-# below this line.
-# __NO_MACROS__
+# Do not remove this line!
+# __END_MACROS__
 
 my @export_accessors = qw(
 	CP_POS_WHITE_PIECES CP_POS_BLACK_PIECES
