@@ -42,6 +42,8 @@ use overload '""' => sub { shift->toFEN };
 
 use Locale::TextDomain qw('Chess-Position');
 use Scalar::Util qw(reftype);
+use Config;
+
 use Chess::Position::Macro;
 
 use base qw(Exporter);
@@ -1217,16 +1219,23 @@ my @export_magicmoves = qw(
 	CP_MAGICMOVESRDB
 );
 
+my @export_aux = qw(CP_INT_SIZE CP_CHAR_BIT);
+
 our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors,
-		@export_magicmoves);
+		@export_magicmoves, @export_aux);
 
 our %EXPORT_TAGS = (
 	accessors => [@export_accessors],
 	pieces => [@export_pieces],
 	board => [@export_board],
 	magicmoves => [@export_magicmoves],
+	aux => [@export_aux],
 	all => [@EXPORT_OK],
 );
+
+# Bit twiddling stuff.
+use constant CP_INT_SIZE => $Config{ivsize};
+use constant CP_CHAR_BIT => 8;
 
 # Diagonals parallel to a1-h8.
 use constant CP_A1A1_MASK => 0x0000000000000001;
