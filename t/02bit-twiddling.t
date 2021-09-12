@@ -12,7 +12,8 @@
 use strict;
 use integer;
 
-use Test::More;
+use Test::More tests => 19;
+use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
 my ($bitboard, $count);
@@ -78,5 +79,8 @@ is(cp_bb_clear_least_set($bitboard), 0x2,
 $bitboard = 0xffff_ffff_ffff_ffff;
 is(cp_bb_clear_least_set($bitboard), -2,
 	"cp_bb_clear_least_set($bitboard)");
+
+is(cp_abs(2304), 2304, "cp_abs(2304)");
+is(cp_abs(-2304), 2304, "cp_abs(-2304)");
 
 done_testing;
