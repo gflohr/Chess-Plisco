@@ -327,7 +327,7 @@ own pieces.
 
 =back
 
-=head2 Bit-fiddling Macros
+=head2 Bit-twiddling Macros
 
 =over 4
 
