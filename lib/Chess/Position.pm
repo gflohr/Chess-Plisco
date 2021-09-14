@@ -1166,7 +1166,7 @@ sub SEE {
 	}
 
 	my $bishop_mask = cp_mm_bmagic($to, $occupancy) & $not_from_mask;
-	my $rook_mask = cp_mm_bmagic($to, $occupancy) & $not_from_mask;
+	my $rook_mask = cp_mm_rmagic($to, $occupancy) & $not_from_mask;
 	my $queen_mask = $bishop_mask | $rook_mask;
 
 	my $bishops = cp_pos_bishops($self);
