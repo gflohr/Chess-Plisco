@@ -33,6 +33,11 @@
 # Make Dist::Zilla happy.
 # ABSTRACT: Representation of a chess position with move generator, legality checker etc.
 
+# Welcome to the world of spaghetti code!  It is deliberately ugly because
+# trying to avoid function/method call overhead is one of the major goals.
+# In the future it may make sense to try to make the code more readable by
+# more extensive use of Chess::Position::Macro.
+
 package Chess::Position;
 
 use strict;
@@ -61,8 +66,8 @@ use constant CP_ROOK => 4;
 use constant CP_QUEEN => 5;
 use constant CP_KING => 6;
 use constant CP_PAWN_VALUE => 100;
-use constant CP_KNIGHT_VALUE => 300;
-use constant CP_BISHOP_VALUE => 300;
+use constant CP_KNIGHT_VALUE => 310;
+use constant CP_BISHOP_VALUE => 320;
 use constant CP_ROOK_VALUE => 500;
 use constant CP_QUEEN_VALUE => 900;
 
@@ -290,6 +295,14 @@ my @castling_rights_rook_masks;
 # victim and promotion piece.
 my @material_deltas;
 
+# This table is used in the static exchange evaluation in order to
+# detect x-ray attacks. It gives a mask of all squares that will
+# attack the destination square if a piece moves from the start square to the
+# destination square. Example: The "obscured mask" of the bishop move "d3e6"
+# is a bitboard with the squares "b1" and "c2" because a queen or bishop on one
+# of these two squares will attack "e6", when the bishop moves there.
+my @obscured_masks;
+
 my @magicmovesbdb;
 my @magicmovesrdb;
 
@@ -304,6 +317,9 @@ use constant CP_MAGICMOVES_B_MASK => \@magicmoves_b_mask;
 use constant CP_MAGICMOVES_R_MASK => \@magicmoves_r_mask;
 use constant CP_MAGICMOVESBDB => \@magicmovesbdb;
 use constant CP_MAGICMOVESRDB => \@magicmovesrdb;
+
+my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
+	CP_ROOK_VALUE, CP_QUEEN_VALUE);
 
 # Do not remove this line!
 # __BEGIN_MACROS__
@@ -1072,6 +1088,263 @@ sub moveCoordinateNotation {
 	my (undef, $move) = @_;
 
 	return cp_move_coordinate_notation $move;
+}
+
+sub SEE {
+	my ($self, $move) = @_;
+
+	my $to = cp_move_to $move;
+	my $from = cp_move_from $move;
+	my $not_from_mask = ~(1 << ($from));
+	my $pos_info = cp_pos_info($self);
+	my $ep_shift = cp_pos_info_ep_shift($pos_info);
+	my $move_is_ep = ($ep_shift && $to == $ep_shift
+		&& cp_move_piece($move == CP_PAWN));
+	my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self));
+	# FIXME! This is possible without a branch.
+	if ($move_is_ep) {
+		$occupancy &= ~(1 << $ep_pawn_masks[$to])
+	}
+
+	my $to_mask = 1 << $to;
+	my $maybe_promote = $to_mask & (CP_1_MASK | CP_8_MASK);
+	my $shifted_pawn_value = ($maybe_promote
+		? CP_QUEEN_VALUE - CP_PAWN_VALUE
+		: CP_PAWN_VALUE) << 8;
+
+	my (@white_attackers, @black_attackers, $mask);
+
+	# Now generate all squares that are attacking the target square.  This is
+	# done in order of piece value.  We silently assume here this relationship:
+	#
+	#   P < N <= B < R < Q (< K)
+	#
+	# But this does not seem to be any restriction.
+	#
+	# For each attack vector we store the piece value shifted 8 bits to the
+	# right ORed with the from shift.
+
+	my $white_pieces = cp_pos_white_pieces($self);
+	my $black_pieces = cp_pos_black_pieces($self);
+
+	my $pawns = cp_pos_pawns($self);
+	# We have to use the opposite pawn masks because we want to get the
+	# attacking squares of the target square, and not the attacked squares
+	# of the start square.
+	$mask = $pawn_masks[CP_BLACK]->[2]->[$to] & $pawns
+		& $white_pieces & $not_from_mask;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @white_attackers, ($afrom | $shifted_pawn_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+	$mask = $pawn_masks[CP_WHITE]->[2]->[$to] & $pawns
+		& $black_pieces & $not_from_mask;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @black_attackers, ($afrom | $shifted_pawn_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+
+	my $knights = cp_pos_knights($self);
+	my $shifted_knight_value = CP_KNIGHT_VALUE << 8;
+	$mask = $knight_attack_masks[$to] & $knights & $not_from_mask;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @white_attackers, ($afrom | $shifted_knight_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+	$mask = $knight_attack_masks[$to] & $knights & $not_from_mask;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @black_attackers, ($afrom | $shifted_knight_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+
+	my $bishop_mask = cp_mm_bmagic($to, $occupancy) & $not_from_mask;
+	my $rook_mask = cp_mm_bmagic($to, $occupancy) & $not_from_mask;
+	my $queen_mask = $bishop_mask | $rook_mask;
+
+	my $bishops = cp_pos_bishops($self);
+	my $shifted_bishop_value = CP_BISHOP_VALUE << 8;
+	$mask = $bishop_mask & $bishops & $white_pieces;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @white_attackers, ($afrom | $shifted_bishop_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+	$mask = $bishop_mask & $bishops & $black_pieces;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @black_attackers, ($afrom | $shifted_bishop_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+
+	my $rooks = cp_pos_rooks($self);
+	my $shifted_rook_value = CP_ROOK_VALUE << 8;
+	$mask = $rook_mask & $rooks & $white_pieces;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @white_attackers, ($afrom | $shifted_rook_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+	$mask = $rook_mask & $rooks & $black_pieces;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @black_attackers, ($afrom | $shifted_rook_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+
+	my $queens = cp_pos_queens($self);
+	my $shifted_queen_value = CP_QUEEN_VALUE << 8;
+	$mask = $queen_mask & $queens & $white_pieces;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @white_attackers, ($afrom | $shifted_queen_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+	$mask = $queen_mask & $queens & $black_pieces;
+	while ($mask) {
+		my $afrom = cp_bb_count_trailing_zbits $mask;
+
+		push @black_attackers, ($afrom | $shifted_queen_value);
+		$mask = cp_bb_clear_least_set($mask);
+	}
+
+	my $kings = cp_pos_kings($self);
+	my $shifted_king_value = 9999 << 8;
+	$mask = $king_attack_masks[$to] & $kings & $white_pieces;
+	if ($mask) {
+		my $afrom = cp_bb_count_isolated_trailing_zbits $mask;
+
+		push @white_attackers, ($afrom | $shifted_king_value);
+	}
+	$mask = $king_attack_masks[$to] & $kings & $black_pieces;
+	if ($mask) {
+		my $afrom = cp_bb_count_isolated_trailing_zbits $mask;
+
+		push @black_attackers, ($afrom | $shifted_king_value);
+	}
+
+	$occupancy &= $not_from_mask;
+
+	my $victim;
+	if ($to_mask & $pawns) {
+		$victim = CP_PAWN;
+	} elsif ($to_mask & $knights) {
+		$victim = CP_KNIGHT;
+	} elsif ($to_mask & $bishops) {
+		$victim = CP_BISHOP;
+	} elsif ($to_mask & $rooks) {
+		$victim = CP_ROOK;
+	} else {
+		$victim = CP_QUEEN;
+	}
+
+	my $side_to_move = !cp_pos_to_move($self);
+	my @gain = ($piece_values[$victim]);
+	my $attacker_value = $piece_values[cp_move_piece($move)];
+	my $promote = cp_move_promote($move);
+	if ($promote) {
+		$attacker_value = $piece_values[$promote];
+		$gain[0] += $attacker_value - CP_PAWN_VALUE;
+	}
+
+	my $white = cp_pos_white_pieces $self;
+	my $black = cp_pos_black_pieces $self;
+	my $sliding_mask = $bishops | $rooks | $queens;
+	my $sliding_rooks_mask = $rooks | $queens;
+	my $sliding_bishops_mask = $bishops | $queens;
+	my $depth = 0;
+	my @attackers = (\@white_attackers, \@black_attackers);
+
+	while (1) {
+		++$depth;
+
+		# FIXME! Rather remember the last gain in order to save an array
+		# dereferencing.
+		$gain[$depth] = $attacker_value - $gain[$depth - 1];
+
+		# Add x-ray attackers.
+		my $obscured_mask = $obscured_masks[$from]->[$to];
+		if ($sliding_mask & $obscured_mask) {
+			# This is the slow part.
+			my $is_rook_move = (($from & 7) == ($to & 7))
+				or (($from & 56) == ($to & 56));
+			my ($piece, $color);
+			if ($is_rook_move && ($obscured_mask & $sliding_rooks_mask)) {
+				$mask = $sliding_rooks_mask & cp_mm_rmagic($to, $occupancy);
+				$piece = CP_ROOK;
+			} elsif (!$is_rook_move && ($obscured_mask & $sliding_bishops_mask)) {
+				$mask = $sliding_bishops_mask & cp_mm_bmagic($to, $occupancy);
+				$piece = CP_BISHOP;
+			}
+			if ($obscured_mask & $mask) {
+				my $piece_mask;
+
+				if ($from > $to) {
+					$piece_mask = cp_bb_clear_but_most_set($obscured_mask & $mask);
+				} else {
+					$piece_mask = cp_bb_clear_but_least_set($obscured_mask & $mask);
+				}
+				if ($piece_mask) {
+					if ($piece_mask & $white) {
+						$color = CP_WHITE;
+					} else {
+						$color = CP_BLACK;
+					}
+					if ($piece_mask & $queens) {
+						$piece = CP_QUEEN;
+					}
+				}
+
+				# Now insert the x-ray attacker into the list.  Since the
+				# piece is encoded in the upper bytes, we can do a simple,
+				# unmasked comparison.
+				my $attackers_array = $attackers[$color];
+				my $item = ($piece_values[$piece] << 8)
+					| cp_bb_count_isolated_trailing_zbits($piece_mask);
+					unshift @$attackers_array, $item;
+				foreach my $i (0.. @$attackers_array - 2) {
+					last if $attackers_array->[$i] <= $attackers_array->[$i + 1];
+					($attackers_array->[$i], $attackers_array->[$i+1])
+						= ($attackers_array->[$i + 1], $attackers_array->[$i]);
+				}
+			}
+		}
+
+		my $attacker_def = shift @{$attackers[$side_to_move]};
+		if (!$attacker_def) {
+			last;
+		}
+
+		$attacker_value = $attacker_def >> 8;
+		$from = $attacker_def & 0xff;
+
+		# Can we prune?
+		if (cp_max(-$gain[$depth - 1], $gain[$depth]) < 0) {
+			last;
+		}
+
+		$occupancy &= ~(1 << $from);
+
+		$side_to_move = !$side_to_move;
+	}
+
+	while (--$depth) {
+		$gain[$depth - 1]= -(cp_max(-$gain[$depth - 1], $gain[$depth]));
+	}
+
+	return $gain[0];
 }
 
 sub parseMove {
@@ -2537,6 +2810,30 @@ foreach my $victim (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEE
 			($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
 		$material_deltas[CP_BLACK | ($promote << 1) | ($victim << 4)] =
 			-($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
+	}
+}
+
+# Obscured masks.
+#
+# If a sliding pieces moves from FROM to TO, sliding pieces of the same type
+# may now also attack TO.  The obscured_masks give the answer to the question
+# which squares had been previously obscured.
+foreach my $from (0 .. 63) {
+	$obscured_masks[$from] = [(0) x 64];
+	my $from_mask = 1 << $from;
+	foreach my $to (0 .. 63) {
+		my $common = $common_lines[$from]->[$to] or next;
+
+		my ($type, $diagonal, $common) = @$common;
+
+		# If $from is less than $to, all bits of the diagonal that are less
+		# than from constitute the obscure squares, otherwise all bits that are
+		# greater than from.
+		if ($from < $to) {
+			$obscured_masks[$from]->[$to] = $diagonal & ($from_mask - 1);
+		} else {
+			$obscured_masks[$from]->[$to] = $diagonal & ~($from_mask - 1) & ~$from_mask;
+		}
 	}
 }
 
