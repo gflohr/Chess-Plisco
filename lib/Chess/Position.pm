@@ -1124,15 +1124,15 @@ sub SEE {
 	# For each attack vector we store the piece value shifted 8 bits to the
 	# right ORed with the from shift.
 
-	my $white_pieces = cp_pos_white_pieces($self);
-	my $black_pieces = cp_pos_black_pieces($self);
+	my $white = cp_pos_white_pieces($self);
+	my $black = cp_pos_black_pieces($self);
 
 	my $pawns = cp_pos_pawns($self);
 	# We have to use the opposite pawn masks because we want to get the
 	# attacking squares of the target square, and not the attacked squares
 	# of the start square.
 	$mask = $pawn_masks[CP_BLACK]->[2]->[$to] & $pawns
-		& $white_pieces & $not_from_mask;
+		& $white & $not_from_mask;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
@@ -1140,7 +1140,7 @@ sub SEE {
 		$mask = cp_bb_clear_least_set($mask);
 	}
 	$mask = $pawn_masks[CP_WHITE]->[2]->[$to] & $pawns
-		& $black_pieces & $not_from_mask;
+		& $black & $not_from_mask;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
@@ -1150,14 +1150,14 @@ sub SEE {
 
 	my $knights = cp_pos_knights($self);
 	my $shifted_knight_value = CP_KNIGHT_VALUE << 8;
-	$mask = $knight_attack_masks[$to] & $knights & $not_from_mask;
+	$mask = $knight_attack_masks[$to] & $knights & $white & $not_from_mask;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_knight_value);
 		$mask = cp_bb_clear_least_set($mask);
 	}
-	$mask = $knight_attack_masks[$to] & $knights & $not_from_mask;
+	$mask = $knight_attack_masks[$to] & $knights & $black & $not_from_mask;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
@@ -1171,14 +1171,14 @@ sub SEE {
 
 	my $bishops = cp_pos_bishops($self);
 	my $shifted_bishop_value = CP_BISHOP_VALUE << 8;
-	$mask = $bishop_mask & $bishops & $white_pieces;
+	$mask = $bishop_mask & $bishops & $white;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_bishop_value);
 		$mask = cp_bb_clear_least_set($mask);
 	}
-	$mask = $bishop_mask & $bishops & $black_pieces;
+	$mask = $bishop_mask & $bishops & $black;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
@@ -1188,14 +1188,14 @@ sub SEE {
 
 	my $rooks = cp_pos_rooks($self);
 	my $shifted_rook_value = CP_ROOK_VALUE << 8;
-	$mask = $rook_mask & $rooks & $white_pieces;
+	$mask = $rook_mask & $rooks & $white;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_rook_value);
 		$mask = cp_bb_clear_least_set($mask);
 	}
-	$mask = $rook_mask & $rooks & $black_pieces;
+	$mask = $rook_mask & $rooks & $black;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
@@ -1205,14 +1205,14 @@ sub SEE {
 
 	my $queens = cp_pos_queens($self);
 	my $shifted_queen_value = CP_QUEEN_VALUE << 8;
-	$mask = $queen_mask & $queens & $white_pieces;
+	$mask = $queen_mask & $queens & $white;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_queen_value);
 		$mask = cp_bb_clear_least_set($mask);
 	}
-	$mask = $queen_mask & $queens & $black_pieces;
+	$mask = $queen_mask & $queens & $black;
 	while ($mask) {
 		my $afrom = cp_bb_count_trailing_zbits $mask;
 
@@ -1222,13 +1222,13 @@ sub SEE {
 
 	my $kings = cp_pos_kings($self);
 	my $shifted_king_value = 9999 << 8;
-	$mask = $king_attack_masks[$to] & $kings & $white_pieces;
+	$mask = $king_attack_masks[$to] & $kings & $white;
 	if ($mask) {
 		my $afrom = cp_bb_count_isolated_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_king_value);
 	}
-	$mask = $king_attack_masks[$to] & $kings & $black_pieces;
+	$mask = $king_attack_masks[$to] & $kings & $black;
 	if ($mask) {
 		my $afrom = cp_bb_count_isolated_trailing_zbits $mask;
 
@@ -1259,8 +1259,6 @@ sub SEE {
 		$gain[0] += $attacker_value - CP_PAWN_VALUE;
 	}
 
-	my $white = cp_pos_white_pieces $self;
-	my $black = cp_pos_black_pieces $self;
 	my $sliding_mask = $bishops | $rooks | $queens;
 	my $sliding_rooks_mask = $rooks | $queens;
 	my $sliding_bishops_mask = $bishops | $queens;

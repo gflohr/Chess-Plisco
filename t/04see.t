@@ -33,7 +33,7 @@ my @tests = (
 	[
 		"4r1k1/5pp1/nbp4p/1p2p2q/1P2P1b1/1BP2N1P/1B2QPPK/3R4 b - -",
 		"Bxf3",
-		0
+		CP_KNIGHT_VALUE - CP_BISHOP_VALUE
 	],
 	[
 		"2r1r1k1/pp1bppbp/3p1np1/q3P3/2P2P2/1P2B3/P1N1B1PP/2RQ1RK1 b - -",
