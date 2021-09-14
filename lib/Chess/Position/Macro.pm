@@ -153,6 +153,10 @@ _define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
 
 # Bit twiddling.
 _define_from_file cp_abs => '$v', 'abs.pm';
+# At least as fast as the versions w/o branching for example
+# a - ((a -b) & ((a - b) >> 63)), and there are no overflow issues.
+_define cp_max => '$A', '$B', '((($A) > ($B)) ? ($A) : ($B))';
+_define cp_min => '$A', '$B', '((($A) < ($B)) ? ($A) : ($B))';
 
 sub import {
 	my ($type) = @_;
