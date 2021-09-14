@@ -12,7 +12,7 @@
 use strict;
 use integer;
 
-use Test::More tests => 23;
+use Test::More tests => 28;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
@@ -88,4 +88,25 @@ is(cp_max(-2304, -1303), -1303, "cp_max(-2304, -1303)");
 is(cp_min(2304, 1303), 1303, "cp_min(2304, 1303)");
 is(cp_min(-2304, -1303), -2304, "cp_min(-2304, -1303)");
 
-done_testing;
+$bitboard = 0xf;
+is(cp_bb_clear_but_most_set($bitboard), 0x8, "cp_bb_clear_but_most_set($bitboard)");
+
+$bitboard = 0xffff_ffff_ffff_ffff;
+is(cp_bb_clear_but_most_set($bitboard), 0x8000_0000_0000_0000,
+	"cp_bb_clear_but_most_set($bitboard)");
+
+$bitboard = 0x0000_0000_0000_0088;
+is(cp_bb_clear_but_most_set($bitboard), 0x0000_0000_0000_0080,
+	"cp_bb_clear_but_most_set($bitboard)");
+
+$bitboard = 0x0000_0000_0000_8800;
+is(cp_bb_clear_but_most_set($bitboard), 0x0000_0000_0000_8000,
+	"cp_bb_clear_but_most_set($bitboard)");
+
+$bitboard = 0x8800_0000_0000_0000;
+is(cp_bb_clear_but_most_set($bitboard), 0x8000_0000_0000_0000,
+	"cp_bb_clear_but_most_set($bitboard)");
+
+$bitboard = 0x8000_0000_0000_0000;
+is(cp_bb_clear_but_most_set($bitboard), 0x0000_0000_0000_0000,
+	"cp_bb_clear_but_most_set($bitboard)");
