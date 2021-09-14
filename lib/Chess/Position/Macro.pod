@@ -327,7 +327,7 @@ own pieces.
 
 =back
 
-=head2 Bit-twiddling Macros
+=head2 Bitboard Macros
 
 =over 4
 
@@ -335,21 +335,15 @@ own pieces.
 
 Count the number of bits set in B<BITBOARD> and save it in B<COUNT>.
 
-L-value: no.
-
 =item B<cp_bb_clear_but_least_set(BITBOARD)>
 
 Clear all bits but the least significant one in B<BITBOARD>.
 
 Important! This works only under the "use integer" pragma!
 
-L-value: no.
-
 =item B<cp_bb_count_isolated_trailing_zbits(BITBOARD)>
 
 Count trailing zero bits in B<BITBOARD>.  Only works for B<BITBOARD> != 0!
-
-L-value: no.
 
 =back
 
@@ -362,42 +356,34 @@ L-value: no.
 Calculate a bit shift offset (0-63) for the square that B<FILE> (0-7) and
 B<RANK> (0-7) point to.
 
-L-value: no.
-
 =item B<cp_shift_to_coordinates(SHIFT)>
 
 Calculate the file (0-7) and rank (0-7) for the bit shift offset B<SHIFT>
 (0-63).
-
-L-value: no.
 
 =item B<cp_coordinates_to_square(FILE, RANK)>
 
 Calculate the square in coordinate notation ("e4", "c5", ...) for
 B<FILE> (0-7) and B<RANK> (0-7).
 
-L-value: no.
-
 =item B<cp_square_to_coordinates(SQUARE)>
 
 Calculate the file (0-7) and rank (0-7) for the B<SQUARE> in coordinate
 notation ("e4", "c5", ...).
-
-L-value: no.
 
 =item B<cp_square_to_shift(SQUARE)>
 
 Calculate the bit shift offset (0-63) for the B<SQUARE> in coordinate
 notation ("e4", "c5", ...).
 
-L-value: no.
-
 =item B<cp_shift_to_square(SHIFT)>
 
 Calculate the square in coordinate notation ("e4", "c5", ...) for the bit shift
 offset B<SHIFT> (0-63).
 
-L-value: no.
+=item B<cp_abs(INTEGER)>
+
+Calculate the absolve value of B<INTEGER> without branching.
 
 =back
 
