@@ -12,7 +12,7 @@
 use strict;
 use integer;
 
-use Test::More tests => 19;
+use Test::More tests => 23;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
@@ -82,5 +82,10 @@ is(cp_bb_clear_least_set($bitboard), -2,
 
 is(cp_abs(2304), 2304, "cp_abs(2304)");
 is(cp_abs(-2304), 2304, "cp_abs(-2304)");
+
+is(cp_max(2304, 1303), 2304, "cp_max(2304, 1303)");
+is(cp_max(-2304, -1303), -1303, "cp_max(-2304, -1303)");
+is(cp_min(2304, 1303), 1303, "cp_min(2304, 1303)");
+is(cp_min(-2304, -1303), -2304, "cp_min(-2304, -1303)");
 
 done_testing;
