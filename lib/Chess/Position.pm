@@ -1099,11 +1099,11 @@ sub SEE {
 	my $pos_info = cp_pos_info($self);
 	my $ep_shift = cp_pos_info_ep_shift($pos_info);
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
-		&& cp_move_piece($move == CP_PAWN));
+		&& cp_move_piece($move) == CP_PAWN);
 	my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self));
 	# FIXME! This is possible without a branch.
 	if ($move_is_ep) {
-		$occupancy &= ~(1 << $ep_pawn_masks[$to])
+		$occupancy &= ~$ep_pawn_masks[$to];
 	}
 
 	my $to_mask = 1 << $to;
@@ -1238,7 +1238,7 @@ sub SEE {
 	$occupancy &= $not_from_mask;
 
 	my $victim;
-	if ($to_mask & $pawns) {
+	if ($move_is_ep || ($to_mask & $pawns)) {
 		$victim = CP_PAWN;
 	} elsif ($to_mask & $knights) {
 		$victim = CP_KNIGHT;
