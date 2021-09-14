@@ -13,6 +13,7 @@ lib/Chess/Position.pm
 lib/Chess/Position.pod
 lib/Chess/Position/Macro.pm
 lib/Chess/Position/Macro.pod
+lib/Chess/Position/Macro/abs.pm
 lib/Chess/Position/Macro/attacked.pm
 lib/Chess/Position/Macro/countIsolatedTrailingZbits.pm
 lib/Chess/Position/Macro/countTrailingZbits.pm
@@ -30,7 +31,7 @@ perlcritic.rc
 t/00base.t
 t/01expand-placeholders.t
 t/01pre-process.t
-t/02bit-fiddling.t
+t/02bit-twiddling.t
 t/02piece-at.t
 t/02square-conversion.t
 t/03attacked.t
