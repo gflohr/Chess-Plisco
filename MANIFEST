@@ -15,6 +15,7 @@ lib/Chess/Position/Macro.pm
 lib/Chess/Position/Macro.pod
 lib/Chess/Position/Macro/abs.pm
 lib/Chess/Position/Macro/attacked.pm
+lib/Chess/Position/Macro/clearButMostSet.pm
 lib/Chess/Position/Macro/countIsolatedTrailingZbits.pm
 lib/Chess/Position/Macro/countTrailingZbits.pm
 lib/Chess/Position/Macro/infoUpdate.pm
@@ -48,6 +49,7 @@ t/04legal-moves.t
 t/04material.t
 t/04move-generator.t
 t/04move-legal.t
+t/04see.t
 t/05bugs.t
 t/05move-making-pgn.t
 t/05perft-by-copy.t
