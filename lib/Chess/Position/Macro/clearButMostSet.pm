@@ -33,7 +33,7 @@
 # In other words, yes, it is less efficient than the unodified algorithm.
 (do {
 	my $B = $bb;
-	if ($B & 0x8000_0000_0000_0000 && $B != 0x8000_0000_0000_0000) {
+	if ($B & 0x8000_0000_0000_0000) {
 		0x8000_0000_0000_0000;
 	} else {
 		$B |= $B >> 1;
