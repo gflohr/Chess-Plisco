@@ -12,7 +12,7 @@
 use strict;
 use integer;
 
-use Test::More tests => 28;
+use Test::More tests => 30;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
@@ -108,5 +108,9 @@ is(cp_bb_clear_but_most_set($bitboard), 0x8000_0000_0000_0000,
 	"cp_bb_clear_but_most_set($bitboard)");
 
 $bitboard = 0x8000_0000_0000_0000;
-is(cp_bb_clear_but_most_set($bitboard), 0x0000_0000_0000_0000,
+is(cp_bb_clear_but_most_set($bitboard), 0x8000_0000_0000_0000,
+	"cp_bb_clear_but_most_set($bitboard)");
+
+$bitboard = 0x0000_0010_0000_0000;
+is(cp_bb_clear_but_most_set($bitboard), 0x0000_0010_0000_0000,
 	"cp_bb_clear_but_most_set($bitboard)");
