@@ -740,7 +740,7 @@ additional information.
 Returns a string with the decoded position information as retured by
 L</info>.
 
-=item B<movesInCoordinateNotation(MOVES)>
+=item B<movesCoordinateNotation(MOVES)>
 
 Takes an array of moves (as integers) and converts it into an array of moves
 in coordinate notation.
