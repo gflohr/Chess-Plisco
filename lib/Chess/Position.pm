@@ -1252,10 +1252,11 @@ sub SEE {
 		$victim = CP_BISHOP;
 	} elsif ($to_mask & $rooks) {
 		$victim = CP_ROOK;
-	} elsif ($promote) {
-		$victim = CP_NO_PIECE;
 	} elsif ($to_mask & $queens) {
 		$victim = CP_QUEEN;
+	} else {
+		# For SEE purposes we have to assume that we do not underpromote.
+		$victim = CP_NO_PIECE;
 	}
 
 	my $side_to_move = !cp_pos_to_move($self);
@@ -1285,7 +1286,7 @@ sub SEE {
 			# This is the slow part.
 			my $is_rook_move = (($from & 7) == ($to & 7))
 				|| (($from & 56) == ($to & 56));
-			my ($piece, $color);
+			my $piece;
 			if ($is_rook_move && ($obscured_mask & $sliding_rooks_mask)) {
 				$mask = $sliding_rooks_mask & cp_mm_rmagic($to, $occupancy);
 				$piece = CP_ROOK;
@@ -1302,6 +1303,7 @@ sub SEE {
 					$piece_mask = cp_bb_clear_but_least_set($obscured_mask & $mask);
 				}
 				if ($piece_mask) {
+					my $color;
 					if ($piece_mask & $white) {
 						$color = CP_WHITE;
 					} else {
@@ -1310,19 +1312,19 @@ sub SEE {
 					if ($piece_mask & $queens) {
 						$piece = CP_QUEEN;
 					}
-				}
 
-				# Now insert the x-ray attacker into the list.  Since the
-				# piece is encoded in the upper bytes, we can do a simple,
-				# unmasked comparison.
-				my $attackers_array = $attackers[$color];
-				my $item = ($piece_values[$piece] << 8)
-					| cp_bb_count_isolated_trailing_zbits($piece_mask);
+					# Now insert the x-ray attacker into the list.  Since the
+					# piece is encoded in the upper bytes, we can do a simple,
+					# unmasked comparison.
+					my $attackers_array = $attackers[$color];
+					my $item = ($piece_values[$piece] << 8)
+						| cp_bb_count_isolated_trailing_zbits($piece_mask);
 					unshift @$attackers_array, $item;
-				foreach my $i (0.. @$attackers_array - 2) {
-					last if $attackers_array->[$i] <= $attackers_array->[$i + 1];
-					($attackers_array->[$i], $attackers_array->[$i+1])
-						= ($attackers_array->[$i + 1], $attackers_array->[$i]);
+					foreach my $i (0.. @$attackers_array - 2) {
+						last if $attackers_array->[$i] <= $attackers_array->[$i + 1];
+						($attackers_array->[$i], $attackers_array->[$i+1])
+							= ($attackers_array->[$i + 1], $attackers_array->[$i]);
+					}
 				}
 			}
 		}
