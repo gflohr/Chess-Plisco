@@ -66,8 +66,8 @@ use constant CP_ROOK => 4;
 use constant CP_QUEEN => 5;
 use constant CP_KING => 6;
 use constant CP_PAWN_VALUE => 100;
-use constant CP_KNIGHT_VALUE => 310;
-use constant CP_BISHOP_VALUE => 320;
+use constant CP_KNIGHT_VALUE => 300;
+use constant CP_BISHOP_VALUE => 300;
 use constant CP_ROOK_VALUE => 500;
 use constant CP_QUEEN_VALUE => 900;
 
@@ -301,6 +301,10 @@ my @material_deltas;
 # destination square. Example: The "obscured mask" of the bishop move "d3e6"
 # is a bitboard with the squares "b1" and "c2" because a queen or bishop on one
 # of these two squares will attack "e6", when the bishop moves there.
+#
+# FIXME! All multi-dimensional lookup tables that are using from and to as
+# their index, should changed to just use the lower 12 bits of the move
+# instead.  That saves us one array dereferencing.
 my @obscured_masks;
 
 my @magicmovesbdb;
@@ -1281,7 +1285,7 @@ sub SEE {
 		if ($sliding_mask & $obscured_mask) {
 			# This is the slow part.
 			my $is_rook_move = (($from & 7) == ($to & 7))
-				or (($from & 56) == ($to & 56));
+				|| (($from & 56) == ($to & 56));
 			my ($piece, $color);
 			if ($is_rook_move && ($obscured_mask & $sliding_rooks_mask)) {
 				$mask = $sliding_rooks_mask & cp_mm_rmagic($to, $occupancy);
