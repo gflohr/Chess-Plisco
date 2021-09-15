@@ -1104,7 +1104,9 @@ sub SEE {
 	my $ep_shift = cp_pos_info_ep_shift($pos_info);
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
 		&& cp_move_piece($move) == CP_PAWN);
-	my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self));
+	my $white = cp_pos_white_pieces($self);
+	my $black = cp_pos_black_pieces($self);
+	my $occupancy = $white | $black;
 
 	# FIXME! This is possible without a branch.
 	if ($move_is_ep) {
@@ -1128,9 +1130,6 @@ sub SEE {
 	#
 	# For each attack vector we store the piece value shifted 8 bits to the
 	# right ORed with the from shift.
-
-	my $white = cp_pos_white_pieces($self);
-	my $black = cp_pos_black_pieces($self);
 
 	my $pawns = cp_pos_pawns($self);
 	# We have to use the opposite pawn masks because we want to get the
@@ -1255,7 +1254,7 @@ sub SEE {
 		$victim = CP_ROOK;
 	} elsif ($promote) {
 		$victim = CP_NO_PIECE;
-	} else {
+	} elsif ($to_mask & $queens) {
 		$victim = CP_QUEEN;
 	}
 
