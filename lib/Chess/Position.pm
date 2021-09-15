@@ -1342,7 +1342,7 @@ sub SEE {
 			last;
 		}
 
-		$occupancy &= ~(1 << $from);
+		$occupancy -= (1 << $from);
 
 		$side_to_move = !$side_to_move;
 	}
