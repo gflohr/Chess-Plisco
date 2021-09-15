@@ -749,6 +749,129 @@ sub pseudoLegalMoves {
 	return @moves;
 }
 
+sub pseudoLegalAttacks {
+	my ($self) = @_;
+
+	my $pos_info = cp_pos_info $self;
+	my $to_move = cp_pos_info_to_move $pos_info;
+	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
+	my $occupancy = $my_pieces | $her_pieces;
+
+	my (@moves, $target_mask, $base_move);
+
+	# Generate king moves.  We take advantage of the fact that there is always
+	# exactly one king of each color on the board.  So there is no need for a
+	# loop.
+	my $king_mask = $my_pieces & cp_pos_kings $self;
+
+	my $from = cp_bb_count_isolated_trailing_zbits $king_mask;
+
+	$base_move = ($from << 6 | CP_KING << 15);
+
+	$target_mask = $her_pieces & $king_attack_masks[$from];
+
+	_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+	# Generate knight moves.
+	my $knight_mask = $my_pieces & cp_pos_knights $self;
+	while ($knight_mask) {
+		my $from = cp_bb_count_trailing_zbits $knight_mask;
+
+		$base_move = ($from << 6 | CP_KNIGHT << 15);
+	
+		$target_mask = $her_pieces & $knight_attack_masks[$from];
+
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+		$knight_mask = cp_bb_clear_least_set $knight_mask;
+	}
+
+	# Generate bishop moves.
+	my $bishop_mask = $my_pieces & cp_pos_bishops $self;
+	while ($bishop_mask) {
+		my $from = cp_bb_count_trailing_zbits $bishop_mask;
+
+		$base_move = ($from << 6 | CP_BISHOP << 15);
+	
+		$target_mask = cp_mm_bmagic($from, $occupancy) & $her_pieces;
+
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+		$bishop_mask = cp_bb_clear_least_set $bishop_mask;
+	}
+
+	# Generate rook moves.
+	my $rook_mask = $my_pieces & cp_pos_rooks $self;
+	while ($rook_mask) {
+		my $from = cp_bb_count_trailing_zbits $rook_mask;
+
+		$base_move = ($from << 6 | CP_ROOK << 15);
+	
+		$target_mask = cp_mm_rmagic($from, $occupancy) & $her_pieces;
+
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+		$rook_mask = cp_bb_clear_least_set $rook_mask;
+	}
+
+	# Generate queen moves.
+	my $queen_mask = $my_pieces & cp_pos_queens $self;
+	while ($queen_mask) {
+		my $from = cp_bb_count_trailing_zbits $queen_mask;
+
+		$base_move = ($from << 6 | CP_QUEEN << 15);
+	
+		$target_mask = 
+			(cp_mm_rmagic($from, $occupancy)
+				| cp_mm_bmagic($from, $occupancy))
+			& $her_pieces;
+
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+
+		$queen_mask = cp_bb_clear_least_set $queen_mask;
+	}
+
+	# Generate pawn moves.
+	my ($regular_mask, $double_mask, $promotion_mask, $offset) =
+		@{$pawn_aux_data[$to_move]};
+
+	my ($pawn_single_masks, $pawn_double_masks, $pawn_capture_masks) = 
+		@{$pawn_masks[$to_move]};
+
+	my $pawns = cp_pos_pawns $self;
+
+	my $pawn_mask;
+
+	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
+
+	# Pawn captures w/o promotions.
+	$pawn_mask = $my_pieces & $pawns & $regular_mask;
+	while ($pawn_mask) {
+		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+
+		$base_move = ($from << 6 | CP_PAWN << 15);
+		$target_mask = ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
+		_cp_moves_from_mask $target_mask, @moves, $base_move;
+		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+	}
+
+	# Pawn promotions including captures.
+	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
+	while ($pawn_mask) {
+		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+
+		$base_move = ($from << 6 | CP_PAWN << 15);
+		$target_mask = ($pawn_single_masks->[$from] & ~$her_pieces)
+			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
+		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
+		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+	}
+
+	return @moves;
+}
+
 # FIXME! Make this a macro!
 sub __update {
 	my ($self) = @_;
@@ -789,6 +912,12 @@ sub movePinned {
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
 
 	return _cp_pos_move_pinned $self, $from, $to, cp_pos_king_shift($self), $my_pieces, $her_pieces;
+}
+
+sub moveEquivalent {
+	my ($self, $m1, $m2) = @_;
+
+	return cp_move_equivalent $m1, $m2;
 }
 
 sub doMove {

@@ -118,6 +118,7 @@ _define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0
 _define cp_move_piece => '$m', '(($m >> 15) & 0x7)';
 _define cp_move_set_piece => '$m', '$a', '(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
+_define cp_move_equivalent => '$m1', '$m2', '(($m1 & 0x7fff) == ($m2 & 0x7fff))';
 
 # Bitboard macros.
 _define cp_bb_popcount => '$b', '$c',
