@@ -160,6 +160,9 @@ _define_from_file cp_abs => '$v', 'abs.pm';
 _define cp_max => '$A', '$B', '((($A) > ($B)) ? ($A) : ($B))';
 _define cp_min => '$A', '$B', '((($A) < ($B)) ? ($A) : ($B))';
 
+# Zobrist keys.
+_define _cp_zk_lookup => '$p', '$c', '$s', 'warn (($p) << 7) + (($c) << 1) + $s; $zk_handle[(($p) << 7) + (($c) << 1) + $s]';
+
 sub import {
 	my ($type) = @_;
 
