@@ -205,6 +205,11 @@ use constant CP_PIECE_CHARS => [
 	['', 'p', 'n', 'b', 'r', 'q', 'k'],
 ];
 
+use constant _CP_ZOBRIST_KEY_ARRAY_SIZE => ((CP_KING + 1) * 2 * 64) + 1;
+
+use constant CP_RANDOM_SEED => 0x415C0415C0415C0;
+my $cp_random = CP_RANDOM_SEED;
+
 my @pawn_aux_data = (
 	# White.
 	[
@@ -306,6 +311,8 @@ my @material_deltas;
 # their index, should changed to just use the lower 12 bits of the move
 # instead.  That saves us one array dereferencing.
 my @obscured_masks;
+
+my @zk_handle;
 
 my @magicmovesbdb;
 my @magicmovesrdb;
@@ -1581,6 +1588,182 @@ sub bitboardCountTrailingZbits {
 	return cp_bb_count_trailing_zbits $bitboard;
 }
 
+sub zobristKey {
+	my ($self) = @_;
+
+	my $signature = 0;
+	my $piece_mask;
+
+	my ($pawns, $knights, $bishops, $rooks, $queens, $kings, $white, $black)
+		= @{$self}[CP_POS_PAWNS .. CP_POS_BLACK_PIECES];
+
+	$piece_mask = $pawns & $white;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_PAWN, CP_WHITE, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $pawns & $black;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_PAWN, CP_BLACK, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $knights & $white;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_KNIGHT, CP_WHITE, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $knights & $black;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_KNIGHT, CP_BLACK, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $bishops & $white;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_BISHOP, CP_WHITE, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $bishops & $black;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_BISHOP, CP_BLACK, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $rooks & $white;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_ROOK, CP_WHITE, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $rooks & $black;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_ROOK, CP_BLACK, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $queens & $white;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_QUEEN, CP_WHITE, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $queens & $black;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_QUEEN, CP_BLACK, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $kings & $white;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_KING, CP_WHITE, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$piece_mask = $kings & $black;
+	while ($piece_mask) {
+		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		$signature ^= _cp_zk_lookup(CP_KING, CP_BLACK, $shift);
+		$piece_mask = cp_bb_clear_least_set $piece_mask;
+	}
+
+	$signature ^= $zk_handle[_CP_ZOBRIST_KEY_ARRAY_SIZE - 1]
+		if cp_pos_to_move($self);
+	
+	return $signature;
+}
+
+sub zobristKeyUpdate {
+	my ($self, $signature, $move) = @_;
+
+	# Actually, we can use two lookup tables for all necessary updates.  The
+	# The key is always the combination of from, to, piece and promote.
+	# The first table is for moves, where the to square is empty, the
+	# second for moves where it is occupied.  That way there is no need for
+	# handling castlings and en passant squares.  The whole thing will become
+	# just one array lookup and one exclusive or operation.
+	my ($from, $to, $piece, $promote) = (
+		cp_move_from($move),
+		cp_move_to($move),
+		cp_move_piece($move),
+		cp_move_promote($move),
+	);
+	my $pos_info = cp_pos_info $self;
+	# This is the color of the side that has *not* made the move because
+	# we update the signature *after* the move has been made.
+	my $color = cp_pos_info_to_move $pos_info;
+
+	$signature ^= _cp_zk_lookup($piece, $color, $from)
+		^ _cp_zk_lookup($piece, $color, $to);
+
+	if ($promote) {
+		$signature ^= _cp_zk_lookup($piece, $color, $to)
+			^ _cp_zk_lookup($promote, $color, $to);
+	}
+
+	my $to_mask = 1 << $to;
+	if ($self->[CP_POS_WHITE_PIECES + $color] & $to_mask) {
+		# Find the victim of the move.
+		if ($to_mask & cp_pos_pawns($self)) {
+			$signature ^= _cp_zk_lookup(CP_PAWN, !$color, $to)
+				^ _cp_zk_lookup(CP_PAWN, !$color, $to);
+		} elsif ($to_mask & cp_pos_knights($self)) {
+			$signature ^= _cp_zk_lookup(CP_KNIGHT, !$color, $to)
+				^ _cp_zk_lookup(CP_KNIGHT, !$color, $to);
+		} elsif ($to_mask & cp_pos_bishops($self)) {
+			$signature ^= _cp_zk_lookup(CP_BISHOP, !$color, $to)
+				^ _cp_zk_lookup(CP_BISHOP, !$color, $to);
+		} elsif ($to_mask & cp_pos_rooks($self)) {
+			$signature ^= _cp_zk_lookup(CP_ROOK, !$color, $to)
+				^ _cp_zk_lookup(CP_ROOK, !$color, $to);
+		} elsif ($to_mask & cp_pos_queens($self)) {
+			$signature ^= _cp_zk_lookup(CP_QUEEN, !$color, $to)
+				^ _cp_zk_lookup(CP_QUEEN, !$color, $to);
+		}
+	} elsif (CP_PAWN == $piece) {
+		my $ep_shift = cp_pos_info_ep_shift $pos_info;
+		if ($ep_shift && $ep_shift == $to) {
+			if ($to < CP_A3) {
+				my $ep_to = $to + 8;
+				$signature ^= _cp_zk_lookup(CP_PAWN, !$color, $ep_to)
+					^ _cp_zk_lookup(CP_PAWN, !$color, $to);
+			} else {
+				my $ep_to = $to - 8;
+				$signature ^= _cp_zk_lookup(CP_PAWN, !$color, $ep_to)
+					^ _cp_zk_lookup(CP_PAWN, !$color, $to);
+			}
+		}
+	}
+
+	# Change the color.
+	$signature ^= $zk_handle[_CP_ZOBRIST_KEY_ARRAY_SIZE - 1];
+
+	return $signature;
+}
+
+sub zobristKeyChangeSide {
+	my ($self, $signature) = @_;
+
+	$signature ^= $zk_handle[_CP_ZOBRIST_KEY_ARRAY_SIZE - 1];
+
+	return $signature;
+
+}
+
 # Do not remove this line!
 # __END_MACROS__
 
@@ -2091,6 +2274,14 @@ sub equals {
 	}
 
 	return $self;
+}
+
+sub RNG {
+	$cp_random ^= ($cp_random << 21);
+	$cp_random ^= (($cp_random >> 35) & 0x1fff_ffff);
+	$cp_random ^= ($cp_random << 4);
+
+	return $cp_random;
 }
 
 sub __parseSAN {
@@ -2841,7 +3032,7 @@ for my $shift (0 .. 63) {
 $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 		\@black_pawn_capture_masks];
 
-# Map en passant squares to pawns.
+# Map en passant squares to masks.
 foreach my $shift (16 .. 23) {
 	$ep_pawn_masks[$shift] = 1 << ($shift + 8);
 }
@@ -2971,6 +3162,12 @@ foreach my $from (0 .. 63) {
 			$obscured_masks[$from]->[$to] = $diagonal & ~($from_mask - 1) & ~$from_mask;
 		}
 	}
+}
+
+# Zobrist keys.
+my %zk_seen;
+for (my $i = 0; $i < _CP_ZOBRIST_KEY_ARRAY_SIZE; ++$i) {
+	push @zk_handle, RNG();
 }
 
 # Magic moves.
