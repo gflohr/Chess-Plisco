@@ -43,6 +43,11 @@ my @tests = (
 		fen => '7k/8/8/8/8/8/8/R3K3 w Q - 0 1',
 		san => 'O-O-O',
 	},
+	{
+		name => 'Black king captures rook',
+		fen => '7k/6R1/8/8/8/8/8/4K3 b - - 0 1',
+		san => 'Kxg7',
+	},
 );
 
 plan tests => 5 * @tests;
