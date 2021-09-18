@@ -1058,7 +1058,6 @@ sub doMove {
 		}
 	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
-		# Why this??? Copy and paste error?
 		_cp_pos_info_set_ep_shift($pos_info, 0);
 		if ($old_castling != $new_castling) {
 			$zk_update ^= $zk_castling[$old_castling]
