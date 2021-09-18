@@ -2865,7 +2865,7 @@ sub dumpInfo {
 
 	my $output = 'Castling: ';
 
-	my $castling = $self->castling;
+	my $castling = $self->castlingRights;
 	if ($castling) {
 		$output .= 'K' if $castling & 0x1;
 		$output .= 'Q' if $castling & 0x2;
@@ -2917,6 +2917,9 @@ sub dumpInfo {
 	} else {
 		$output .= "In check: no\n";
 	}
+
+	my $signature = $self->signature;
+	$output .= "Signature: $signature\n";
 
 	return $output;
 }
