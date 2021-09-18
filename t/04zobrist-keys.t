@@ -33,6 +33,16 @@ my @tests = (
 		name => 'Start position 1. e4',
 		san => 'e4',
 	},
+	{
+		name => 'Remove ep shift after 1. e4',
+		fen => 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
+		san => 'Nf6',
+	},
+	{
+		name => 'White queen-side castling',
+		fen => '7k/8/8/8/8/8/8/R3K3 w Q - 0 1',
+		san => 'O-O-O',
+	},
 );
 
 plan tests => 5 * @tests;
