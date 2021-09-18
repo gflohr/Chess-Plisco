@@ -1052,7 +1052,7 @@ sub doMove {
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			_cp_pos_info_set_ep_shift($pos_info, $from + (($to - $from) >> 1));
+			_cp_pos_info_set_ep_shift($pos_info, ($from + (($to - $from) >> 1)));
 		} else {
 			_cp_pos_info_set_ep_shift($pos_info, 0);
 		}
@@ -1710,7 +1710,6 @@ sub __updateZobristKey {
 		$piece_mask = cp_bb_clear_least_set $piece_mask;
 	}
 
-	$signature ^= $zk_color if cp_pos_to_move($self);
 	my $pos_info = cp_pos_info $self;
 	my $ep_shift = cp_pos_info_ep_shift $pos_info;
 	if ($ep_shift) {
@@ -1718,6 +1717,10 @@ sub __updateZobristKey {
 	}
 	my $castling = cp_pos_info_castling $pos_info;
 	$signature ^= $zk_castling[$castling];
+
+	if (cp_pos_info_to_move $pos_info) {
+		$signature ^= $zk_color;
+	}
 
 	$self->[CP_POS_SIGNATURE] = $signature;
 
@@ -1740,26 +1743,27 @@ sub __zobristKeyDump {
 	my ($self) = @_;
 
 	my $output = "Pieces\n======\n\n";
-	for (my $i = 0; $i < 1023; ++$i) {
-		$output .= sprintf '% 3u:', $i;
-		my $pc = $i >> 7;
+	for (my $i = 0; $i < 768; ++$i) {
+		$output .= sprintf '% 4u:', $i;
+		my $s = $i + 128;
+		my $pc = $s >> 7;
 		if ($pc && $pc <= CP_KING) {
-			my $shift = $i & 63;
-			my $co = ($i >> 6) & 1;
+			my $shift = $s & 63;
+			my $co = ($s >> 6) & 1;
 			my $square = $self->shiftToSquare($shift);
 			my $piece_char = CP_PIECE_CHARS->[$co]->[$pc];
 			$output .= "$piece_char:$square:";
 		} else {
 			$output .= '     ';
 		}
-		$output .= sprintf " %016x (%d)\n", $zk_pieces[$i], $zk_pieces[$i];
+		$output .= sprintf " 0x%016x (%d)\n", $zk_pieces[$i], $zk_pieces[$i];
 	}
 
 	$output .= "\nEn-Passant Files\n";
 	$output .= "================\n\n";
 	foreach my $file (CP_FILE_A .. CP_FILE_H) {
 		my $char = chr($file + ord('a'));
-		$output .= sprintf "$char: %016x (%d)\n", $zk_ep_files[$file], $zk_ep_files[$file];
+		$output .= sprintf "$char: 0x%016x (%d)\n", $zk_ep_files[$file], $zk_ep_files[$file];
 	}
 
 	$output .= "\nCastling States\n";
@@ -1772,14 +1776,14 @@ sub __zobristKeyDump {
 			$castle .= 'k' if $castling & 0x4;
 			$castle .= 'q' if $castling & 0x8;
 		} else {
-			$castle = '- ';
+			$castle = '-';
 		}
 
-		$output .= sprintf "% 2d:% 4s: %016x (%d)\n", $castling, $castle, $zk_castling[$castling], $zk_castling[$castling];
+		$output .= sprintf "% 2u:% 4s: 0x%016x (%d)\n", $castling, $castle, $zk_castling[$castling], $zk_castling[$castling];
 	}
 
 	$output .= "\nColor\n=====\n\n";
-	$output .= sprintf "1:black: %016x (%d)\n", $zk_color, $zk_color;
+	$output .= sprintf "1:black: 0x%016x (%d)\n", $zk_color, $zk_color;
 
 	return $output;
 }
@@ -3190,7 +3194,7 @@ foreach my $from (0 .. 63) {
 
 # Zobrist keys.  Setting this up may take several seconds.
 my %zk_seen;
-for (my $i = 0; $i < 1024; ++$i) {
+for (my $i = 0; $i < 768; ++$i) {
 	push @zk_pieces, RNG();
 }
 for (my $i = 0; $i < 16; ++$i) {
@@ -3225,7 +3229,7 @@ foreach my $move (0 .. 0x3f_ffff) {
 	my $zk_update = __zobristKeyLookup(undef, $piece, $color, $from)
 		^ __zobristKeyLookup(undef, $piece, $color, $to);
 	
-	$zk_update ^= $zk_color if $color;
+	$zk_update ^= $zk_color;
 
 	# Castling?
 	if ($piece == CP_KING) {
@@ -3250,8 +3254,11 @@ foreach my $move (0 .. 0x3f_ffff) {
 	} elsif ($is_ep) {
 		my $ep_file = $to & 0x7;
 		my $ep_shift = $color ? $to + 8 : $to - 8;
-		$zk_update ^= __zobristKeyLookup(undef, CP_PAWN, !$color, $ep_shift)
-			^ $zk_ep_files[$ep_file];
+		$zk_update ^= __zobristKeyLookup(undef, CP_PAWN, !$color, $ep_shift);
+	} elsif (CP_PAWN == $piece
+	         && (($to - $from == 16) || ($to - $from == -16))) {
+		# Pawn double step?
+		$zk_update ^= $zk_ep_files[$from & 0x7];
 	} elsif ($victim) {
 		$zk_update ^= __zobristKeyLookup(undef, $victim, !$color, $to);
 	}

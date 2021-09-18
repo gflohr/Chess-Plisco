@@ -162,7 +162,7 @@ _define cp_max => '$A', '$B', '((($A) > ($B)) ? ($A) : ($B))';
 _define cp_min => '$A', '$B', '((($A) < ($B)) ? ($A) : ($B))';
 
 # Zobrist keys.
-_define _cp_zk_lookup => '$p', '$c', '$s', '$zk_pieces[(($p) << 7) | (($c) << 6) | ($s)]';
+_define _cp_zk_lookup => '$p', '$c', '$s', '$zk_pieces[((($p) << 7) | (($c) << 6) | ($s)) - 128]';
 
 sub import {
 	my ($type) = @_;
