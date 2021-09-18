@@ -51,6 +51,7 @@ GAME: while ($pgn->read_game) {
 
 	my @undo_infos;
 	my @fen = ($pos->toFEN);
+	my @signatures = ($pos->signature);
 	my @positions = ($pos->copy);
 
 	my $sans = $pgn->moves;
@@ -74,10 +75,23 @@ GAME: while ($pgn->read_game) {
 		}
 		push @undo_infos, $undo_info;
 		push @fen, $pos->toFEN;
+		push @signatures, $pos->signature;
+		
+		my $copy_from_fen = Chess::Position->new($fen[-1]);
+		if ($pos->signature != $copy_from_fen->signature) {
+			my $sig_from_pos = $copy_from_fen->signature;
+			my $sig_from_move = $pos->signature;
+			report_failure $pgn, $pos,
+				"\nsignatures differ after move '$san':"
+				. " $sig_from_pos(from position)"
+				. " != $sig_from_move(from move)\n", $halfmove;
+		}
+	
 		push @positions, $pos->copy;
 	}
 
 	pop @fen;
+	pop @signatures;
 	pop @positions;
 
 	while (@undo_infos) {
@@ -89,6 +103,14 @@ GAME: while ($pgn->read_game) {
 		if ($wanted_fen ne $got_fen) {
 			report_failure $pgn, $pos,
 				"\nwanted FEN: '$wanted_fen'\n   got FEN: '$got_fen'\n", $halfmove;
+		} else {
+			ok 1;
+		}
+		my $wanted_signature = pop @signatures;
+		my $got_signature = $pos->signature;
+		if ($wanted_signature ne $got_signature) {
+			report_failure $pgn, $pos,
+				"\nwanted signature: '$wanted_signature'\n   got signature: '$got_signature'\n", $halfmove;
 		} else {
 			ok 1;
 		}
