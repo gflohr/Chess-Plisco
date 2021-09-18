@@ -1104,7 +1104,7 @@ sub doMove {
 			($to_move << 21)
 			| ($zk_victim << 18)
 			| ($move & 0x3_ffff)];
-	
+
 	$self->[CP_POS_SIGNATURE] = $signature;
 
 	_cp_pos_info_update $self, $pos_info;
@@ -3224,6 +3224,7 @@ foreach my $move (0 .. 0x3f_ffff) {
 	next if $piece > CP_KING;
 	next if $promote > CP_QUEEN;
 	next if $promote == CP_PAWN;
+	next if $promote && $piece != CP_PAWN;
 
 	my $zk_update = __zobristKeyLookup(undef, $piece, $color, $from)
 		^ __zobristKeyLookup(undef, $piece, $color, $to);
@@ -3231,25 +3232,23 @@ foreach my $move (0 .. 0x3f_ffff) {
 	$zk_update ^= $zk_color;
 
 	# Castling?
-	if ($piece == CP_KING) {
-		if ((($from - $to) & 0x3) == 0x2) {
-			my ($rook_from, $rook_to);
-			if ($color) {
-				if ($to > $from) {
-					($rook_from, $rook_to) = (CP_H8, CP_F8);
-				} else {
-					($rook_from, $rook_to) = (CP_A8, CP_D8);
-				}
+	if ($piece == CP_KING && (($from - $to) & 0x3) == 0x2) {
+		my ($rook_from, $rook_to);
+		if ($color) {
+			if ($to > $from) {
+				($rook_from, $rook_to) = (CP_H8, CP_F8);
 			} else {
-				if ($to > $from) {
-					($rook_from, $rook_to) = (CP_H1, CP_F1);
-				} else {
-					($rook_from, $rook_to) = (CP_A1, CP_D1);
-				}
+				($rook_from, $rook_to) = (CP_A8, CP_D8);
 			}
-			$zk_update ^= __zobristKeyLookup(undef, CP_ROOK, $color, $rook_from)
-				^ __zobristKeyLookup(undef, CP_ROOK, $color, $rook_to);
+		} else {
+			if ($to > $from) {
+				($rook_from, $rook_to) = (CP_H1, CP_F1);
+			} else {
+				($rook_from, $rook_to) = (CP_A1, CP_D1);
+			}
 		}
+		$zk_update ^= __zobristKeyLookup(undef, CP_ROOK, $color, $rook_from)
+			^ __zobristKeyLookup(undef, CP_ROOK, $color, $rook_to);
 	} elsif ($is_ep) {
 		my $ep_file = $to & 0x7;
 		my $ep_shift = $color ? $to + 8 : $to - 8;
