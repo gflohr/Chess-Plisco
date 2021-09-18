@@ -1058,7 +1058,12 @@ sub doMove {
 		}
 	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
+		# Why this??? Copy and paste error?
 		_cp_pos_info_set_ep_shift($pos_info, 0);
+		if ($old_castling != $new_castling) {
+			$zk_update ^= $zk_castling[$old_castling]
+				^ $zk_castling[$new_castling];
+		}
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
 		_cp_pos_info_set_ep_shift($pos_info, 0);
@@ -1094,14 +1099,9 @@ sub doMove {
 	# simply add it.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($victim << 4)];
 
-	if ($old_castling != $new_castling) {
-		$zk_update ^= $zk_castling[$old_castling]
-			^= $zk_castling[$new_castling];
-	}
-
 	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
 	$signature ^= $zk_update
-		| $zk_move_masks[
+		^ $zk_move_masks[
 			($to_move << 21)
 			| ($zk_victim << 18)
 			| ($move & 0x3_ffff)];
@@ -3243,13 +3243,13 @@ foreach my $move (0 .. 0x3f_ffff) {
 				}
 			} else {
 				if ($to > $from) {
-					($rook_from, $rook_to) = (CP_H8, CP_F8);
+					($rook_from, $rook_to) = (CP_H1, CP_F1);
 				} else {
-					($rook_from, $rook_to) = (CP_A8, CP_D8);
+					($rook_from, $rook_to) = (CP_A1, CP_D1);
 				}
 			}
-			$zk_update ^= __zobristKeyLookup(undef, $piece, $color, $rook_from)
-				^ __zobristKeyLookup(undef, $piece, $color, $rook_to);
+			$zk_update ^= __zobristKeyLookup(undef, CP_ROOK, $color, $rook_from)
+				^ __zobristKeyLookup(undef, CP_ROOK, $color, $rook_to);
 		}
 	} elsif ($is_ep) {
 		my $ep_file = $to & 0x7;
