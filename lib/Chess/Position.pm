@@ -88,7 +88,8 @@ use constant CP_POS_BLACK_PIECES => CP_POS_WHITE_PIECES + CP_BLACK;
 use constant CP_POS_HALF_MOVE_CLOCK => 9;
 use constant CP_POS_INFO => 10;
 use constant CP_POS_EVASION_SQUARES => 11;
-use constant CP_POS_IN_CHECK => 12;
+use constant CP_POS_SIGNATURE => 12;
+use constant CP_POS_IN_CHECK => 13;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -205,7 +206,12 @@ use constant CP_PIECE_CHARS => [
 	['', 'p', 'n', 'b', 'r', 'q', 'k'],
 ];
 
-use constant _CP_ZOBRIST_KEY_ARRAY_SIZE => ((CP_KING + 1) * 2 * 64) + 1;
+# 6 pieces of 2 colors on 64 squares, plus castling rights plus the file of
+# the en passant square plus the color to move.
+use constant _CP_ZOBRIST_KEY_ARRAY_SIZE => 6 * 2 * 64 + 16 + 8 + 1;
+use constant _CP_ZOBRIST_KEY_OFFSET_CASTLING => 6 * 2 * 64;
+use constant _CP_ZOBRIST_KEY_OFFSET_EP_FILE => _CP_ZOBRIST_KEY_OFFSET_CASTLING + 16;
+use constant _CP_ZOBRIST_KEY_OFFSET_COLOR => _CP_ZOBRIST_KEY_OFFSET_EP_FILE + 8;
 
 use constant CP_RANDOM_SEED => 0x415C0415C0415C0;
 my $cp_random = CP_RANDOM_SEED;
@@ -312,7 +318,12 @@ my @material_deltas;
 # instead.  That saves us one array dereferencing.
 my @obscured_masks;
 
-my @zk_handle;
+my @zk_pieces;
+my @zk_castling;
+my @zk_ep_files;
+my $zk_color;
+
+my @zk_move_masks;
 
 my @magicmovesbdb;
 my @magicmovesrdb;
@@ -364,9 +375,10 @@ sub new {
 	_cp_pos_info_set_to_move($info, CP_WHITE);
 	_cp_pos_info_set_ep_shift($info, 0);
 	cp_pos_info($self) = $info;
-
+	
+	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $info;
-
+	
 	return $self;
 }
 
@@ -580,6 +592,7 @@ sub newFromFEN {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
 	}
 
+	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $pos_info;
 
 	return $self;
@@ -958,6 +971,7 @@ sub doMove {
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
 	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	my $zk_update = $ep_shift ? ($zk_ep_files[$ep_shift & 0x7]) : 0;
 
 	if ($piece == CP_KING) {
 		# Does the king move into check?
@@ -1000,19 +1014,19 @@ sub doMove {
 
 	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
 
-	my $victim = CP_NO_PIECE;
+	my ($victim, $zk_victim) = (CP_NO_PIECE, CP_NO_PIECE);
 	my $victim_mask = 0;
 	if ($to_mask & $her_pieces) {
 		if ($to_mask & cp_pos_pawns($self)) {
-			$victim = CP_PAWN;
+			$victim = $zk_victim = CP_PAWN;
 		} elsif ($to_mask & cp_pos_knights($self)) {
-			$victim = CP_KNIGHT;
+			$victim = $zk_victim = CP_KNIGHT;
 		} elsif ($to_mask & cp_pos_bishops($self)) {
-			$victim = CP_BISHOP;
+			$victim = $zk_victim = CP_BISHOP;
 		} elsif ($to_mask & cp_pos_rooks($self)) {
-			$victim = CP_ROOK;
+			$victim = $zk_victim = CP_ROOK;
 		} else {
-			$victim = CP_QUEEN;
+			$victim = $zk_victim = CP_QUEEN;
 		}
 		$victim_mask = 1 << $to;
 	}
@@ -1034,6 +1048,7 @@ sub doMove {
 			}
 			
 			$victim = CP_PAWN;
+			$zk_victim = CP_KING; # This is interpreted as an ep capture.
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
@@ -1078,6 +1093,20 @@ sub doMove {
 	# already left-shifted 19 bit in the lookup table so that we can
 	# simply add it.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($victim << 4)];
+
+	if ($old_castling != $new_castling) {
+		$zk_update ^= $zk_castling[$old_castling]
+			^= $zk_castling[$new_castling];
+	}
+
+	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
+	$signature ^= $zk_update
+		| $zk_move_masks[
+			($to_move << 21)
+			| ($zk_victim << 18)
+			| ($move & 0x3_ffff)];
+	
+	$self->[CP_POS_SIGNATURE] = $signature;
 
 	_cp_pos_info_update $self, $pos_info;
 
@@ -1588,7 +1617,7 @@ sub bitboardCountTrailingZbits {
 	return cp_bb_count_trailing_zbits $bitboard;
 }
 
-sub zobristKey {
+sub __updateZobristKey {
 	my ($self) = @_;
 
 	my $signature = 0;
@@ -1681,87 +1710,78 @@ sub zobristKey {
 		$piece_mask = cp_bb_clear_least_set $piece_mask;
 	}
 
-	$signature ^= $zk_handle[_CP_ZOBRIST_KEY_ARRAY_SIZE - 1]
-		if cp_pos_to_move($self);
-	
-	return $signature;
-}
-
-sub zobristKeyUpdate {
-	my ($self, $signature, $move) = @_;
-
-	# Actually, we can use two lookup tables for all necessary updates.  The
-	# The key is always the combination of from, to, piece and promote.
-	# The first table is for moves, where the to square is empty, the
-	# second for moves where it is occupied.  That way there is no need for
-	# handling castlings and en passant squares.  The whole thing will become
-	# just one array lookup and one exclusive or operation.
-	my ($from, $to, $piece, $promote) = (
-		cp_move_from($move),
-		cp_move_to($move),
-		cp_move_piece($move),
-		cp_move_promote($move),
-	);
+	$signature ^= $zk_color if cp_pos_to_move($self);
 	my $pos_info = cp_pos_info $self;
-	# This is the color of the side that has *not* made the move because
-	# we update the signature *after* the move has been made.
-	my $color = cp_pos_info_to_move $pos_info;
-
-	$signature ^= _cp_zk_lookup($piece, $color, $from)
-		^ _cp_zk_lookup($piece, $color, $to);
-
-	if ($promote) {
-		$signature ^= _cp_zk_lookup($piece, $color, $to)
-			^ _cp_zk_lookup($promote, $color, $to);
+	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	if ($ep_shift) {
+		$signature ^= $zk_ep_files[$ep_shift & 0x7];
 	}
+	my $castling = cp_pos_info_castling $pos_info;
+	$signature ^= $zk_castling[$castling];
 
-	my $to_mask = 1 << $to;
-	if ($self->[CP_POS_WHITE_PIECES + $color] & $to_mask) {
-		# Find the victim of the move.
-		if ($to_mask & cp_pos_pawns($self)) {
-			$signature ^= _cp_zk_lookup(CP_PAWN, !$color, $to)
-				^ _cp_zk_lookup(CP_PAWN, !$color, $to);
-		} elsif ($to_mask & cp_pos_knights($self)) {
-			$signature ^= _cp_zk_lookup(CP_KNIGHT, !$color, $to)
-				^ _cp_zk_lookup(CP_KNIGHT, !$color, $to);
-		} elsif ($to_mask & cp_pos_bishops($self)) {
-			$signature ^= _cp_zk_lookup(CP_BISHOP, !$color, $to)
-				^ _cp_zk_lookup(CP_BISHOP, !$color, $to);
-		} elsif ($to_mask & cp_pos_rooks($self)) {
-			$signature ^= _cp_zk_lookup(CP_ROOK, !$color, $to)
-				^ _cp_zk_lookup(CP_ROOK, !$color, $to);
-		} elsif ($to_mask & cp_pos_queens($self)) {
-			$signature ^= _cp_zk_lookup(CP_QUEEN, !$color, $to)
-				^ _cp_zk_lookup(CP_QUEEN, !$color, $to);
-		}
-	} elsif (CP_PAWN == $piece) {
-		my $ep_shift = cp_pos_info_ep_shift $pos_info;
-		if ($ep_shift && $ep_shift == $to) {
-			if ($to < CP_A3) {
-				my $ep_to = $to + 8;
-				$signature ^= _cp_zk_lookup(CP_PAWN, !$color, $ep_to)
-					^ _cp_zk_lookup(CP_PAWN, !$color, $to);
-			} else {
-				my $ep_to = $to - 8;
-				$signature ^= _cp_zk_lookup(CP_PAWN, !$color, $ep_to)
-					^ _cp_zk_lookup(CP_PAWN, !$color, $to);
-			}
-		}
-	}
-
-	# Change the color.
-	$signature ^= $zk_handle[_CP_ZOBRIST_KEY_ARRAY_SIZE - 1];
+	$self->[CP_POS_SIGNATURE] = $signature;
 
 	return $signature;
 }
 
-sub zobristKeyChangeSide {
-	my ($self, $signature) = @_;
+sub __zobristKeyLookup {
+	my ($self, $piece, $color, $shift) = @_;
 
-	$signature ^= $zk_handle[_CP_ZOBRIST_KEY_ARRAY_SIZE - 1];
+	return _cp_zk_lookup($piece, $color, $shift);
+}
 
-	return $signature;
+sub __zobristKeyLookupByIndex {
+	my ($self, $index) = @_;
 
+	return $zk_pieces[$index];
+}
+
+sub __zobristKeyDump {
+	my ($self) = @_;
+
+	my $output = "Pieces\n======\n\n";
+	for (my $i = 0; $i < 1023; ++$i) {
+		$output .= sprintf '% 3u:', $i;
+		my $pc = $i >> 7;
+		if ($pc && $pc <= CP_KING) {
+			my $shift = $i & 63;
+			my $co = ($i >> 6) & 1;
+			my $square = $self->shiftToSquare($shift);
+			my $piece_char = CP_PIECE_CHARS->[$co]->[$pc];
+			$output .= "$piece_char:$square:";
+		} else {
+			$output .= '     ';
+		}
+		$output .= sprintf " %016x (%d)\n", $zk_pieces[$i], $zk_pieces[$i];
+	}
+
+	$output .= "\nEn-Passant Files\n";
+	$output .= "================\n\n";
+	foreach my $file (CP_FILE_A .. CP_FILE_H) {
+		my $char = chr($file + ord('a'));
+		$output .= sprintf "$char: %016x (%d)\n", $zk_ep_files[$file], $zk_ep_files[$file];
+	}
+
+	$output .= "\nCastling States\n";
+	$output .= "===============\n\n";
+	foreach my $castling (0 .. 15) {
+		my $castle = '';
+		if ($castling) {
+			$castle .= 'K' if $castling & 0x1;
+			$castle .= 'Q' if $castling & 0x2;
+			$castle .= 'k' if $castling & 0x4;
+			$castle .= 'q' if $castling & 0x8;
+		} else {
+			$castle = '- ';
+		}
+
+		$output .= sprintf "% 2d:% 4s: %016x (%d)\n", $castling, $castle, $zk_castling[$castling], $zk_castling[$castling];
+	}
+
+	$output .= "\nColor\n=====\n\n";
+	$output .= sprintf "1:black: %016x (%d)\n", $zk_color, $zk_color;
+
+	return $output;
 }
 
 # Do not remove this line!
@@ -2033,6 +2053,10 @@ sub info {
 
 sub evasionSquares {
 	shift->[CP_POS_EVASION_SQUARES];
+}
+
+sub signature {
+	shift->[CP_POS_SIGNATURE];
 }
 
 sub inCheck {
@@ -3164,10 +3188,75 @@ foreach my $from (0 .. 63) {
 	}
 }
 
-# Zobrist keys.
+# Zobrist keys.  Setting this up may take several seconds.
 my %zk_seen;
-for (my $i = 0; $i < _CP_ZOBRIST_KEY_ARRAY_SIZE; ++$i) {
-	push @zk_handle, RNG();
+for (my $i = 0; $i < 1024; ++$i) {
+	push @zk_pieces, RNG();
+}
+for (my $i = 0; $i < 16; ++$i) {
+	push @zk_castling, RNG();
+}
+for (my $i = 0; $i < 8; ++$i) {
+	push @zk_ep_files, RNG();
+}
+$zk_color = RNG();
+
+@zk_move_masks = (0) x 0x40_0000;
+foreach my $move (0 .. 0x3f_ffff) {
+	my $is_ep;
+	my $color = 1 & ($move >> 21);
+	my $victim = 0x7 & ($move >> 18);
+	if ($victim == CP_KING) {
+		$victim = CP_PAWN;
+		$is_ep = 1;
+	}
+	my ($to, $from, $promote, $piece) = (
+		moveTo(undef, $move),
+		moveFrom(undef, $move),
+		movePromote(undef, $move),
+		movePiece(undef, $move),
+	);
+
+	next if $victim > CP_QUEEN;
+	next if $piece > CP_KING;
+	next if $promote > CP_QUEEN;
+	next if $promote == CP_PAWN;
+
+	my $zk_update = __zobristKeyLookup(undef, $piece, $color, $from)
+		^ __zobristKeyLookup(undef, $piece, $color, $to);
+	
+	$zk_update ^= $zk_color if $color;
+
+	# Castling?
+	if ($piece == CP_KING) {
+		if ((($from - $to) & 0x3) == 0x2) {
+			my ($rook_from, $rook_to);
+			if ($color) {
+				if ($to > $from) {
+					($rook_from, $rook_to) = (CP_H8, CP_F8);
+				} else {
+					($rook_from, $rook_to) = (CP_A8, CP_D8);
+				}
+			} else {
+				if ($to > $from) {
+					($rook_from, $rook_to) = (CP_H8, CP_F8);
+				} else {
+					($rook_from, $rook_to) = (CP_A8, CP_D8);
+				}
+			}
+			$zk_update ^= __zobristKeyLookup(undef, $piece, $color, $rook_from)
+				^ __zobristKeyLookup(undef, $piece, $color, $rook_to);
+		}
+	} elsif ($is_ep) {
+		my $ep_file = $to & 0x7;
+		my $ep_shift = $color ? $to + 8 : $to - 8;
+		$zk_update ^= __zobristKeyLookup(undef, CP_PAWN, !$color, $ep_shift)
+			^ $zk_ep_files[$ep_file];
+	} elsif ($victim) {
+		$zk_update ^= __zobristKeyLookup(undef, $victim, !$color, $to);
+	}
+
+	$zk_move_masks[$move] = $zk_update;
 }
 
 # Magic moves.

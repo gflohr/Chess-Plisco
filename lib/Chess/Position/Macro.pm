@@ -38,6 +38,7 @@ _define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 _define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
 _define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
 _define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
+_define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
 
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 
@@ -161,7 +162,7 @@ _define cp_max => '$A', '$B', '((($A) > ($B)) ? ($A) : ($B))';
 _define cp_min => '$A', '$B', '((($A) < ($B)) ? ($A) : ($B))';
 
 # Zobrist keys.
-_define _cp_zk_lookup => '$p', '$c', '$s', 'warn (($p) << 7) + (($c) << 1) + $s; $zk_handle[(($p) << 7) + (($c) << 1) + $s]';
+_define _cp_zk_lookup => '$p', '$c', '$s', '$zk_pieces[(($p) << 7) | (($c) << 6) | ($s)]';
 
 sub import {
 	my ($type) = @_;
