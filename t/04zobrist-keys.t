@@ -55,7 +55,7 @@ plan tests => 5 * @tests;
 foreach my $test (@tests) {
 	my $pos = Chess::Position->new($test->{fen});
 	my $zk_before = $pos->signature;
-	ok defined $zk_before, "$test->{name}: zk after move";
+	ok defined $zk_before, "$test->{name}: zk defined after move";
 	my $move = $pos->parseMove($test->{san});
 	ok $move, "$test->{name}: parse $test->{san}";
 	ok $pos->doMove($move), "$test->{name}: do $test->{san}";
