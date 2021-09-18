@@ -3261,6 +3261,11 @@ foreach my $move (0 .. 0x3f_ffff) {
 		$zk_update ^= __zobristKeyLookup(undef, $victim, !$color, $to);
 	}
 
+	if ($promote) {
+		$zk_update ^= __zobristKeyLookup(undef, CP_PAWN, $color, $to);
+		$zk_update ^= __zobristKeyLookup(undef, $promote, $color, $to);
+	}
+
 	$zk_move_masks[$move] = $zk_update;
 }
 

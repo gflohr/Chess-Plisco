@@ -48,6 +48,16 @@ my @tests = (
 		fen => '7k/6R1/8/8/8/8/8/4K3 b - - 0 1',
 		san => 'Kxg7',
 	},
+	{
+		name => 'White promotes to queen',
+		fen => '7k/4P3/8/8/8/8/8/4K3 w - - 0 1',
+		san => 'e8=Q',
+	},
+	{
+		name => 'White promotes to queen and captures',
+		fen => '5q1k/4P3/8/8/8/8/8/4K3 w - - 0 1',
+		san => 'exf8=Q',
+	},
 );
 
 plan tests => 5 * @tests;
