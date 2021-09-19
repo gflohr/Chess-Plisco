@@ -63,7 +63,7 @@ the array indices.
 A move in B<Chess::Plisco> is a regular scalar, more precisely an unsigned
 integer. You can access its properties with the move methods described below.
 
-It is guaranteed that every legal chess move is represented by an non-zero
+It is guaranteed that every legal chess move is represented by a non-zero
 integer.  It is therefore safe to use moves in boolean context.
 
 =head2 Terminology
