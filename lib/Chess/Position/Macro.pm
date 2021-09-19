@@ -169,6 +169,16 @@ sub cp_move_piece {}
 _define cp_move_set_piece => '$m', '$a',
 		'(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
 sub cp_move_set_piece {}
+_define cp_move_captured => '$m', '(($m >> 18) & 0x7)';
+sub cp_move_captured {}
+_define cp_move_set_captured => '$m', '$a',
+		'(($m) = (($m) & ~0x1c0000) | (($a) & 0x7) << 18)';
+sub cp_move_set_captured {}
+_define cp_move_color => '$m', '(($m >> 21) & 0x1)';
+sub cp_move_color {}
+_define cp_move_set_color => '$m', '$c',
+		'(($m) = (($m) & ~0x20_0000) | (($c) & 0x1) << 21)';
+sub cp_move_set_captured {}
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 sub cp_move_coordinate_notation {}
 _define cp_move_equivalent => '$m1', '$m2', '(($m1 & 0x7fff) == ($m2 & 0x7fff))';

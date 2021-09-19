@@ -303,7 +303,7 @@ my @castling_rook_move_masks;
 my @castling_rights_rook_masks;
 
 # Change in material.  Looked up via a combined mask of color to move,
-# victim and promotion piece.
+# captured and promotion piece.
 my @material_deltas;
 
 # This table is used in the static exchange evaluation in order to
@@ -1014,31 +1014,31 @@ sub doMove {
 
 	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
 
-	my ($victim, $zk_victim) = (CP_NO_PIECE, CP_NO_PIECE);
-	my $victim_mask = 0;
+	my ($captured, $zk_captured) = (CP_NO_PIECE, CP_NO_PIECE);
+	my $captured_mask = 0;
 	if ($to_mask & $her_pieces) {
 		if ($to_mask & cp_pos_pawns($self)) {
-			$victim = $zk_victim = CP_PAWN;
+			$captured = $zk_captured = CP_PAWN;
 		} elsif ($to_mask & cp_pos_knights($self)) {
-			$victim = $zk_victim = CP_KNIGHT;
+			$captured = $zk_captured = CP_KNIGHT;
 		} elsif ($to_mask & cp_pos_bishops($self)) {
-			$victim = $zk_victim = CP_BISHOP;
+			$captured = $zk_captured = CP_BISHOP;
 		} elsif ($to_mask & cp_pos_rooks($self)) {
-			$victim = $zk_victim = CP_ROOK;
+			$captured = $zk_captured = CP_ROOK;
 		} else {
-			$victim = $zk_victim = CP_QUEEN;
+			$captured = $zk_captured = CP_QUEEN;
 		}
-		$victim_mask = 1 << $to;
+		$captured_mask = 1 << $to;
 	}
 
 	if ($piece == CP_PAWN) {
 		# Check en passant.
 		if ($ep_shift && $to == $ep_shift) {
-			$victim_mask = $ep_pawn_masks[$ep_shift];
+			$captured_mask = $ep_pawn_masks[$ep_shift];
 
 			# Removing the pawn may discover a check.
 			my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self))
-					& ((~$move_mask) ^ $victim_mask);
+					& ((~$move_mask) ^ $captured_mask);
 			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
 				& (cp_pos_bishops($self) | cp_pos_queens($self))) {
 				return;
@@ -1047,8 +1047,8 @@ sub doMove {
 				return;
 			}
 			
-			$victim = CP_PAWN;
-			$zk_victim = CP_KING; # This is interpreted as an ep capture.
+			$captured = CP_PAWN;
+			$zk_captured = CP_KING; # This is interpreted as an ep capture.
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
@@ -1069,9 +1069,10 @@ sub doMove {
 	}
 
 	# Move all pieces involved.
-	if ($victim != CP_NO_PIECE) {
-		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $victim_mask;
-		$self->[$victim] ^= $victim_mask;
+	if ($captured != CP_NO_PIECE) {
+		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $captured_mask;
+		$self->[$captured] ^= $captured_mask;
+		cp_move_set_captured($move, $captured);
 	}
 
 	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
@@ -1088,7 +1089,7 @@ sub doMove {
 		$self->[$promote] ^= $to_mask;
 	}
 
-	my @undo_info = ($move, $victim, $victim_mask, @state);
+	my @undo_info = ($move, $captured_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
@@ -1096,13 +1097,13 @@ sub doMove {
 	# The material balance is stored in the most signicant bits.  It is
 	# already left-shifted 19 bit in the lookup table so that we can
 	# simply add it.
-	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($victim << 4)];
+	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
 	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
 	$signature ^= $zk_update
 		^ $zk_move_masks[
 			($to_move << 21)
-			| ($zk_victim << 18)
+			| ($zk_captured << 18)
 			| ($move & 0x3_ffff)];
 
 	$self->[CP_POS_SIGNATURE] = $signature;
@@ -1115,11 +1116,11 @@ sub doMove {
 sub undoMove {
 	my ($self, $undo_info) = @_;
 
-	my ($move, $victim, $victim_mask, @state) = @$undo_info;
+	my ($move, $captured_mask, @state) = @$undo_info;
 
-	my ($from, $to, $promote, $piece) =
+	my ($from, $to, $promote, $piece, $captured) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
-		 cp_move_piece($move));
+		 cp_move_piece($move), cp_move_captured($move));
 
 	my $move_mask = (1 << $from) | (1 << $to);
 	my $to_move = !cp_pos_to_move $self;
@@ -1143,9 +1144,9 @@ sub undoMove {
 		$self->[$piece] ^= $move_mask;
 	}
 
-	if ($victim) {
-		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $victim_mask;
-		$self->[$victim] |= $victim_mask;
+	if ($captured) {
+		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
+		$self->[$captured] |= $captured_mask;
 	}
 
 	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
@@ -1234,7 +1235,7 @@ sub moveFrom {
 	return cp_move_from $move;
 }
 
-sub setMoveFrom {
+sub moveSetFrom {
 	my (undef, $move, $from) = @_;
 
 	cp_move_set_from $move, $from;
@@ -1248,20 +1249,21 @@ sub moveTo {
 	return cp_move_to $move;
 }
 
-sub setMoveTo {
+sub moveSetTo {
 	my (undef, $move, $to) = @_;
 
 	cp_move_set_from $move, $to;
 
 	return $move;
 }
+
 sub movePromote {
 	my (undef, $move) = @_;
 
 	return cp_move_promote $move;
 }
 
-sub setMovePromote {
+sub moveSetPromote {
 	my (undef, $move, $promote) = @_;
 
 	cp_move_set_promote $move, $promote;
@@ -1275,10 +1277,38 @@ sub movePiece {
 	return cp_move_piece $move;
 }
 
-sub setMovePiece {
+sub moveSetPiece {
 	my (undef, $move, $piece) = @_;
 
-	cp_move_set_promote $move, $piece;
+	cp_move_set_piece $move, $piece;
+
+	return $move;
+}
+
+sub moveCaptured {
+	my (undef, $move) = @_;
+
+	return cp_move_captured $move;
+}
+
+sub moveSetCaptured {
+	my (undef, $move, $piece) = @_;
+
+	cp_move_set_captured $move, $piece;
+
+	return $move;
+}
+
+sub moveColor {
+	my (undef, $move) = @_;
+
+	return cp_move_color $move;
+}
+
+sub moveSetColor {
+	my (undef, $move, $color) = @_;
+
+	cp_move_set_color $move, $color;
 
 	return $move;
 }
@@ -1442,24 +1472,24 @@ sub SEE {
 
 	my $promote = cp_move_promote($move);
 
-	my $victim;
+	my $captured;
 	if ($move_is_ep || ($to_mask & $pawns)) {
-		$victim = CP_PAWN;
+		$captured = CP_PAWN;
 	} elsif ($to_mask & $knights) {
-		$victim = CP_KNIGHT;
+		$captured = CP_KNIGHT;
 	} elsif ($to_mask & $bishops) {
-		$victim = CP_BISHOP;
+		$captured = CP_BISHOP;
 	} elsif ($to_mask & $rooks) {
-		$victim = CP_ROOK;
+		$captured = CP_ROOK;
 	} elsif ($to_mask & $queens) {
-		$victim = CP_QUEEN;
+		$captured = CP_QUEEN;
 	} else {
 		# For SEE purposes we have to assume that we do not underpromote.
-		$victim = CP_NO_PIECE;
+		$captured = CP_NO_PIECE;
 	}
 
 	my $side_to_move = !cp_pos_to_move($self);
-	my @gain = ($piece_values[$victim]);
+	my @gain = ($piece_values[$captured]);
 	my $attacker_value = $piece_values[cp_move_piece($move)];
 	if ($promote) {
 		$attacker_value = $piece_values[$promote];
@@ -2208,6 +2238,8 @@ sub legalMoves {
 		my $undo_info = $self->doMove($move) or next;
 		push @legal, $move;
 		$self->undoMove($undo_info);
+		# Set captured piece.
+		$move = $undo_info->[0];
 	}
 
 	return @legal;
@@ -3194,14 +3226,14 @@ $castling_rights_rook_masks[CP_A8] = ~0x8;
 my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
 @material_deltas = (0) x (1 + (1 | (CP_QUEEN << 1) | (CP_QUEEN << 4)));
-foreach my $victim (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
-	$material_deltas[CP_WHITE | ($victim << 4)] = ($piece_values[$victim] << 19);
-	$material_deltas[CP_BLACK | ($victim << 4)] = (-$piece_values[$victim] << 19);
+foreach my $captured (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
+	$material_deltas[CP_WHITE | ($captured << 4)] = ($piece_values[$captured] << 19);
+	$material_deltas[CP_BLACK | ($captured << 4)] = (-$piece_values[$captured] << 19);
 	foreach my $promote (CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
-		$material_deltas[CP_WHITE | ($promote << 1) | ($victim << 4)] =
-			($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
-		$material_deltas[CP_BLACK | ($promote << 1) | ($victim << 4)] =
-			-($piece_values[$victim] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
+		$material_deltas[CP_WHITE | ($promote << 1) | ($captured << 4)] =
+			($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
+		$material_deltas[CP_BLACK | ($promote << 1) | ($captured << 4)] =
+			-($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
 	}
 }
 
@@ -3248,7 +3280,7 @@ $zk_color = RNG();
 # 6-11: from
 # 12-14: promote
 # 15-17: piece
-# 18-20: victim
+# 18-20: captured
 # 21: color
 my $gen_moves = sub {
 	my ($moves, $piece, $from, $to, $color) = @_;
@@ -3466,9 +3498,9 @@ foreach my $file (CP_FILE_A .. CP_FILE_H) {
 		foreach my $move (@moves) {
 			my $is_ep;
 			my $color = 1 & ($move >> 21);
-			my $victim = 0x7 & ($move >> 18);
-			if ($victim == CP_KING) {
-				$victim = CP_PAWN;
+			my $captured = 0x7 & ($move >> 18);
+			if ($captured == CP_KING) {
+				$captured = CP_PAWN;
 				$is_ep = 1;
 			}
 			my ($to, $from, $promote, $piece) = (
@@ -3509,8 +3541,8 @@ foreach my $file (CP_FILE_A .. CP_FILE_H) {
 					&& (($to - $from == 16) || ($to - $from == -16))) {
 				# Pawn double step?
 				$zk_update ^= $zk_ep_files[$from & 0x7];
-			} elsif ($victim) {
-				$zk_update ^= __zobristKeyLookup(undef, $victim, !$color, $to);
+			} elsif ($captured) {
+				$zk_update ^= __zobristKeyLookup(undef, $captured, !$color, $to);
 			}
 
 			if ($promote) {

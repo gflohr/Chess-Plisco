@@ -359,7 +359,7 @@ Same as L<Chess::Position/moveTo>.
 
 =item B<cp_move_set_to(MOVE, TO)>
 
-Same as L<Chess::Position/moveTo> but modifies B<MOVE> directly.
+Same as L<Chess::Position/moveSetTo> but modifies B<MOVE> directly.
 
 =item B<cp_move_from(MOVE)>
 
@@ -367,7 +367,7 @@ Same as L<Chess::Position/moveFrom>.
 
 =item B<cp_move_set_from(MOVE, FROM)>
 
-Same as L<Chess::Position/moveFrom> but modifies B<MOVE> directly.
+Same as L<Chess::Position/moveSetFrom> but modifies B<MOVE> directly.
 
 =item B<cp_move_promote(MOVE)>
 
@@ -375,7 +375,7 @@ Same as L<Chess::Position/movePromote>.
 
 =item B<cp_move_set_promote(MOVE, PROMOTE)>
 
-Same as L<Chess::Position/moveFrom> but modifies B<MOVE> directly.
+Same as L<Chess::Position/moveSetPromote> but modifies B<MOVE> directly.
 
 =item B<cp_move_piece(MOVE)>
 
@@ -383,7 +383,23 @@ Same as L<Chess::Position/movePiece>.
 
 =item B<cp_move_set_piece(MOVE, PIECE)>
 
-Same as L<Chess::Position/movePiece> but modifies B<MOVE> directly.
+Same as L<Chess::Position/moveSetPiece> but modifies B<MOVE> directly.
+
+=item B<cp_move_captured(MOVE)>
+
+Same as L<Chess::Position/moveCaptured>.
+
+=item B<cp_move_set_captured(MOVE, PIECE)>
+
+Same as L<Chess::Position/moveSetCaptured> but modifies B<MOVE> directly.
+
+=item B<cp_move_color(MOVE)>
+
+Same as L<Chess::Position/moveCaptured>.
+
+=item B<cp_move_set_color(MOVE, COLOR)>
+
+Same as L<Chess::Position/moveSetColor> but modifies B<MOVE> directly.
 
 =item B<cp_move_equivalent(MOVE)>
 

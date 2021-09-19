@@ -125,7 +125,7 @@ my @tests = (
 		after => '8/8/2Pp4/7r/1K3p2/6k1/4P1P1/1R6 b - - 0 3',
 	},
 	{
-		name => 'victim is not pawn if captured on h1 and ep shift == 0',
+		name => 'captured is not pawn if captured on h1 and ep shift == 0',
 		before => 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBPpP/R4K1R b kq - 0 2',
 		move => 'g2h1q',
 		after => 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q2/PPPBBP1P/R4K1q w kq - 0 3',
