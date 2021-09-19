@@ -6,7 +6,15 @@ contains a UCI compatible chess engine.
 It only works with Perl versions that are compiled with support for 64
 bit integers!
 
-It is currently work in progress.
+The software is stable but still considered work in progress.
+
+Since it is reasonably fast and offers a lot of functionality needed for
+chess engines, it can be used for rapid prototyping of a chess engine.
+Writing a basic implementation of the AlphaBeta algorithm with `Chess::Plisco`
+will not require more than 30 lines of code.
+
+The library also has a very high test coverage so that you can probably use it
+as a reference implementation for your own experiments and tests.
 
 ## Installation
 
