@@ -373,7 +373,7 @@ sub new {
 	_cp_pos_info_set_black_king_side_castling_right($info, 1);
 	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
 	_cp_pos_info_set_to_move($info, CP_WHITE);
-	_cp_pos_info_set_ep_shift($info, 0);
+	_cp_pos_info_set_en_passant_shift($info, 0);
 	cp_pos_info($self) = $info;
 	
 	$self->__updateZobristKey;
@@ -560,18 +560,18 @@ sub newFromFEN {
 
 	my $to_move = cp_pos_info_to_move($pos_info);
 	if ('-' eq $ep_square) {
-		_cp_pos_info_set_ep_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 	} elsif ($to_move == CP_WHITE && $ep_square =~ /^[a-h]6$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			_cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
+			_cp_pos_info_set_en_passant_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	} elsif ($to_move == CP_BLACK && $ep_square =~ /^[a-h]3$/) {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			_cp_pos_info_set_ep_shift($pos_info, $self->squareToShift($ep_square));
+			_cp_pos_info_set_en_passant_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	}
 
@@ -723,7 +723,7 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
 
 	# Pawn single steps and captures w/o promotions.
@@ -863,7 +863,7 @@ sub pseudoLegalAttacks {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
 
 	# Pawn captures w/o promotions.
@@ -970,7 +970,7 @@ sub doMove {
 
 	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
 	my $in_check = cp_pos_in_check $self;
-	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $zk_update = $ep_shift ? ($zk_ep_files[$ep_shift & 0x7]) : 0;
 
 	if ($piece == CP_KING) {
@@ -1052,20 +1052,20 @@ sub doMove {
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			_cp_pos_info_set_ep_shift($pos_info, ($from + (($to - $from) >> 1)));
+			_cp_pos_info_set_en_passant_shift($pos_info, ($from + (($to - $from) >> 1)));
 		} else {
-			_cp_pos_info_set_ep_shift($pos_info, 0);
+			_cp_pos_info_set_en_passant_shift($pos_info, 0);
 		}
 	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
-		_cp_pos_info_set_ep_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 		if ($old_castling != $new_castling) {
 			$zk_update ^= $zk_castling[$old_castling]
 				^ $zk_castling[$new_castling];
 		}
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
-		_cp_pos_info_set_ep_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 	}
 
 	# Move all pieces involved.
@@ -1206,7 +1206,7 @@ sub toMove {
 sub enPassantShift {
 	my ($self) = @_;
 
-	return cp_pos_ep_shift($self);
+	return cp_pos_en_passant_shift($self);
 }
 
 sub kingShift {
@@ -1300,7 +1300,7 @@ sub SEE {
 	my $from = cp_move_from $move;
 	my $not_from_mask = ~(1 << ($from));
 	my $pos_info = cp_pos_info($self);
-	my $ep_shift = cp_pos_info_ep_shift($pos_info);
+	my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
 		&& cp_move_piece($move) == CP_PAWN);
 	my $white = cp_pos_white_pieces($self);
@@ -1745,7 +1745,7 @@ sub __updateZobristKey {
 	}
 
 	my $pos_info = cp_pos_info $self;
-	my $ep_shift = cp_pos_info_ep_shift $pos_info;
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	if ($ep_shift) {
 		$signature ^= $zk_ep_files[$ep_shift & 0x7];
 	}
