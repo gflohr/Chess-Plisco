@@ -414,6 +414,10 @@ scope of a block:
         printf "avg. loss in centipedes: %g\n", $score / 100;
     }
 
+=head3 Do Not Use Here Documents
+
+The translation currently chokes on here documents (E<lt>E<lt>EOF ...).
+
 =head3 Do not Create References to Macros
 
 Macros are not Perl subroutines. They are more or less stupidly replaced
