@@ -9,9 +9,6 @@
 # to Public License, Version 2, as published by Sam Hocevar. See
 # http://www.wtfpl.net/ for more details.
 
-# Make Dist::Zilla happy.
-# ABSTRACT: Analyze chess games in PGN format
-
 package Chess::Plisco::Engine::Tree;
 
 use strict;

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-Chess::Analyze - Analyze chess games in PGN format
+Chess::Plisco::Engine - The Perl chess engine plisco
 
 =head1 SYNOPSIS
 
@@ -12,7 +12,7 @@ Chess::Analyze - Analyze chess games in PGN format
 
 =head1 COPYRIGHT
 
-Copyright (C) 2019 Guido Flohr <guido.flohr@cantanea.com>,
+Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
 all rights reserved.
 
 =head1 SEE ALSO
