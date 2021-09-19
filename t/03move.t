@@ -12,7 +12,7 @@
 use strict;
 use integer;
 
-use Test::More;
+use Test::More tests => 13;
 use Chess::Position qw(:all);
 use Chess::Position::Macro;
 
@@ -44,4 +44,18 @@ is(cp_move_from($move), $from, 'd2e1q from');
 is(cp_move_to($move), $to, 'd2e1q to');
 is(cp_move_promote($move), CP_QUEEN, 'd2e1q promote');
 
-done_testing;
+# Full move.
+$from = CP_D5;
+$to = CP_E4;
+cp_move_set_from $move, $from;
+cp_move_set_to $move, $to;
+cp_move_set_promote $move, CP_NO_PIECE;
+cp_move_set_piece $move, CP_PAWN;
+cp_move_set_captured $move, CP_KNIGHT;
+cp_move_set_color $move, CP_BLACK;
+is(cp_move_from($move), CP_D5);
+is(cp_move_to($move), CP_E4);
+is(cp_move_promote($move), CP_NO_PIECE);
+is(cp_move_piece($move), CP_PAWN);
+is(cp_move_captured($move), CP_KNIGHT);
+is(cp_move_color($move), CP_BLACK);

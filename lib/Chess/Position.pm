@@ -1092,6 +1092,7 @@ sub doMove {
 	my @undo_info = ($move, $captured_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
+	cp_move_set_color($move, $to_move);
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
 	# The material balance is stored in the most signicant bits.  It is
@@ -1100,11 +1101,12 @@ sub doMove {
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
 	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
+
+	# For the signature lookup we have to replace the real captured piece
+	# because it may be a king which is interpreted as a pawn captured en
+	# passant.
 	$signature ^= $zk_update
-		^ $zk_move_masks[
-			($to_move << 21)
-			| ($zk_captured << 18)
-			| ($move & 0x3_ffff)];
+		^ $zk_move_masks[($zk_captured << 18) | ($move & 0x23_ffff)];
 
 	$self->[CP_POS_SIGNATURE] = $signature;
 
