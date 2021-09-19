@@ -1093,11 +1093,11 @@ Example to get the character for a black knight:
 
 =head3 CP_A_MASK .. CP_H_MASK
 
-These are bitboard of all files ("a" to "h") of the chess board.
+These are bitboards of all files ("a" to "h") of the chess board.
 
 =head3 CP_1_MASK .. CP_8_MASK
 
-These are bitboard of all ranks ("1" to "8") of the chess board.
+These are bitboards of all ranks ("1" to "8") of the chess board.
 
 =head3 CP_FILE_A .. CP_FILE_H
 

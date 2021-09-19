@@ -39,7 +39,8 @@ macros has only disadvantages:
 
 =item Seemingly correct syntax may lead to syntax errors.
 
-=item Your code becomes less readable.
+=item Your code becomes less readable.  Although sometimes the opposite may be
+true.
 
 =back
 
@@ -93,13 +94,15 @@ and over in your code.
 This module tries to mitigate that dilemma. If you just "use" it, all
 invocations of the macros defined here, are translated into a regular statements
 so that you can do these computations without subroutine call overhead.
-Depending on the exact implementation of the macro, you can often use them as
-l-vales (the left-hand side of an assignment).  This is mentioned in the
-documentation below.
+
+Depending on the exact implementation of the macro, you can sometimes even use
+them as l-vales (the left-hand side of an assignment) but you should generally
+avoid this because the resulting code will become hard to understand.
 
 =head1 PITFALLS
 
-There are some caveats, when using this module.
+There are a number of caveats, when using this module.  You had been warned
+before, do not use it! If you cannot help, then ...
 
 =head2 Import Constants from L<Chess::Plisco>
 
@@ -120,7 +123,7 @@ The translation currently chokes on here documents (E<lt>E<lt>EOF ...).
 
 =head2 Use More Parentheses
 
-Remember that the macros ar expanded by a rather dumb search and replace.  That
+Remember that the macros are expanded by a rather dumb search and replace.  That
 can lead to problems with parentheses. Say you have a line like this in a test
 written with L<Test::More>
 
@@ -297,52 +300,52 @@ All these work directly on a position info as returned by L</cp_pos_info>.
 
 =over 4
 
-=item b<cp_pos_info_castling_rights(INFO)>
+=item B<cp_pos_info_castling_rights(INFO)>
 
-Same as L</cp_pos_castling_ights> but work directly on position
+Same as L</cp_pos_castling_rights> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_white_king_side_castling_right(INFO)>
+=item B<cp_pos_info_white_king_side_castling_right(INFO)>
 
 Same as L</cp_pos_white_king_side_castling_right> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_white_queen_side_castling_right(INFO)>
+=item B<cp_pos_info_white_queen_side_castling_right(INFO)>
 
 Same as L</cp_pos_white_queen_side_castling_right> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_black_king_side_castling_right(INFO)>
+=item B<cp_pos_info_black_king_side_castling_right(INFO)>
 
 Same as L</cp_pos_black_king_side_castling_right> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_black_queen_side_castling_right(INFO)>
+=item B<cp_pos_info_black_queen_side_castling_right(INFO)>
 
 Same as L</cp_pos_black_queen_side_castling_right> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_to_move(INFO)>
+=item B<cp_pos_info_to_move(INFO)>
 
 Same as L</cp_pos_to_move> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_en_passant_shift(INFO)>
+=item B<cp_pos_info_en_passant_shift(INFO)>
 
 Same as L</cp_pos_en_passant_shift> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_king_shift(INFO)>
+=item B<cp_pos_info_king_shift(INFO)>
 
 Same as L</cp_pos_king_shift> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_evasion(INFO)>
+=item B<cp_pos_info_evasion(INFO)>
 
 Same as L</cp_pos_evasion> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item b<cp_pos_info_material(INFO)>
+=item B<cp_pos_info_material(INFO)>
 
 Same as L</cp_pos_material> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
@@ -421,15 +424,11 @@ Same as L<Chess::Plisco/moveCoordinateNotation>.
 
 =item B<cp_mm_bmagic(SHIFT, OCCUPANCY)>
 
-Returns a bitboard of all squares that a bishop attacks from the square denoted
-by B<SHIFT> if B<OCCUPANCY> is a bitboard of all squares that are occupied by
-own pieces.
+Same as L<Chess::Plisco/bMagic>.
 
 =item B<cp_mm_rmagic(SHIFT, OCCUPANCY)>
 
-Returns a bitboard of all squares that a rook attacks from the square denoted
-by B<SHIFT> if B<OCCUPANCY> is a bitboard of all squares that are occupied by
-own pieces.
+Same as L<Chess::Plisco/rMagic>.
 
 =back
 
