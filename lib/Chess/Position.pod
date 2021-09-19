@@ -496,7 +496,7 @@ the move.
 
 Extracts the shift (0-63) of the destination square.
 
-=item B<setMoveFrom(MOVE, TO)>
+=item B<setMoveTo(MOVE, TO)>
 
 Sets the shift (0-63) of the destination square in B<MOVE> to B<TO> and returns
 the move.
@@ -783,8 +783,6 @@ leave nodes for certain positions are well known.
 
 Internally, each legal move is applied to the position, then the next level
 is computed from the resulting position, and finally the move is undone.
-
-=over 4
 
 =item B<perftByCopy(DEPTH)>
 

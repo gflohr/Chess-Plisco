@@ -281,16 +281,35 @@ Same as L<Chess::Position/moveTo>.
 
 =item B<cp_move_set_to(MOVE, TO)>
 
-Set the destination square of B<MOVE> as a bit-shift offset to B<TO>.
+Same as L<Chess::Position/moveTo> but modifies B<MOVE> directly.
 
-L-value: no.
+=item B<cp_move_from(MOVE)>
+
+Same as L<Chess::Position/moveFrom>.
+
+=item B<cp_move_set_from(MOVE, FROM)>
+
+Same as L<Chess::Position/moveFrom> but modifies B<MOVE> directly.
+
+=item B<cp_move_promote(MOVE)>
+
+Same as L<Chess::Position/movePromote>.
+
+=item B<cp_move_set_from(MOVE, PROMOTE)>
+
+Same as L<Chess::Position/moveFrom> but modifies B<MOVE> directly.
+
+=item B<cp_move_piece(MOVE)>
+
+Same as L<Chess::Position/movePiece>.
+
+=item B<cp_move_set_piece(MOVE, PIECE)>
+
+Same as L<Chess::Position/movePiece> but modifies B<MOVE> directly.
 
 =item B<cp_move_coordinate_notation(MOVE)>
 
-Convert the move to coordinate notation.  Example: "g1f3" would be the
-coordinate notation for a piece moving from "g1" to "f3".  And "e7d8q" would
-be the cordinate notation for a pawn on "e7", capturing a piece on "d8", being
-promoted to a queen.
+Same as L<Chess::Position/moveCoordinateNotation>.
 
 =back
 
@@ -318,7 +337,14 @@ own pieces.
 
 =item B<cp_bitboard_popcount(BITBOARD, COUNT)>
 
-Count the number of bits set in B<BITBOARD> and save it in B<COUNT>.
+Count the number of bits set in B<BITBOARD> and store it in B<COUNT>.
+
+Example:
+
+    cp_bitboard_popcount $bitboard, $count;
+    print "There are $count bits set in $bitboard.\n";
+
+Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_but_least_set(BITBOARD)>
 
@@ -326,9 +352,23 @@ Clear all bits but the least significant one in B<BITBOARD>.
 
 Important! This works only under the "use integer" pragma!
 
+=item B<cp_bitboard_clear_but_most_set(BITBOARD)>
+
+Clear all bits but the msot significant one in B<BITBOARD>.
+
+Important! This works only under the "use integer" pragma!
+
+=item B<cp_bitboard_clear_least_set(BITBOARD)>
+
+Clear the least signficant set bit in B<BITBOARD>.
+
+Important! This works only under the "use integer" pragma!
+
 =item B<cp_bitboard_count_isolated_trailing_zbits(BITBOARD)>
 
-Count trailing zero bits in B<BITBOARD>.  Only works for B<BITBOARD> != 0!
+Count trailing zero bits in B<BITBOARD>.  Only works for B<BITBOARD> != 0
+and B<BITBOARD> B<must> have a popcount of exactly 1, in other words, it must
+be a non-zero power of 2.
 
 =back
 
@@ -368,7 +408,15 @@ offset B<SHIFT> (0-63).
 
 =item B<cp_abs(INTEGER)>
 
-Calculate the absolve value of B<INTEGER> without branching.
+Calculate the absolve value of B<INTEGER>.
+
+=item B<cp_max(A, B)>
+
+Calculate the maximum of B<A> and B<B>.
+
+=item B<cp_min(A, B)>
+
+Calculate the minimum of B<A> and B<B>.
 
 =back
 

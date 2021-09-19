@@ -726,13 +726,13 @@ from L<Chess::Position::Macro> for it:
 
 You should also use a macro from L<Chess::Position::Macro>:
 
-    $en_passant_shift = cp_pos_ep_shift $pos;
+    $en_passant_shift = cp_pos_en_passant_shift $pos;
 
 This will be 0 if capturing en passant is not possible in the particular
 position.  You may have to be careful to use this information because 0 is
 also the "shift" for the square "h1".  In doubt, go like this:
 
-    $ep_shift = cp_pos_ep_shift $pos;
+    $ep_shift = cp_pos_en_passant_shift $pos;
     if ($ep_shift && $ep_shift == $location) {
         # do what you need ...
     }
@@ -833,7 +833,7 @@ Alternatively with macros:
 
     ($piece, $from, $to) =
         (cp_move_piece($move), cp_move_from($move), $cp_move_to($move));
-    $ep_shift = cp_pos_ep_shift $pos;
+    $ep_shift = cp_pos_en_passant_shift $pos;
     if ($ep_shift && $piece == CP_PAWN
         && ($from - $to) & 0x && $to == $ep_shift) {
         # En-passant.

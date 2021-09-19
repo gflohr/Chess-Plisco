@@ -32,7 +32,7 @@ my %defines;
 _define cp_pos_white_pieces => '$p', '$p->[CP_POS_WHITE_PIECES]';
 sub cp_pos_white_pieces {}
 _define cp_pos_black_pieces => '$p', '$p->[CP_POS_BLACK_PIECES]';
-sub cp_pos_black_piecess {}
+sub cp_pos_black_pieces {}
 _define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
 sub cp_pos_pawns {}
 _define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
@@ -68,7 +68,7 @@ _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
 sub cp_pos_info_black_queen_side_castling_right {}
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
 sub cp_pos_info_to_move {}
-_define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
+_define cp_pos_info_en_passant_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
 sub cp_pos_info_en_passant_shift {}
 _define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
 sub cp_pos_info_king_shift {}
@@ -89,7 +89,7 @@ _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | ($c << 3))';
 _define _cp_pos_info_set_to_move => '$i', '$c',
 	'($i = ($i & ~(1 << 4)) | ($c << 4))';
-_define _cp_pos_info_set_ep_shift => '$i', '$s',
+_define _cp_pos_info_set_en_passant_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 5)) | ($s << 5))';
 _define _cp_pos_info_set_king_shift => '$i', '$s',
 	'($i = ($i & ~(0x3f << 11)) | ($s << 11))';
@@ -117,7 +117,7 @@ _define cp_pos_black_queen_side_castling_right => '$p',
 sub cp_pos_black_queen_side_castling_right {}
 _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 sub cp_pos_to_move {}
-_define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
+_define cp_pos_en_passant_shift => '$p', '(cp_pos_info_en_passant_shift(cp_pos_info($p)))';
 sub cp_pos_en_passant_shift {}
 _define cp_pos_king_shift => '$p', '(cp_pos_info_king_shift(cp_pos_info($p)))';
 sub cp_pos_king_shift {}
@@ -138,8 +138,8 @@ _define _cp_pos_set_black_queen_side_castling_right => '$p', '$c',
 	'(_cp_pos_info_set_black_queen_side_castling_right(cp_pos_info($p), $c))';
 _define _cp_pos_set_to_move => '$p', '$c',
 	'(_cp_pos_info_set_to_move(cp_pos_info($p), $c))';
-_define _cp_pos_set_ep_shift => '$p', '$s',
-	'(_cp_pos_info_set_ep_shift(cp_pos_info($p), $s))';
+_define _cp_pos_set_en_passant_shift => '$p', '$s',
+	'(_cp_pos_info_set_en_passant_shift(cp_pos_info($p), $s))';
 _define _cp_pos_set_king_shift => '$p', '$s',
 	'(_cp_pos_info_set_king_shift(cp_pos_info($p), $s))';
 _define _cp_pos_set_evasion => '$p', '$e',
@@ -186,7 +186,7 @@ _define_from_file cp_bitboard_count_isolated_trailing_zbits => '$bb',
 		'countIsolatedTrailingZbits.pm';
 sub cp_bitboard_count_isolated_trailing_zbits {}
 _define_from_file cp_bitboard_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
-sub cp_bitboard_count_isolated_zbits {}
+sub cp_bitboard_count_trailing_zbits {}
 _define cp_bitboard_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 sub cp_bitboard_clear_least_set {}
 
