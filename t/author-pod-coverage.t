@@ -22,8 +22,8 @@ use Test::More;
 use Test::Pod::Coverage 1.08;
 use Pod::Coverage::TrustPod;
 
-pod_coverage_ok('Chess::Position', { coverage_class => 'Pod::Coverage::TrustPod' });
-pod_coverage_ok('Chess::Position::Macro', {
+pod_coverage_ok('Chess::Plisco', { coverage_class => 'Pod::Coverage::TrustPod' });
+pod_coverage_ok('Chess::Plisco::Macro', {
 	coverage_class => 'Pod::Coverage::TrustPod',
 	also_private => [qr/^filter$/]
 });

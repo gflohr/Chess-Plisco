@@ -36,9 +36,9 @@
 # Welcome to the world of spaghetti code!  It is deliberately ugly because
 # trying to avoid function/method call overhead is one of the major goals.
 # In the future it may make sense to try to make the code more readable by
-# more extensive use of Chess::Position::Macro.
+# more extensive use of Chess::Plisco::Macro.
 
-package Chess::Position;
+package Chess::Plisco;
 
 use strict;
 use integer;
@@ -49,7 +49,7 @@ use Locale::TextDomain qw('Chess-Position');
 use Scalar::Util qw(reftype);
 use Config;
 
-use Chess::Position::Macro;
+use Chess::Plisco::Macro;
 
 use base qw(Exporter);
 
@@ -2549,7 +2549,7 @@ sub perftByCopy {
 	my $nodes = 0;
 	my @moves = $pos->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my $copy = bless [@$pos], 'Chess::Position';
+		my $copy = bless [@$pos], 'Chess::Plisco';
 		$copy->doMove($move) or next;
 
 		if ($depth > 1) {
@@ -2620,7 +2620,7 @@ sub perftByCopyWithOutput {
 
 	my @moves = $pos->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my $copy = bless [@$pos], 'Chess::Position';
+		my $copy = bless [@$pos], 'Chess::Plisco';
 		$copy->doMove($move) or next;
 
 		my $movestr = $copy->moveCoordinateNotation($move);

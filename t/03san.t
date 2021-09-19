@@ -13,7 +13,7 @@ use strict;
 
 use Test::More;
 
-use Chess::Position qw(:all);
+use Chess::Plisco qw(:all);
 
 my @tests = (
 	{
@@ -131,7 +131,7 @@ my @tests = (
 plan tests => 10 * @tests;
 
 foreach my $test (@tests) {
-	my $pos = Chess::Position->new($test->{fen});
+	my $pos = Chess::Plisco->new($test->{fen});
 	ok $pos, "valid FEN $test->{fen}";
 	my $move = $pos->parseMove($test->{move});
 	ok $move, "valid move $test->{move}";

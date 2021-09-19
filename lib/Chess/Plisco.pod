@@ -1,13 +1,13 @@
 =head1 NAME 
 
-Chess::Position - A comprehensive chess library for Perl
+Chess::Plisco - A comprehensive chess library for Perl
 
 =head1 SYNOPSIS
 
-    use Chess::Position(:all);
+    use Chess::Plisco(:all);
 
-    $pos = Chess::Position->new;
-    $pos = Chess::Position->new('k7/8/8/8/8/8/8/7K w - - 0 1');
+    $pos = Chess::Plisco->new;
+    $pos = Chess::Plisco->new('k7/8/8/8/8/8/8/7K w - - 0 1');
 
 =head1 DESCRIPTION
 
@@ -42,12 +42,12 @@ coordinate notation
 
 =back
 
-For a gentler introduction, please see L<Chess::Position::Tutorial>.  The rest
+For a gentler introduction, please see L<Chess::Plisco::Tutorial>.  The rest
 of this document contains reference documentation only.
 
 If performance is key for you, you are strongly advised to have a look at
-L<Chess::Position::Macro> which documents macros resp. inline functions that
-speed up tasks that can be done with L<Chess::Position> significantly.
+L<Chess::Plisco::Macro> which documents macros resp. inline functions that
+speed up tasks that can be done with L<Chess::Plisco> significantly.
 
 The class exports a number of constants that can either be imported
 individually, by export tag, or all at once by the export tag ':all'.  All
@@ -56,11 +56,11 @@ import all constants.
 
 =head2 Internals
 
-An instance of a B<Chess::Position> is a blessed array reference.  You can
+An instance of a B<Chess::Plisco> is a blessed array reference.  You can
 access its properties through accessor macros or by using constants for
 the array indices.
 
-A move in B<Chess::Position> is a regular scalar, more precisely an unsigned
+A move in B<Chess::Plisco> is a regular scalar, more precisely an unsigned
 integer. You can access its properties with the move methods described below.
 
 It is guaranteed that every legal chess move is represented by an non-zero
@@ -110,17 +110,17 @@ move, either Standard-Algebraic Notation SAN or coordinate notation.
 
 =head2 Limitations
 
-B<Chess::Position> requires 64-bit support for Perl.  It will not run on
+B<Chess::Plisco> requires 64-bit support for Perl.  It will not run on
 32-bit Perls.
 
 =head2 Similar Software
 
 L<Chess::Rep> and L<Chess::Play> provide similar functionality.  Both compile
-a lot faster than B<Chess::Position> but once compiled, a perft test of
-B<Chess::Position> runs more than 30 times faster than one of L<Chess::Play>
+a lot faster than B<Chess::Plisco> but once compiled, a perft test of
+B<Chess::Plisco> runs more than 30 times faster than one of L<Chess::Play>
 and more than 100 times faster than one of L<Chess::Rep>.
 
-At the time of this writing, B<Chess::Position> also outperforms
+At the time of this writing, B<Chess::Plisco> also outperforms
 L<python-chess|https://python-chess.readthedocs.io/en/latest/> by about 50 %.
 
 =head1 CONSTRUCTORS
@@ -129,7 +129,7 @@ L<python-chess|https://python-chess.readthedocs.io/en/latest/> by about 50 %.
 
 =item B<new([FEN])>
 
-Creates a new B<Chess::Position> instance that represents the starting position
+Creates a new B<Chess::Plisco> instance that represents the starting position
 of standard chess.
 
 If an argument is passed to the constructor, it is interpreted as a position in
@@ -138,7 +138,7 @@ constructor C<newFromFEN>.
 
 =item B<newFromFEN(FEN)>
 
-Creates a new B<Chess::Position> instance from a string containing the
+Creates a new B<Chess::Plisco> instance from a string containing the
 Forsyth-Edwards Notation (FEN) of a chess position.  The only difference to
 C<new()> is that the string argument is required. 
 
@@ -161,7 +161,7 @@ other operators are overloaded.
 
 Note that the Forsyth-Edwards Notation does not cover all aspects of a chess
 position, especially the history of moves.  String-wise equality of two
-instances of a B<Chess::Position> does therefore not imply that the two
+instances of a B<Chess::Plisco> does therefore not imply that the two
 positions are identical.  Use the method L</equal> for a strict equality
 check.
 
@@ -176,7 +176,7 @@ check.
 Renders the position to Forsyth-Edwards Notation.  Alternatively, you can just
 use the object as a string:
 
-    $position = Chess::Position->new;
+    $position = Chess::Plisco->new;
     say $position->toFEN;
     say "$position"; # Does the same as above.
 
@@ -326,7 +326,7 @@ Note that hash collisions albeit unlikely, may occur because 64 bit are, of
 course, not sufficient to uniquely identify a chess position.
 
 The signature computed for a certain position is guaranteed not to change for
-one release of B<Chess::Position>.  In order to compute different signatures,
+one release of B<Chess::Plisco>.  In order to compute different signatures,
 you have to override either the pseudo-random number generator L</RNG> or its
 seed L</CP_RANDOM_SEED>.  If you turn the constant L</CP_RANDOM_SEED> into
 a non-constant subroutine, you can also get different signatures, whenever
@@ -394,7 +394,7 @@ The values are:
 
 =back
 
-These constants can be overridden by inheriting from B<Chess::Position>.
+These constants can be overridden by inheriting from B<Chess::Plisco>.
 
 Note: Kings do not count!
 
@@ -745,7 +745,7 @@ B<OCCUPANCY> is a bitboard of all squares that are occupied by pieces.
 The first piece that the sliding piece would reach is considered a potential
 captured of a capture and is a valid target square.
 
-See L<Chess::Position::Tutorial/Understanding C<rMagic> and C<bMagic>> for
+See L<Chess::Plisco::Tutorial/Understanding C<rMagic> and C<bMagic>> for
 more information.
 
 =item B<bMagic(SHIFT, OCCUPANCY)>
@@ -755,7 +755,7 @@ B<OCCUPANCY> is a bitboard of all squares that are occupied by pieces.
 The first piece that the sliding piece would reach is considered a potential
 captured of a capture and is a valid target square.
 
-See L<Chess::Position::Tutorial/Understanding C<rMagic> and C<bMagic>> for
+See L<Chess::Plisco::Tutorial/Understanding C<rMagic> and C<bMagic>> for
 more information.
 
 =back
@@ -902,9 +902,9 @@ L</CP_RANDOM_SEED>.
 =head1 PROPERTIES
 
 You can access individual properties either by using index constants or by
-using accessor macros from L<Chess::Position::Macro>.  All accessor macros
+using accessor macros from L<Chess::Plisco::Macro>.  All accessor macros
 can be assigned to; they are L-values.  But you are strongly advised
-to modify properties of a B<Chess::Position> instance only with the methods
+to modify properties of a B<Chess::Plisco> instance only with the methods
 documented here.
 
 For getting or setting the bitboard of all white pieces, you have
@@ -918,7 +918,7 @@ these options:
     cp_w_pieces($pos) = $white_pieces;
 
 The macros (all starting with "cp_") are only available when you have loaded
-L<Chess::Position::Macro>, see there for more information.
+L<Chess::Plisco::Macro>, see there for more information.
 
 All elements of the position array are documented below under
 L</Accessor Indexes (:accessors)>.
@@ -928,7 +928,7 @@ L</Accessor Indexes (:accessors)>.
 The module exports only constants, all prefixed with "CP_".
 
 Note that (lowercase) macros "cp_" are defined by using
-L<Chess::Position::Macro>.
+L<Chess::Plisco::Macro>.
 
 =head2 All Constants (:all)
 
@@ -1153,7 +1153,7 @@ These are all large data tables that are used internally for the magic
 bitboards that generate the attack masks for the sliding pieces (queens,
 bishops, and rooks).  See the source if you are curious.  Otherwise just import
 them if you want to use the macros C<cp_mm_bmagic()> and C<cp_mm_rmagic()>
-from L<Chess::Position::Macro>.
+from L<Chess::Plisco::Macro>.
 
 =head3 CP_MAGICMOVES_B_MAGICS
 
@@ -1185,4 +1185,4 @@ Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
 
 =head1 SEE ALSO
 
-L<Chess::Position::Macro>, perl(1)
+L<Chess::Plisco::Macro>, perl(1)

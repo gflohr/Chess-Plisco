@@ -13,8 +13,8 @@ use strict;
 use integer;
 
 use Test::More;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my @tests = (
 	{
@@ -74,7 +74,7 @@ my @tests = (
 plan tests => scalar @tests;
 
 foreach my $test (@tests) {
-	my $pos = Chess::Position->new($test->{fen});
+	my $pos = Chess::Plisco->new($test->{fen});
 	if ($test->{move}) {
 		my $move = $pos->parseMove($test->{move})
 			or die "$test->{name}: invalid move $test->{move}";

@@ -1,14 +1,14 @@
 =head1 NAME
 
-Chess::Position::Macro - Macros/inline functions for Chess::Position
+Chess::Plisco::Macro - Macros/inline functions for Chess::Plisco
 
 =head1 SYNOPSIS
 
     use integer;
-    use Chess::Position qw(:all);
-    use Chess::Position::Macro;
+    use Chess::Plisco qw(:all);
+    use Chess::Plisco::Macro;
 
-    my $white_pieces = cp_pos_white_pieces(Chess::Position->new);
+    my $white_pieces = cp_pos_white_pieces(Chess::Plisco->new);
 
     my $bitboard = '0x8080808080808080';
     my $popcount;
@@ -20,13 +20,13 @@ Chess::Position::Macro - Macros/inline functions for Chess::Position
 
 =head1 DESCRIPTION
 
-The module L<Chess::Position::Macro> is a source filter.  It makes a number
+The module L<Chess::Plisco::Macro> is a source filter.  It makes a number
 of macros respectively inline functions available that can be invoked without
 any subroutine call overhead.  In fact, all invocations of these macros are
 translated into constant expressions at compile-time.
 
 All the functionality available in the module is also available as instance
-or class methods of L<Chess::Position>.  You should only use the macros
+or class methods of L<Chess::Plisco>.  You should only use the macros
 defined here if you have to squeeze out the last bit of performance from
 your code, for example, when writing a chess engine.  Otherwise, using the
 macros has only disadvantages:
@@ -46,7 +46,7 @@ macros has only disadvantages:
 If performance outweighs these problems in your use case, read on!
 
 The source filter is probably not perfect but is able to translate at least
-the source code of L<Chess::Position>.  If you have trouble like unexpected
+the source code of L<Chess::Plisco>.  If you have trouble like unexpected
 syntax errors in your own code, you can use the function C<preprocess()> (see
 below), to get a translation of your source file, and find the problem.
 
@@ -71,7 +71,7 @@ These are actually subroutines but Perl inlines them into your code, even
 with constant folding (see the second example), so that you pay no price for
 the use of these constants.
 
-But L<Chess::Position> needs parametrized macros.  For example, if you want
+But L<Chess::Plisco> needs parametrized macros.  For example, if you want
 to extract the start square of a move, you have to do this:
 
     $from = ((($move) >> 6) & 0x3f);
@@ -101,12 +101,12 @@ documentation below.
 
 There are some caveats, when using this module.
 
-=head2 Import Constants from L<Chess::Position>
+=head2 Import Constants from L<Chess::Plisco>
 
 Remember that the macro calls defined in your code will be replaced by other
 code at compile-time and that other code makes use of constants defined in
-L<Chess::Position>.  Therefore, you should always import these constants
-with C<use Chess::Position ':all'>.
+L<Chess::Plisco>.  Therefore, you should always import these constants
+with C<use Chess::Plisco ':all'>.
 
 =head2 Use C<integer>
 
@@ -170,9 +170,9 @@ And some more esoteric usages will probaly also not work.
 You should only use one single function of this module, the function
 C<preprocess()> that does the actual translation of your code.  Example:
 
-    require Chess::Position::Macro;
+    require Chess::Plisco::Macro;
     open my $fh, '<', 'YourModule.pm' or die;
-    print Chess::Position::Macro::preprocess(join '', <$fh>);
+    print Chess::Plisco::Macro::preprocess(join '', <$fh>);
 
 This will dump the translated source code of F<YourModule.pm> on standard
 output.
@@ -185,105 +185,105 @@ Note that the source filter is theoretically able to inline constants (that
 are macros without arguments) as well but this feature is not used because
 it does not have any advantage over the regular L<constant> pragma of Perl.
 
-=head2 Macros for L<Chess::Position> Instances
+=head2 Macros for L<Chess::Plisco> Instances
 
 =over 4
 
 =item B<cp_pos_white_pieces(POS)>
 
-Same as L<Chess::Position/whitePieces>.
+Same as L<Chess::Plisco/whitePieces>.
 
 =item B<cp_pos_black_pieces(POS)>
 
-Same as L<Chess::Position/blackPieces>.
+Same as L<Chess::Plisco/blackPieces>.
 
 =item B<cp_pos_kings(POS)>
 
-Same as L<Chess::Position/kings>.
+Same as L<Chess::Plisco/kings>.
 
 =item B<cp_pos_queens(POS)>
 
-Same as L<Chess::Position/queens>.
+Same as L<Chess::Plisco/queens>.
 
 =item B<cp_pos_rooks(POS)>
 
-Same as L<Chess::Position/rooks>.
+Same as L<Chess::Plisco/rooks>.
 
 =item B<cp_pos_bishops(POS)>
 
-Same as L<Chess::Position/bishops>.
+Same as L<Chess::Plisco/bishops>.
 
 =item B<cp_pos_knights(POS)>
 
-Same as L<Chess::Position/knights>.
+Same as L<Chess::Plisco/knights>.
 
 =item B<cp_pos_pawns(POS)>
 
-Same as L<Chess::Position/pawns>.
+Same as L<Chess::Plisco/pawns>.
 
 =item B<cp_pos_to_move(POS)>
 
-Same as L<Chess::Position/toMove>.
+Same as L<Chess::Plisco/toMove>.
 
 =item B<cp_pos_castling_rights(POS)>
 
-Same as L<Chess::Position/castlingRights>.
+Same as L<Chess::Plisco/castlingRights>.
 
 =item B<cp_pos_white_king_side_castling_right(POS)>
 
-Same as L<Chess::Position/whiteKingSideCastlingRight>.
+Same as L<Chess::Plisco/whiteKingSideCastlingRight>.
 
 =item B<cp_pos_white_queen_side_castling_right(POS)>
 
-Same as L<Chess::Position/whiteQueenSideCastlingRight>.
+Same as L<Chess::Plisco/whiteQueenSideCastlingRight>.
 
 =item B<cp_pos_black_king_side_castling_right(POS)>
 
-Same as L<Chess::Position/blackKingSideCastlingRight>.
+Same as L<Chess::Plisco/blackKingSideCastlingRight>.
 
 =item B<cp_pos_black_queen_side_castling_right(POS)>
 
-Same as L<Chess::Position/blackQueenSideCastlingRight>.
+Same as L<Chess::Plisco/blackQueenSideCastlingRight>.
 
 =item B<cp_pos_half_move_clock(POS)>
 
-Same as L<Chess::Position/halfMoveClock>.
+Same as L<Chess::Plisco/halfMoveClock>.
 
 =item B<cp_pos_half_moves(POS)>
 
-Same as L<Chess::Position/halfMoves>.
+Same as L<Chess::Plisco/halfMoves>.
 
 =item B<cp_pos_en_passant_shift(POS)>
 
-Same as L<Chess::Position/enPassantShift>.
+Same as L<Chess::Plisco/enPassantShift>.
 
 =item B<cp_pos_king_shift(POS)>
 
-Same as L<Chess::Position/kingShift>.
+Same as L<Chess::Plisco/kingShift>.
 
 =item B<cp_pos_in_check(POS)>
 
-Same as L<Chess::Position/inCheck>.
+Same as L<Chess::Plisco/inCheck>.
 
 =item B<cp_pos_evasion(POS)>
 
-Same as L<Chess::Position/evasion>.
+Same as L<Chess::Plisco/evasion>.
 
 =item B<cp_pos_evasion_squares(POS)>
 
-Same as L<Chess::Position/evasionSquares>.
+Same as L<Chess::Plisco/evasionSquares>.
 
 =item B<cp_pos_signature(POS)>
 
-Same as L<Chess::Position/signature>.
+Same as L<Chess::Plisco/signature>.
 
 =item B<cp_pos_material(POS)>
 
-Same as L<Chess::Position/material>.
+Same as L<Chess::Plisco/material>.
 
 =item B<cp_pos_info(POS)>
 
-Same as L<Chess::Position/info>.  See also L</Position Info Macros> below!
+Same as L<Chess::Plisco/info>.  See also L</Position Info Macros> below!
 
 =back
 
@@ -347,67 +347,67 @@ info B<INFO> as returned by L</cp_pos_info>.
 
 =head2 Move Macros
 
-These macros operate on scalar moves for L<Chess::Position> which are just
+These macros operate on scalar moves for L<Chess::Plisco> which are just
 plain integers.  They do I<not> work for instances of a
-L<Chess::Position::Move>!
+L<Chess::Plisco::Move>!
 
 =over 4
 
 =item B<cp_move_to(MOVE)>
 
-Same as L<Chess::Position/moveTo>.
+Same as L<Chess::Plisco/moveTo>.
 
 =item B<cp_move_set_to(MOVE, TO)>
 
-Same as L<Chess::Position/moveSetTo> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetTo> but modifies B<MOVE> directly.
 
 =item B<cp_move_from(MOVE)>
 
-Same as L<Chess::Position/moveFrom>.
+Same as L<Chess::Plisco/moveFrom>.
 
 =item B<cp_move_set_from(MOVE, FROM)>
 
-Same as L<Chess::Position/moveSetFrom> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetFrom> but modifies B<MOVE> directly.
 
 =item B<cp_move_promote(MOVE)>
 
-Same as L<Chess::Position/movePromote>.
+Same as L<Chess::Plisco/movePromote>.
 
 =item B<cp_move_set_promote(MOVE, PROMOTE)>
 
-Same as L<Chess::Position/moveSetPromote> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetPromote> but modifies B<MOVE> directly.
 
 =item B<cp_move_piece(MOVE)>
 
-Same as L<Chess::Position/movePiece>.
+Same as L<Chess::Plisco/movePiece>.
 
 =item B<cp_move_set_piece(MOVE, PIECE)>
 
-Same as L<Chess::Position/moveSetPiece> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetPiece> but modifies B<MOVE> directly.
 
 =item B<cp_move_captured(MOVE)>
 
-Same as L<Chess::Position/moveCaptured>.
+Same as L<Chess::Plisco/moveCaptured>.
 
 =item B<cp_move_set_captured(MOVE, PIECE)>
 
-Same as L<Chess::Position/moveSetCaptured> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetCaptured> but modifies B<MOVE> directly.
 
 =item B<cp_move_color(MOVE)>
 
-Same as L<Chess::Position/moveCaptured>.
+Same as L<Chess::Plisco/moveCaptured>.
 
 =item B<cp_move_set_color(MOVE, COLOR)>
 
-Same as L<Chess::Position/moveSetColor> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetColor> but modifies B<MOVE> directly.
 
 =item B<cp_move_equivalent(MOVE)>
 
-Same as L<Chess::Position/moveEquivalent>.
+Same as L<Chess::Plisco/moveEquivalent>.
 
 =item B<cp_move_coordinate_notation(MOVE)>
 
-Same as L<Chess::Position/moveCoordinateNotation>.
+Same as L<Chess::Plisco/moveCoordinateNotation>.
 
 =back
 
@@ -442,37 +442,37 @@ Example:
     cp_bitboard_popcount $bitboard, $count;
     print "There are $count bits set in $bitboard.\n";
 
-See also L<Chess::Position/bitboardPopcount>!
+See also L<Chess::Plisco/bitboardPopcount>!
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_but_least_set(BITBOARD)>
 
-Same as L<Chess::Position/bitboardclearButLeastSet> but modifies
+Same as L<Chess::Plisco/bitboardclearButLeastSet> but modifies
 B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_but_most_set(BITBOARD)>
 
-Same as L<Chess::Position/bitboardclearButMostSet> but modifies
+Same as L<Chess::Plisco/bitboardclearButMostSet> but modifies
 B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_least_set(BITBOARD)>
 
-Same as L<Chess::Position/clearLeastSet> but modifies B<BITBOARD> directly.
+Same as L<Chess::Plisco/clearLeastSet> but modifies B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_count_trailing_zbits(BITBOARD)>
 
-Same as L<Chess::Position/countTrailingZbits>.
+Same as L<Chess::Plisco/countTrailingZbits>.
 
 =item B<cp_bitboard_count_isolated_trailing_zbits(BITBOARD)>
 
-Same as L<Chess::Position/countIsolatedTrailingZbits>.
+Same as L<Chess::Plisco/countIsolatedTrailingZbits>.
 
 =back
 
@@ -530,4 +530,4 @@ Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
 
 =head1 SEE ALSO
 
-L<Chess::Position>, L<constant>, L<Filter::Util::Call>, perl(1)
+L<Chess::Plisco>, L<constant>, L<Filter::Util::Call>, perl(1)

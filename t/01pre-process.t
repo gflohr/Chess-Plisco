@@ -14,26 +14,26 @@ use strict;
 use Test::More;
 
 # Do not "use" the module because we do not want to acti
-require Chess::Position::Macro;
+require Chess::Plisco::Macro;
 
 my ($code);
 
 $code = 'cp_move_to($move)';
-is Chess::Position::Macro::preprocess($code), '(($move) & 0x3f)', $code;
+is Chess::Plisco::Macro::preprocess($code), '(($move) & 0x3f)', $code;
 
 $code = 'cp_move_to $move';
-is Chess::Position::Macro::preprocess($code), '(($move) & 0x3f)', $code;
+is Chess::Plisco::Macro::preprocess($code), '(($move) & 0x3f)', $code;
 
 $code = 'cp_move_to($move); return;';
-is Chess::Position::Macro::preprocess($code),
+is Chess::Plisco::Macro::preprocess($code),
 	'(($move) & 0x3f); return;', $code;
 
 $code = 'cp_move_to $move; return;';
-is Chess::Position::Macro::preprocess($code),
+is Chess::Plisco::Macro::preprocess($code),
 	'(($move) & 0x3f); return;', $code;
 
 $code = 'cp_move_set_to($move, 32);';
-is Chess::Position::Macro::preprocess($code),
+is Chess::Plisco::Macro::preprocess($code),
 	'(($move) = (($move) & ~0x3f) | ((32) & 0x3f));', $code;
 
 done_testing;

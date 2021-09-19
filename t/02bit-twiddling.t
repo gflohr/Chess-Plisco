@@ -13,8 +13,8 @@ use strict;
 use integer;
 
 use Test::More tests => 30;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my ($bitboard, $count);
 

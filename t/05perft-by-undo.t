@@ -16,8 +16,8 @@ use Test::More;
 use Data::Dumper;
 use Time::HiRes qw(gettimeofday tv_interval);
 
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my @tests = (
 	{
@@ -128,7 +128,7 @@ plan tests => $num_tests;
 
 my $seconds_per_test = $ENV{CP_STRESS_TEST} || 5;
 foreach my $test (@tests) {
-	my $pos = Chess::Position->new($test->{fen});
+	my $pos = Chess::Plisco->new($test->{fen});
 	my @perfts = @{$test->{perft}};
 
 	for (my $depth = 1; $depth <= @perfts; ++$depth) {

@@ -12,9 +12,9 @@
 use strict;
 
 use Test::More;
-use Chess::Position;
+use Chess::Plisco;
 
-my $pos = Chess::Position->new;
+my $pos = Chess::Plisco->new;
 
 ok $pos, 'created';
 
@@ -25,43 +25,43 @@ my $wanted = $initial;
 is $got, $wanted, 'FEN initial position';
 is "$pos", $wanted, 'FEN initial position stringified';
 
-is_deeply(Chess::Position->newFromFEN($wanted), $pos, 'newFromFEN');
+is_deeply(Chess::Plisco->newFromFEN($wanted), $pos, 'newFromFEN');
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w');
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w');
 };
 like $@, qr/incomplete/i;
 
-is(Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq')
+is(Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq')
    ->toFEN, $initial, 'defaults');
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 like $@, qr/exactly eight ranks/i;
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 like $@, qr/exactly eight ranks/i;
 
 eval {
-	Chess::Position->newFromFEN('rsbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Plisco->newFromFEN('rsbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 like $@, qr/illegal piece\/number 's'/i;
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppppppp/8/8/9/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/9/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 like $@, qr/illegal piece\/number '9'/i;
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/pppp0pppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppp0pppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 like $@, qr/illegal piece\/number '0'/i, "illegal number 0";
 
 eval {
-	Chess::Position->newFromFEN('rnbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
+	Chess::Plisco->newFromFEN('rnbqkbnr/ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
 like $@, qr/incomplete or overpopulated rank/i;
 

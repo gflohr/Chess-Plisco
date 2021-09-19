@@ -13,7 +13,7 @@ use strict;
 use integer;
 
 use Test::More;
-use Chess::Position::Macro;
+use Chess::Plisco::Macro;
 
 my ($bitboard, $count);
 
