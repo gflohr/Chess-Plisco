@@ -58,6 +58,21 @@ my @tests = (
 		fen => '5q1k/4P3/8/8/8/8/8/4K3 w - - 0 1',
 		san => 'exf8=Q',
 	},
+	{
+		name => 'Simple white pawn capture',
+		fen => '7k/8/8/8/8/1p6/P7/K7 w - - 0 1',
+		san => 'axb3',
+	},
+	{
+		name => 'Simple black pawn capture',
+		fen => '7k/p7/1P6/8/8/8/8/K7 b - - 0 1',
+		san => 'axb6',
+	},
+	{
+		name => 'Flohr - Poisl, Kautsky mem4, 1927',
+		fen => 'r2q1rk1/pbpnbpp1/1p1p3p/4p3/2PPP1nP/P1NB1N2/1P1BQPP1/R3K2R b KQ - 1 12',
+		san => 'exd4',
+	},
 );
 
 plan tests => 5 * @tests;
