@@ -1053,7 +1053,7 @@ The index of the in-check bitboard.
 
 Symbolic constant for white pieces, side to move, and so on.
 
-=head3 CP_BLACK =C<gt> 1
+=head3 CP_BLACK =E<gt> 1
 
 Symbolic constant for black pieces, side to move, and so on.  Actually, usage
 of this constant is avoided internally so that any truthy value can be used.
