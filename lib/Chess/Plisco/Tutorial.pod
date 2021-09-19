@@ -60,9 +60,9 @@ first few are:
 
 =over
 
-=item * C<w_pieces> - one bitboard for the white pieces
+=item * C<white_pieces> - one bitboard for the white pieces
 
-=item * C<b_pieces> - one bitboard for the black pieces
+=item * C<black_pieces> - one bitboard for the black pieces
 
 =item * C<pawns> - one bitboard for the pawns (of both colors)
 
@@ -74,10 +74,10 @@ first few are:
 
 =item * C<queens> - one bitboard for the queens (of both colors)
 
-=item * C<checkers> - one bitboard for all pieces giving check (of the color
-not to move)
-
 =item * C<kings> - one bitboard for the kings (of both colors)
+
+=item * C<in_check> - one bitboard for all pieces giving check (of the color
+not to move)
 
 =back
 
