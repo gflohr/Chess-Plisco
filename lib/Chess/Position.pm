@@ -1598,7 +1598,6 @@ sub parseMove {
 
 	my $piece;
 	my $from_mask = 1 << (cp_move_from $move);
-
 	if ($from_mask & cp_pos_pawns($self)) {
 		$piece = CP_PAWN;
 	} elsif ($from_mask & cp_pos_knights($self)) {
@@ -1617,6 +1616,28 @@ sub parseMove {
 	}
 
 	cp_move_set_piece($move, $piece);
+
+	my $captured = CP_NO_PIECE;
+	my $to_mask = 1 << (cp_move_to $move);
+	if ($to_mask & cp_pos_pawns($self)) {
+		$captured = CP_PAWN;
+	} elsif ($to_mask & cp_pos_knights($self)) {
+		$captured = CP_KNIGHT;
+	} elsif ($to_mask & cp_pos_bishops($self)) {
+		$captured = CP_BISHOP;
+	} elsif ($to_mask & cp_pos_rooks($self)) {
+		$captured = CP_ROOK;
+	} elsif ($to_mask & cp_pos_queens($self)) {
+		$captured = CP_QUEEN;
+	} elsif ($to_mask & cp_pos_kings($self)) {
+		$captured = CP_KING;
+	} elsif ($piece == CP_PAWN && $self->enPassantShift
+	         && (cp_move_to($move)) == $self->enPassantShift) {
+		$captured = CP_PAWN;
+	}
+	cp_move_set_captured $move, $captured;
+
+	cp_move_set_color $move, $self->toMove;
 
 	return $move;
 }
@@ -2238,10 +2259,9 @@ sub legalMoves {
 
 	foreach my $move ($self->pseudoLegalMoves) {
 		my $undo_info = $self->doMove($move) or next;
-		push @legal, $move;
+		# Set captured piece and color.
+		push @legal, $undo_info->[0];
 		$self->undoMove($undo_info);
-		# Set captured piece.
-		$move = $undo_info->[0];
 	}
 
 	return @legal;
@@ -2303,7 +2323,13 @@ sub SAN {
 
 	my (%files, %ranks);
 	my $candidates = 0;
-	foreach my $cmove (@cmoves) {
+	# When we iterate over the moves make sure that we do not count moves that
+	# just differ in the promotion piece, four times.  We do that by just
+	# stripping off the promotion piece and making the array unique.
+	my %cmoves = map { $_ => 1 }
+			map { $self->moveSetPromote($_, CP_NO_PIECE) }
+			@cmoves;
+	foreach my $cmove (keys %cmoves) {
 		my ($cfrom, $cto) = ($self->moveFrom($cmove), $self->moveTo($cmove));
 		next if $cto != $to;
 
@@ -2345,6 +2371,11 @@ sub SAN {
 	}
 
 	$san .= $self->shiftToSquare($to);
+
+	my $promote = $self->movePromote($move);
+	if ($promote) {
+		$san .= "=$pieces[$promote]";
+	}
 
 	my $copy = $self->copy;
 	if ($copy->doMove($move) && $copy->inCheck) {
@@ -2851,7 +2882,7 @@ sub moveLegal {
 
 	my @legal_moves = $self->legalMoves;
 	foreach my $legal_move (@legal_moves) {
-		return $self if $legal_move == $move;
+		return $self if $self->moveEquivalent($legal_move, $move);
 	}
 
 	return;
