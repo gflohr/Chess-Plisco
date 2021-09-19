@@ -968,7 +968,7 @@ sub doMove {
 	# Check number 4 is done below for en passant moves.
 	return if _cp_pos_move_pinned $self, $from, $to, $king_shift, $my_pieces, $her_pieces;
 
-	my $old_castling = my $new_castling = cp_pos_info_castling $pos_info;
+	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
 	my $in_check = cp_pos_in_check $self;
 	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $zk_update = $ep_shift ? ($zk_ep_files[$ep_shift & 0x7]) : 0;
@@ -1749,7 +1749,7 @@ sub __updateZobristKey {
 	if ($ep_shift) {
 		$signature ^= $zk_ep_files[$ep_shift & 0x7];
 	}
-	my $castling = cp_pos_info_castling $pos_info;
+	my $castling = cp_pos_info_castling_rights $pos_info;
 	$signature ^= $zk_castling[$castling];
 
 	if (cp_pos_info_to_move $pos_info) {

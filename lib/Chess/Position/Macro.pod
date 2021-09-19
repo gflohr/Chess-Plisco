@@ -201,6 +201,10 @@ Same as L<Chess::Position/blackPieces>.
 
 Same as L<Chess::Position/kings>.
 
+=item B<cp_pos_queens(POS)>
+
+Same as L<Chess::Position/queens>.
+
 =item B<cp_pos_rooks(POS)>
 
 Same as L<Chess::Position/rooks>.
@@ -249,21 +253,95 @@ Same as L<Chess::Position/halfMoveClock>.
 
 Same as L<Chess::Position/halfMoves>.
 
-=item B<cp_pos_w_king_shift(POS)>
+=item B<cp_pos_en_passant_shift(POS)>
 
-Same as L<Chess::Position/whiteKingShift>.
+Same as L<Chess::Position/enPassantShift>.
 
-=item B<cp_pos_b_king_shift(POS)>
+=item B<cp_pos_king_shift(POS)>
 
-Same as L<Chess::Position/blackKingShift>.
+Same as L<Chess::Position/kingShift>.
 
 =item B<cp_pos_in_check(POS)>
 
 Same as L<Chess::Position/inCheck>.
 
+=item B<cp_pos_evasion(POS)>
+
+Same as L<Chess::Position/evasion>.
+
+=item B<cp_pos_evasion_squares(POS)>
+
+Same as L<Chess::Position/evasionSquares>.
+
 =item B<cp_pos_signature(POS)>
 
 Same as L<Chess::Position/signature>.
+
+=item B<cp_pos_material(POS)>
+
+Same as L<Chess::Position/material>.
+
+=item B<cp_pos_info(POS)>
+
+Same as L<Chess::Position/info>.  See also L</Position Info Macros> below!
+
+=back
+
+=head2 Position Info Macros
+
+All these work directly on a position info as returned by L</cp_pos_info>.
+
+=over 4
+
+=item b<cp_pos_info_castling_rights(INFO)>
+
+Same as L</cp_pos_castling_ights> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_white_king_side_castling_right(INFO)>
+
+Same as L</cp_pos_white_king_side_castling_right> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_white_queen_side_castling_right(INFO)>
+
+Same as L</cp_pos_white_queen_side_castling_right> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_black_king_side_castling_right(INFO)>
+
+Same as L</cp_pos_black_king_side_castling_right> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_black_queen_side_castling_right(INFO)>
+
+Same as L</cp_pos_black_queen_side_castling_right> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_to_move(INFO)>
+
+Same as L</cp_pos_to_move> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_en_passant_shift(INFO)>
+
+Same as L</cp_pos_en_passant_shift> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_king_shift(INFO)>
+
+Same as L</cp_pos_king_shift> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_evasion(INFO)>
+
+Same as L</cp_pos_evasion> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item b<cp_pos_info_material(INFO)>
+
+Same as L</cp_pos_material> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
 
 =back
 
@@ -295,7 +373,7 @@ Same as L<Chess::Position/moveFrom> but modifies B<MOVE> directly.
 
 Same as L<Chess::Position/movePromote>.
 
-=item B<cp_move_set_from(MOVE, PROMOTE)>
+=item B<cp_move_set_promote(MOVE, PROMOTE)>
 
 Same as L<Chess::Position/moveFrom> but modifies B<MOVE> directly.
 
@@ -306,6 +384,10 @@ Same as L<Chess::Position/movePiece>.
 =item B<cp_move_set_piece(MOVE, PIECE)>
 
 Same as L<Chess::Position/movePiece> but modifies B<MOVE> directly.
+
+=item B<cp_move_equivalent(MOVE)>
+
+Same as L<Chess::Position/moveEquivalent>.
 
 =item B<cp_move_coordinate_notation(MOVE)>
 
@@ -344,31 +426,37 @@ Example:
     cp_bitboard_popcount $bitboard, $count;
     print "There are $count bits set in $bitboard.\n";
 
+See also L<Chess::Position/bitboardPopcount>!
+
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_but_least_set(BITBOARD)>
 
-Clear all bits but the least significant one in B<BITBOARD>.
+Same as L<Chess::Position/bitboardclearButLeastSet> but modifies
+B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_but_most_set(BITBOARD)>
 
-Clear all bits but the msot significant one in B<BITBOARD>.
+Same as L<Chess::Position/bitboardclearButMostSet> but modifies
+B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_least_set(BITBOARD)>
 
-Clear the least signficant set bit in B<BITBOARD>.
+Same as L<Chess::Position/clearLeastSet> but modifies B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
+=item B<cp_bitboard_count_trailing_zbits(BITBOARD)>
+
+Same as L<Chess::Position/countTrailingZbits>.
+
 =item B<cp_bitboard_count_isolated_trailing_zbits(BITBOARD)>
 
-Count trailing zero bits in B<BITBOARD>.  Only works for B<BITBOARD> != 0
-and B<BITBOARD> B<must> have a popcount of exactly 1, in other words, it must
-be a non-zero power of 2.
+Same as L<Chess::Position/countIsolatedTrailingZbits>.
 
 =back
 

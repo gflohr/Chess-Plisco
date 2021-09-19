@@ -208,8 +208,6 @@ discovered checks does not have a negative impact.
 
 Future versions of this library may include discovered checks.
 
-=back
-
 =item B<equals(POSITION)>
 
 Returns true if the current position is equivalent to B<POSITION>.
@@ -784,6 +782,8 @@ leave nodes for certain positions are well known.
 Internally, each legal move is applied to the position, then the next level
 is computed from the resulting position, and finally the move is undone.
 
+=over 4
+
 =item B<perftByCopy(DEPTH)>
 
 Does a performance test for the current position to depth B<DEPTH>.  Returns
@@ -924,7 +924,9 @@ location C<CP_POS_WHITE_PIECES + $pos->toMove>.  Or in other words, the
 constants C<CP_POS_PAWNS> and C<CP_PAWN> (likewise for the other piece types)
 are guaranteed to be the same and to point to the corresponding piece bitboard.
 
-=head3 B<POS-E<gt>[CP_POS_WHITE_PIECES]>
+=over 4
+
+=item B<POS-E<gt>[CP_POS_WHITE_PIECES]>
 
 A bitboard of all white pieces on the board. See also L</whitePieces>.
 
@@ -975,6 +977,8 @@ Bitboard of squares where a check can be blocked.  See also L</evasionSquares>.
 =item B<POS-E<gt>[CP_POS_INFO]>
 
 Additional properties of the position. See also L</info>.
+
+=back
 
 =head3 CP_POS_BLACK_PIECES
 
