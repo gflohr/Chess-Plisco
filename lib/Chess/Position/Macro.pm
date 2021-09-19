@@ -27,31 +27,55 @@ sub _expand_placeholder;
 
 my %defines;
 
+# The no-op empty subroutines only exist so that Pod::Coverage works
+# correctly.
 _define cp_pos_white_pieces => '$p', '$p->[CP_POS_WHITE_PIECES]';
+sub cp_pos_white_pieces {}
 _define cp_pos_black_pieces => '$p', '$p->[CP_POS_BLACK_PIECES]';
+sub cp_pos_black_piecess {}
 _define cp_pos_pawns => '$p', '$p->[CP_POS_PAWNS]';
+sub cp_pos_pawns {}
 _define cp_pos_knights => '$p', '$p->[CP_POS_KNIGHTS]';
+sub cp_pos_knights {}
 _define cp_pos_bishops => '$p', '$p->[CP_POS_BISHOPS]';
+sub cp_pos_bishops {}
 _define cp_pos_queens => '$p', '$p->[CP_POS_QUEENS]';
+sub cp_pos_queens {}
 _define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
+sub cp_pos_rooks {}
 _define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
+sub cp_pos_kings {}
 _define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
+sub cp_pos_half_move_clock {}
 _define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
+sub cp_pos_in_check {}
 _define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
+sub cp_pos_half_moves {}
 _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
-
+sub cp_pos_half_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
+sub cp_pos_info {}
 
 _define cp_pos_info_castling => '$i', '$i & 0xf';
+sub cp_pos_info_castling {}
 _define cp_pos_info_white_king_side_castling_right => '$i', '$i & (1 << 0)';
+sub cp_pos_info_white_king_side_castling_right {}
 _define cp_pos_info_white_queen_side_castling_right => '$i', '$i & (1 << 1)';
+sub cp_pos_info_white_queen_side_castling_right {}
 _define cp_pos_info_black_king_side_castling_right => '$i', '$i & (1 << 2)';
+sub cp_pos_info_black_king_side_castling_right {}
 _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
+sub cp_pos_info_black_queen_side_castling_right {}
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 4)) >> 4)';
+sub cp_pos_info_to_move {}
 _define cp_pos_info_ep_shift => '$i', '(($i & (0x3f << 5)) >> 5)';
+sub cp_pos_info_en_passant_shift {}
 _define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 11)) >> 11)';
+sub cp_pos_info_king_shift {}
 _define cp_pos_info_evasion => '$i', '(($i & (0x3 << 17)) >> 17)';
+sub cp_pos_info_evasion {}
 _define cp_pos_info_material => '$i', '($i >> 19)';
+sub cp_pos_info_material {}
 
 _define _cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | $c)';
@@ -76,16 +100,31 @@ _define _cp_pos_info_set_material => '$i', '$m',
 
 _define_from_file _cp_pos_info_update => '$p', '$i' => 'infoUpdate.pm';
 
-_define cp_pos_castling_rights => '$p', '(cp_pos_info_castling(cp_pos_info($p)))';
-_define cp_pos_white_king_side_castling_right => '$p', '(cp_pos_info_white_king_side_castling_right(cp_pos_info($p)))';
-_define cp_pos_white_queen_side_castling_right => '$p', '(cp_pos_info_white_queen_side_castling_right(cp_pos_info($p)))';
-_define cp_pos_black_king_side_castling_right => '$p', '(cp_pos_info_black_king_side_castling_right(cp_pos_info($p)))';
-_define cp_pos_black_queen_side_castling_right => '$p', '(cp_pos_info_black_queen_side_castling_right(cp_pos_info($p)))';
+_define cp_pos_castling_rights => '$p',
+		'(cp_pos_info_castling(cp_pos_info($p)))';
+sub cp_pos_castling_rights {}
+_define cp_pos_white_king_side_castling_right => '$p',
+		'(cp_pos_info_white_king_side_castling_right(cp_pos_info($p)))';
+sub cp_pos_white_king_side_castling_right {}
+_define cp_pos_white_queen_side_castling_right => '$p',
+		'(cp_pos_info_white_queen_side_castling_right(cp_pos_info($p)))';
+sub cp_pos_white_queen_side_castling_right {}
+_define cp_pos_black_king_side_castling_right => '$p',
+		'(cp_pos_info_black_king_side_castling_right(cp_pos_info($p)))';
+sub cp_pos_black_king_side_castling_right {}
+_define cp_pos_black_queen_side_castling_right => '$p',
+		'(cp_pos_info_black_queen_side_castling_right(cp_pos_info($p)))';
+sub cp_pos_black_queen_side_castling_right {}
 _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
+sub cp_pos_to_move {}
 _define cp_pos_ep_shift => '$p', '(cp_pos_info_ep_shift(cp_pos_info($p)))';
+sub cp_pos_en_passant_shift {}
 _define cp_pos_king_shift => '$p', '(cp_pos_info_king_shift(cp_pos_info($p)))';
+sub cp_pos_king_shift {}
 _define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
+sub cp_pos_evasion {}
 _define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
+sub cp_pos_material {}
 
 _define _cp_pos_set_castling => '$p', '$c',
 	'(_cp_pos_info_set_castling(cp_pos_info($p), $c))';
@@ -109,40 +148,70 @@ _define _cp_pos_set_material => '$p', '$m',
 	'(_cp_pos_info_set_material(cp_pos_info($p), $m))';
 
 _define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
+sub cp_pos_evasion_squares {}
 
 _define cp_move_to => '$m', '(($m) & 0x3f)';
+sub cp_move_to {}
 _define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
+sub cp_move_set_to {}
 _define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
-_define cp_move_set_from => '$m', '$v', '(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
+sub cp_move_from {}
+_define cp_move_set_from => '$m', '$v',
+		'(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
+sub cp_move_set_from {}
 _define cp_move_promote => '$m', '(($m >> 12) & 0x7)';
-_define cp_move_set_promote => '$m', '$p', '(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
+sub cp_move_promote {}
+_define cp_move_set_promote => '$m', '$p',
+		'(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
+sub cp_move_set_promote {}
 _define cp_move_piece => '$m', '(($m >> 15) & 0x7)';
-_define cp_move_set_piece => '$m', '$a', '(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
+sub cp_move_piece {}
+_define cp_move_set_piece => '$m', '$a',
+		'(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
+sub cp_move_set_piece {}
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
+sub cp_move_coordinate_notation {}
 _define cp_move_equivalent => '$m1', '$m2', '(($m1 & 0x7fff) == ($m2 & 0x7fff))';
+sub cp_move_equivalent {}
 
 # Bitboard macros.
 _define cp_bb_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
+sub cp_bitboard_popcount {}
 _define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
+sub cp_bitboard_clear_but_least_set {}
 _define_from_file cp_bb_clear_but_most_set => '$bb', 'clearButMostSet.pm';
-_define_from_file cp_bb_count_isolated_trailing_zbits => '$bb', 'countIsolatedTrailingZbits.pm';
+sub cp_bitboard_clear_but_most_set {}
+_define_from_file cp_bb_count_isolated_trailing_zbits => '$bb',
+		'countIsolatedTrailingZbits.pm';
+sub cp_bitboard_count_isolated_trailing_zbits {}
 _define_from_file cp_bb_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
+sub cp_bitboard_count_isolated_zbits {}
 _define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
+sub cp_bitboard_clear_least_set {}
 
 # Magic moves.
 _define cp_mm_bmagic => '$s', '$o',
 	'CP_MAGICMOVESBDB->[$s][(((($o) & CP_MAGICMOVES_B_MASK->[$s]) * CP_MAGICMOVES_B_MAGICS->[$s]) >> 55) & ((1 << (64 - 55)) - 1)]';
+sub cp_mm_bmagic {}
 _define cp_mm_rmagic => '$s', '$o',
 	'CP_MAGICMOVESRDB->[$s][(((($o) & CP_MAGICMOVES_R_MASK->[$s]) * CP_MAGICMOVES_R_MAGICS->[$s]) >> 52) & ((1 << (64 - 52)) - 1)]';
+sub cp_mm_rmagic {}
 
 # Conversion between different notions of a square.
 _define cp_coordinates_to_shift => '$f', '$r', '(($r << 3) + $f)';
+sub cp_coordinates_to_shift {}
 _define cp_shift_to_coordinates => '$s', '($s & 0x7, $s >> 3)';
+sub cp_shift_to_coordinates {}
 _define cp_coordinates_to_square => '$f', '$r', 'chr(97 + $f) . (1 + $r)';
+sub cp_coordinates_to_square {}
 _define cp_square_to_coordinates => '$s', '(ord($s) - 97, -1 + substr $s, 1)';
-_define cp_square_to_shift => '$s', '(((substr $s, 1) - 1) << 3) + ord($s) - 97';
+sub cp_square_to_coordinates {}
+_define cp_square_to_shift => '$s',
+		'(((substr $s, 1) - 1) << 3) + ord($s) - 97';
+sub cp_square_to_shift {}
 _define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
+sub cp_shift_to_square {}
 
 _define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
 	'movesFromMask.pm';
@@ -156,10 +225,14 @@ _define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
 
 # Bit twiddling.
 _define_from_file cp_abs => '$v', 'abs.pm';
+sub cp_abs {}
+
 # At least as fast as the versions w/o branching for example
 # a - ((a -b) & ((a - b) >> 63)), and there are no overflow issues.
 _define cp_max => '$A', '$B', '((($A) > ($B)) ? ($A) : ($B))';
+sub cp_max {}
 _define cp_min => '$A', '$B', '((($A) < ($B)) ? ($A) : ($B))';
+sub cp_min {}
 
 # Zobrist keys.
 _define _cp_zk_lookup => '$p', '$c', '$s', '$zk_pieces[((($p) << 7) | (($c) << 6) | ($s)) - 128]';

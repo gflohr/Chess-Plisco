@@ -223,60 +223,47 @@ Same as L<Chess::Position/toMove>.
 
 =item B<cp_pos_castling_rights(POS)>
 
-Same as L<Chess::Position/castling>.
+Same as L<Chess::Position/castlingRights>.
 
 =item B<cp_pos_white_king_side_castling_right(POS)>
 
-True if white can castle on the king-side in the L<Chess::Position> B<POS>.
+Same as L<Chess::Position/whiteKingSideCastlingRight>.
 
-L-value: no
 =item B<cp_pos_white_queen_side_castling_right(POS)>
 
-True if white can castle on the queen-side in the L<Chess::Position> B<POS>.
+Same as L<Chess::Position/whiteQueenSideCastlingRight>.
 
-L-value: no
 =item B<cp_pos_black_king_side_castling_right(POS)>
 
-True if black can castle on the king-side in the L<Chess::Position> B<POS>.
+Same as L<Chess::Position/blackKingSideCastlingRight>.
 
-L-value: no
 =item B<cp_pos_black_queen_side_castling_right(POS)>
 
-True if black can castle on the queen-side in the L<Chess::Position> B<POS>.
-
-L-value: no
+Same as L<Chess::Position/blackQueenSideCastlingRight>.
 
 =item B<cp_pos_half_move_clock(POS)>
 
-Get or set the half-move clock from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/halfMoveClock>.
 
 =item B<cp_pos_half_moves(POS)>
 
-Get or set the number of half-moves from the L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/halfMoves>.
 
 =item B<cp_pos_w_king_shift(POS)>
 
-Get or set the bit-shift offset of the white king square of
-L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/whiteKingShift>.
 
 =item B<cp_pos_b_king_shift(POS)>
 
-Get or set the bit-shift offset of the black king square of
-L<Chess::Position> B<POS>.
-
-L-value: yes.
+Same as L<Chess::Position/blackKingShift>.
 
 =item B<cp_pos_in_check(POS)>
 
-Get or set the in-check bitboard of the L<Chess::Position> B<POS>.
+Same as L<Chess::Position/inCheck>.
 
-L-value: yes.
+=item B<cp_pos_signature(POS)>
+
+Same as L<Chess::Position/signature>.
 
 =back
 
@@ -290,9 +277,7 @@ L<Chess::Position::Move>!
 
 =item B<cp_move_to(MOVE)>
 
-Get the destination square of B<MOVE> as a bit-shift offset.
-
-L-value: no.
+Same as L<Chess::Position/moveTo>.
 
 =item B<cp_move_set_to(MOVE, TO)>
 
@@ -319,7 +304,7 @@ Returns a bitboard of all squares that a bishop attacks from the square denoted
 by B<SHIFT> if B<OCCUPANCY> is a bitboard of all squares that are occupied by
 own pieces.
 
-=item B<cp_mm_bmagic(SHIFT, OCCUPANCY)>
+=item B<cp_mm_rmagic(SHIFT, OCCUPANCY)>
 
 Returns a bitboard of all squares that a rook attacks from the square denoted
 by B<SHIFT> if B<OCCUPANCY> is a bitboard of all squares that are occupied by
