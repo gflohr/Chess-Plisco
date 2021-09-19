@@ -196,6 +196,10 @@ Only the lower 16 bits of the move are set, that means the start and destination
 square, a possible promotion piece and the en passant flag in case the move
 is an en passant capture.
 
+If you also need the captured piece and the color, you either have to call
+L</legalMoves> or you must use the state information returned from L</doMove>
+to retrieve the enriched move.
+
 =item B<pseudoLegalAttacks>
 
 Like </pseudoLegalMoves> but only returns "interesting" moves.  Interesting
@@ -485,7 +489,7 @@ the redundant parts of the moves depend on the current position.
 
 Extracts the shift (0-63) of the starting square.
 
-=item B<setMoveFrom(MOVE, FROM)>
+=item B<moveSetFrom(MOVE, FROM)>
 
 Sets the shift (0-63) of the starting square in B<MOVE> to B<FROM> and returns
 the move.
@@ -494,7 +498,7 @@ the move.
 
 Extracts the shift (0-63) of the destination square.
 
-=item B<setMoveTo(MOVE, TO)>
+=item B<moveSetTo(MOVE, TO)>
 
 Sets the shift (0-63) of the destination square in B<MOVE> to B<TO> and returns
 the move.
@@ -504,7 +508,7 @@ the move.
 Extracts the piece that a pawn is promoted to if the move is a promotion.
 Returns either L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>, or L</CP_KNIGHT>.
 
-=item B<setMovePromote(MOVE, PROMOTE)>
+=item B<moveSetPromote(MOVE, PROMOTE)>
 
 Sets the piece to promote to in B<MOVE> to B<PROMOTE> and returns
 the move.  The piece should be one of L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>,
@@ -515,11 +519,30 @@ or L</CP_KNIGHT>.
 Extracts the piece that does the move.  Returns one of L</CP_KING>,
 L</CP_QUEEN>, L</CP_ROOK>, L</CP_BISHOP>, L</CP_KNIGHT>, or L</CP_PAWN>.
 
-=item B<setMovePiece(MOVE, PIECE)>
+=item B<moveSetPiece(MOVE, PIECE)>
 
 Sets the piece that moves in B<MOVE> to B<PIECE> and returns
 the move.  The piece should be one of L</CP_KING>, L</CP_QUEEN>, L</CP_ROOK>,
 L</CP_BISHOP>, L</CP_KNIGHT>, or L</CP_PAWN>.
+
+=item B<moveCaptured(MOVE)>
+
+Extracts the piece that gets captured if any.  Returns one of L</CP_QUEEN>,
+L</CP_ROOK>, L</CP_BISHOP>, L</CP_KNIGHT>, L</CP_PAWN>, L</CP_NO_PIECE>.
+
+=item B<moveSetCaptured(MOVE, PIECE)>
+
+Sets the piece that gets captured in B<MOVE> to B<PIECE> and returns
+the move.  The piece should be one of L</CP_QUEEN>,
+L</CP_ROOK>, L</CP_BISHOP>, L</CP_KNIGHT>, L</CP_PAWN>, L</CP_NO_PIECE>.
+
+=item B<moveColor(MOVE)>
+
+Extracts the color that does the move.
+
+=item B<moveSetColor(MOVE, COLOR)>
+
+Sets the color in B<MOVE> to B<COLOR> and returns the move.
 
 =item B<moveLegal(MOVE|NOTATION)>
 
@@ -556,6 +579,10 @@ complete legality check but works only for those moves that
 L</pseudoLegalMoves> has returned for the current position.
 
 This method is fast and is the one that should be used by engines.
+
+The state information returned is an array of various bits of information.
+The first one is the move itself but the captured piece is set in that
+move.
 
 =item B<undoMove(STATE)>
 
@@ -716,7 +743,7 @@ notations.
 Returns a bitboard of all squares that a rook can reach from B<SHIFT>.
 B<OCCUPANCY> is a bitboard of all squares that are occupied by pieces.
 The first piece that the sliding piece would reach is considered a potential
-victim of a capture and is a valid target square.
+captured of a capture and is a valid target square.
 
 See L<Chess::Position::Tutorial/Understanding C<rMagic> and C<bMagic>> for
 more information.
@@ -726,7 +753,7 @@ more information.
 Returns a bitboard of all squares that a bishop can reach from B<SHIFT>.
 B<OCCUPANCY> is a bitboard of all squares that are occupied by pieces.
 The first piece that the sliding piece would reach is considered a potential
-victim of a capture and is a valid target square.
+captured of a capture and is a valid target square.
 
 See L<Chess::Position::Tutorial/Understanding C<rMagic> and C<bMagic>> for
 more information.

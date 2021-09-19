@@ -267,9 +267,13 @@ move are:
 
 =over
 
+=item * 22 (21): side (0 for white, 1 for black) that moves
+
+=item * 19-21 (18-20): piece that gets captured if any
+
 =item * 16-18 (15-17): piece that moves (resp. piece)
 
-=item * 13-15 (12-14): promotion piece
+=item * 13-15 (12-14): promotion piece if any
 
 =item * 7-12 (6-11): from shift (0-63)
 
@@ -283,11 +287,12 @@ Only bits 1 to 15 are really needed to characterize a move, and the bits
 13 to 15 are only needed for pawn promotions. The other bits can be
 derived from the position that the move is applied to.
 
-The piece that moves, the piece is the piece that stands on the
-starting square.  Note that this is never C<CP_QUEEN> even if the piece that
-moves is a queen.  It is either C<CP_BISHOP> or C<CP_ROOK> for queen moves,
-depending on how the queen moves.  This is a little bit confusing but has a
-marginal performance advantage.
+Please note that the piece that gets captured and the color are added by
+L<Chess::Position/doMove> to the move.  They are I<not> set, when calling
+L<Chess::Position/pseudoLegalMoves> or L<Chess::Position/pseudoLegalAttacks>! 
+
+The piece that moves, is the piece that stands on the
+starting square.
 
 You do not have to remember the exact structure of a move but use macros
 resp. inline functions for accessing individual properties:
@@ -298,9 +303,11 @@ resp. inline functions for accessing individual properties:
 
 =item * C<cp_move_from($move)>: the destination square as a shift
 
-=item * C<cp_move_promotion($move)>: the promotion piece
+=item * C<cp_move_promotion($move)>: the promotion piece if any
 
 =item * C<cp_move_piece($move)>: the attacking piece
+
+=item * C<cp_move_captured($move)>: the captured piece if any
 
 =back
 
@@ -316,6 +323,8 @@ an assignment)! For this, use other macros:
 =item * C<cp_move_set_promotion($move, $piece)>: the promotion piece
 
 =item * C<cp_move_set_piece($move, $piece)>: the attacking piece
+
+=item * C<cp_move_set_captured($move, $piece)>: a possible captured piece
 
 =back
 
