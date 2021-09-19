@@ -114,6 +114,10 @@ Almost all of the macros run a lot faster with C<use integer> and some of them
 I<only> work with C<use integer>.  Therefore, you should always enable that
 pragma for your code.
 
+=head2 Do Not Use Here Documents
+
+The translation currently chokes on here documents (E<lt>E<lt>EOF ...).
+
 =head2 Use More Parentheses
 
 Remember that the macros ar expanded by a rather dumb search and replace.  That
