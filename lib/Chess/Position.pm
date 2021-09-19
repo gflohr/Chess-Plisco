@@ -66,8 +66,8 @@ use constant CP_ROOK => 4;
 use constant CP_QUEEN => 5;
 use constant CP_KING => 6;
 use constant CP_PAWN_VALUE => 100;
-use constant CP_KNIGHT_VALUE => 310;
-use constant CP_BISHOP_VALUE => 320;
+use constant CP_KNIGHT_VALUE => 300;
+use constant CP_BISHOP_VALUE => 300;
 use constant CP_ROOK_VALUE => 500;
 use constant CP_QUEEN_VALUE => 900;
 
@@ -1234,16 +1234,39 @@ sub moveFrom {
 	return cp_move_from $move;
 }
 
+sub setMoveFrom {
+	my (undef, $move, $from) = @_;
+
+	cp_move_set_from $move, $from;
+
+	return $move;
+}
+
 sub moveTo {
 	my (undef, $move) = @_;
 
 	return cp_move_to $move;
 }
 
+sub setMoveTo {
+	my (undef, $move, $to) = @_;
+
+	cp_move_set_from $move, $to;
+
+	return $move;
+}
 sub movePromote {
 	my (undef, $move) = @_;
 
 	return cp_move_promote $move;
+}
+
+sub setMovePromote {
+	my (undef, $move, $promote) = @_;
+
+	cp_move_set_promote $move, $promote;
+
+	return $move;
 }
 
 sub movePiece {
@@ -1252,10 +1275,22 @@ sub movePiece {
 	return cp_move_piece $move;
 }
 
+sub setMovePiece {
+	my (undef, $move, $piece) = @_;
+
+	cp_move_set_promote $move, $piece;
+
+	return $move;
+}
+
 sub moveCoordinateNotation {
 	my (undef, $move) = @_;
 
 	return cp_move_coordinate_notation $move;
+}
+
+sub LAN {
+	&moveCoordinateNotation;
 }
 
 sub SEE {
