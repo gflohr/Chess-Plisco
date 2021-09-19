@@ -115,12 +115,12 @@ foreach my $test (@tests) {
 	my @moves = sort map { cp_move_coordinate_notation($_) } $pos->legalMoves;
 	my @expect = sort @{$test->{moves}};
 	is(scalar(@moves), scalar(@expect), "number of moves $test->{name}");
-	is_deeply \@moves, \@expect, $test->{name};
+	is_deeply \@moves, \@expect, "$test->{name} same moves";
 	if (@moves != @expect) {
 		diag Dumper [sort @moves];
 	}
 
-	foreach my $move ($pos->pseudoLegalMoves) {
+	foreach my $move ($pos->legalMoves) {
 		# Check the correct piece.
 		my $from_mask = 1 << (cp_move_from $move);
 		my $got_piece = cp_move_piece $move;
@@ -142,7 +142,25 @@ foreach my $test (@tests) {
 		}
 
 		my $movestr = cp_move_coordinate_notation $move;
-		is(cp_move_piece($move), $piece, "correct piece for $movestr");
+		is(cp_move_piece($move), $piece,
+			"$test->{name} correct piece for $movestr");
+
+		my $her_pieces = $pos->[CP_POS_WHITE_PIECES + !$pos->toMove];
+		my $to = cp_move_to $move;
+		my $to_mask = 1 << (cp_move_to $move);
+		my $ep_shift = $pos->enPassantShift;
+		# Check that the captured piece is set.
+		if ($to_mask & $her_pieces
+		    || ($ep_shift && $ep_shift == $to && $piece == CP_PAWN)) {
+			ok(cp_move_captured($move),
+				"$test->{name}: correct captured piece for $movestr");
+		} else {
+			ok(!cp_move_captured($move),
+				"$test->{name}: no captured piece for $movestr");
+		}
+
+		is(cp_move_color($move), $pos->toMove,
+			"$test->{name} correct color for $movestr");
 	}
 }
 
