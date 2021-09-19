@@ -1089,10 +1089,10 @@ sub doMove {
 		$self->[$promote] ^= $to_mask;
 	}
 
+	cp_move_set_color($move, $to_move);
 	my @undo_info = ($move, $captured_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
-	cp_move_set_color($move, $to_move);
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
 	# The material balance is stored in the most signicant bits.  It is
@@ -2258,8 +2258,8 @@ sub legalMoves {
 	my @legal;
 
 	foreach my $move ($self->pseudoLegalMoves) {
+		# Sets also captured piece and color.
 		my $undo_info = $self->doMove($move) or next;
-		# Set captured piece and color.
 		push @legal, $undo_info->[0];
 		$self->undoMove($undo_info);
 	}
