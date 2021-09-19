@@ -13,11 +13,11 @@ It is currently work in progress.
 Apart from Perl (which ships with your operating system unless you use
 MS-DOS aka MS Windows), the software has little dependencies:
 
-- PPI::Document
-- Locale::TextDomain from libintl-perl
+- [PPI](https://github.com/Perl-Critic/PPI)
+- [Locale::TextDomain](https://github.com/gflohr/libintl-perl) from [libintl-perl](http://www.guido-flohr.net/en/projects/#libintl-perl)
 
 Probably both dependencies are available for your system.  Search your package
-manager for "PPI-Document" and "libintl-perl".
+manager for "PPI" and "libintl-perl".
 
 Alternatively, install the command "cpanm" and do:
 
