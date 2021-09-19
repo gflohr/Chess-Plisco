@@ -1915,7 +1915,7 @@ my @export_magicmoves = qw(
 	CP_MAGICMOVESRDB
 );
 
-my @export_aux = qw(CP_INT_SIZE CP_CHAR_BIT);
+my @export_aux = qw(CP_INT_SIZE CP_CHAR_BIT CP_RANDOM_SEED);
 
 our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors,
 		@export_magicmoves, @export_aux);

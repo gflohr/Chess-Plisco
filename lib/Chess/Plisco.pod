@@ -1179,6 +1179,21 @@ Internal.
 
 Internal.
 
+=head2 Auxiliary Constants (:aux)
+
+=head3 CP_INT_SIZE
+
+The size in bits of an integer.  Should be at least 64.
+
+=head3 CP_CHAR_BITS
+
+The number of bits in a char.  Should be 8.
+
+=head3 CP_RANDOM_SEED
+
+A pretty arbitrary value used to initialize the pseudo-random number
+generator L</RNG>.
+
 =head1 COPYRIGHT
 
 Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
