@@ -39,8 +39,7 @@ macros has only disadvantages:
 
 =item Seemingly correct syntax may lead to syntax errors.
 
-=item Your code becomes less readable.  Although sometimes the opposite may be
-true.
+=item Your code becomes less readable; although sometimes it may not.
 
 =back
 
