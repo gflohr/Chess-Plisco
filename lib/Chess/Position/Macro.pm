@@ -52,12 +52,12 @@ sub cp_pos_in_check {}
 _define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 sub cp_pos_half_moves {}
 _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
-sub cp_pos_half_signature {}
+sub cp_pos_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 sub cp_pos_info {}
 
-_define cp_pos_info_castling => '$i', '$i & 0xf';
-sub cp_pos_info_castling {}
+_define cp_pos_info_castling_rights => '$i', '$i & 0xf';
+sub cp_pos_info_castling_rights {}
 _define cp_pos_info_white_king_side_castling_right => '$i', '$i & (1 << 0)';
 sub cp_pos_info_white_king_side_castling_right {}
 _define cp_pos_info_white_queen_side_castling_right => '$i', '$i & (1 << 1)';
@@ -101,7 +101,7 @@ _define _cp_pos_info_set_material => '$i', '$m',
 _define_from_file _cp_pos_info_update => '$p', '$i' => 'infoUpdate.pm';
 
 _define cp_pos_castling_rights => '$p',
-		'(cp_pos_info_castling(cp_pos_info($p)))';
+		'(cp_pos_info_castling_rights(cp_pos_info($p)))';
 sub cp_pos_castling_rights {}
 _define cp_pos_white_king_side_castling_right => '$p',
 		'(cp_pos_info_white_king_side_castling_right(cp_pos_info($p)))';
