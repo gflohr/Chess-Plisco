@@ -192,13 +192,13 @@ Generates all pseudo-legal moves for the current position.
 Pseudo-legal are all moves that can be executed by the pieces on the side to
 move ignoring whether the side to move is in check after the move.
 
-Only the lower 16 bits of the move are set, that means the start and destination
-square, a possible promotion piece and the en passant flag in case the move
-is an en passant capture.
+Only the lower 15 bits of the move are set, that means the start and destination
+square, and a possible promotion piece.
 
 If you also need the captured piece and the color, you either have to call
 L</legalMoves> or you must use the state information returned from L</doMove>
-to retrieve the enriched move.
+to retrieve the enriched move.  The first element of the state array is the
+enriched move.
 
 =item B<pseudoLegalAttacks>
 
