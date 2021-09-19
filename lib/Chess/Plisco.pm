@@ -206,13 +206,6 @@ use constant CP_PIECE_CHARS => [
 	['', 'p', 'n', 'b', 'r', 'q', 'k'],
 ];
 
-# 6 pieces of 2 colors on 64 squares, plus castling rights plus the file of
-# the en passant square plus the color to move.
-use constant _CP_ZOBRIST_KEY_ARRAY_SIZE => 6 * 2 * 64 + 16 + 8 + 1;
-use constant _CP_ZOBRIST_KEY_OFFSET_CASTLING => 6 * 2 * 64;
-use constant _CP_ZOBRIST_KEY_OFFSET_EP_FILE => _CP_ZOBRIST_KEY_OFFSET_CASTLING + 16;
-use constant _CP_ZOBRIST_KEY_OFFSET_COLOR => _CP_ZOBRIST_KEY_OFFSET_EP_FILE + 8;
-
 use constant CP_RANDOM_SEED => 0x415C0415C0415C0;
 my $cp_random = CP_RANDOM_SEED;
 
