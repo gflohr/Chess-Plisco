@@ -363,7 +363,7 @@ piece must be moved between the king and the attacking piece.
 If a check can be evaded by moving a piece between the king and the attacking
 piece of the opponent, this bitboard gives all squares where the check can be
 blocked.  These are all squares between the king and the attacking piece,
-including the square where the attacking is standing.
+including the square where the attacker is standing.
 
 =item B<enPassantShift>
 
@@ -458,7 +458,7 @@ false, if the B<NOTATION> cannot be parsed or is an illegal move.
 
 B<NOTATION> can either be a move in Standard Algebraic Notation (SAN) or in
 coordinate notation.  Coordinate notation is the format used by most chess
-engine and is the concatenation of the start and destination square and a
+engines and is the concatenation of the start and destination square and a
 possible promotion piece, for example "e2e4" or "f2f1q".
 
 =item B<SAN(MOVE)>
@@ -1001,51 +1001,15 @@ Bitmask of pieces giving check.  See also L</inCheck>.
 
 Bitboard of squares where a check can be blocked.  See also L</evasionSquares>.
 
+=item B<POS-E<gt>[CP_POS_SIGNATURE]>
+
+Same as L</signature>.
+
 =item B<POS-E<gt>[CP_POS_INFO]>
 
 Additional properties of the position. See also L</info>.
 
 =back
-
-=head3 CP_POS_BLACK_PIECES
-
-The index of the black bitboard.
-
-=head3 CP_POS_PAWNS
-
-The index of the pawns bitboard.
-
-=head3 CP_POS_KNIGHTS
-
-The index of the knights bitboard.
-
-=head3 CP_POS_BISHOPS
-
-The index of the bishops bitboard.
-
-=head3 CP_POS_ROOKS
-
-The index of the rooks bitboard.
-
-=head3 CP_POS_KINGS
-
-The index of the kings bitboard.
-
-=head3 CP_POS_HALF_MOVE_CLOCK
-
-The index of the half-move clock.
-
-=head3 CP_POS_HALF_MOVES
-
-The index of the number of half-moves made.
-
-=head3 CP_POS_INFO
-
-The index of the additional position info
-
-=head3 CP_POS_IN_CHECK
-
-The index of the in-check bitboard.
 
 =head2 Piece Constants (:pieces)
 
