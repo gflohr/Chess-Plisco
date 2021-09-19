@@ -11,7 +11,7 @@ Chess::Plisco - A comprehensive chess library for Perl
 
 =head1 DESCRIPTION
 
-B<Chess-Position> is a comprehensive chess library for Perl, aiming at being
+B<Chess::Plisco> is a comprehensive chess library for Perl, aiming at being
 as fast and efficient as possible for a scripting language.  It is also
 somewhat opinionated but this is not an end in itself but owed to its intention
 of being fast and efficient.  In doubt, flexibility is sacrificed for

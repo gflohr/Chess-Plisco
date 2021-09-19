@@ -121,7 +121,7 @@ You can think of it as FEN with meta data.
 
 The chess board is actually a Cartesian coordinate system. There are
 multiple ways, how a particular point in that coordinate system can be
-specified. In C<Chess-Position> we use the terms "coordinates",
+specified. In C<Chess-Plisco> we use the terms "coordinates",
 "squares", and "shifts", and you can convert between all of them with
 dedicated class methods:
 
