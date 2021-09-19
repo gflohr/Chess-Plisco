@@ -363,7 +363,7 @@ humand-readable format:
     $pos->moveCoordinateNotation($move);
     # d6e7
 
-In general, you will prefer print moves in Standard Algebraic Notation.
+In general, you will prefer printing moves in Standard Algebraic Notation.
 
 =head2 Using Macros
 
@@ -572,16 +572,16 @@ reverted to the state before the move had been played.
 In general, there are two strategies for undoing moves in chess software.
 The brute force approach is to make a deep copy of the position and revert
 by copying back later, resp. by simply applying the move to the copy only and
-throw it away.
+throwing it away.
 
-The other possibility is to undo all modifications makde by applying the
+The other possibility is to undo all modifications made by applying the
 move.  This is, of course, more complicated but often faster than the brute
 force approach.
 
 L<Chess::Plisco> supports both approaches and currently the brute force
 approach seems to be faster (around 10-15 percent) but this maybe depends on
 the hardware or system.  The reason for that is that a shallow copy is
-sufficient for copying a L<Chess::Plisco> which makes the copying really
+sufficient for copying a L<Chess::Plisco> object which makes the copying really
 cheap, whereas undoing a move programmatically requires several dereferencings.
 
 But you are encouraged to try it out yourself.
@@ -591,11 +591,18 @@ But you are encouraged to try it out yourself.
 This is done with C<undoMove()>:
 
     $state = $pos->doMove($move);
-    $pos->undoMove($move, $state);
+    $pos->undoMove($state);
 
 Not all recovery information can be stored in the move itself.  Therefore,
-you have to pass the state information return from C<doMove()> as the
-second argument to C<undoMove()>.
+you have to pass the state information returned from C<doMove()> as the
+argument to C<undoMove()>.
+
+The state information is an array reference containing all information needed
+to rever the position.  The first element of that array is the move itself
+but with the captured piece and the color on move updated.  This is
+important to know, when you use L<Chess::Plisco/pseudoLegalMoves> resp.
+L<Chess::Plisco/pseudoLegalAttacks> because these methods do B<not> set
+a possibly captured piece and the color that made the move.
 
 =head4 Undoing Moves By Copying the Position
 
@@ -635,7 +642,7 @@ positions.
 
 =head3 Listing Possible Moves
 
-You have to ways to do this:
+You have two ways for doing this:
 
     @moves = $pos->legalMoves;
     foreach $move (@moves) {
@@ -688,7 +695,8 @@ that are giving check.
 
 Finding out whether a white piece is on "e4" can be done like this:
 
-    $shift = $pos->squareToShift('e4');
+    $shift = CP_E4;
+    # or $shift = $pos->squareToShift('e4');
     # or $shift = $pos->coordinatesToShift(4, 0); 
     $mask = 1 << $shift;
     $is_white = $mask & $pos->[CP_POS_WHITE_PIECES];
@@ -699,17 +707,10 @@ If you want to know whether it is a white king, you go like this:
     $is_king = $mask & ($pos->[CP_POS_WHITE_PIECES] & $pos->[CP_POS_KINGS]);
     # or: $is_king = $mask & (cp_pos_white_pieces($pos) & cp_pos_kings($pos));
 
-For bishops, queens, and rooks, you have to keep in mind that there is no
-bitboard for queens:
-
-    $is_queen = $mask & cp_pos_bishops($pos) & cp_pos_rooks($pos);
-    $is_rook = $mask & ~cp_pos_bishops($pos) & cp_pos_rooks($pos);
-    $is_bishop = $mask & cp_pos_bishops($pos) & ~cp_pos_rooks($pos);
-
 If you want to also check for the color, you additionally have to do the
 bitwise AND of the white or black bitboard.
 
-Finding out which piece is on a particular location can be done with
+Finding out which piece is on a particular location can also be done with
 dedicated methods:
 
     ($piece, $color) = $pos->pieceAtSquare('e4');
@@ -720,26 +721,31 @@ dedicated methods:
     $piece = $pos->pieceAtShift(27);
 
 In array context, you get the piece and the color, in scalar context just the
-piece.  The piece is one of C<CP_PAWN>, C<CP_KNIGHT>, C<CP_BISHOP>,
+piece.  The piece is one of C<CP_NO_PIECE>, C<CP_PAWN>, C<CP_KNIGHT>, C<CP_BISHOP>,
 C<CP_QUEEN>, or C<CP_KING>, and the color one of C<CP_WHITE>, C<CP_BLACK>,
 or C<undef> if there is no piece at all at the specified location.
 
 =head3 Castling State
 
 The castling state is encoded with other state information in one single
-integer as a bit mask.  It is highly recommended that you use the macros
-from L<Chess::Plisco::Macro> for it:
+integer as a bit mask.  It is highly recommended that you use the dedicated
+methods from L<Chess::Plisco> or the macros from L<Chess::Plisco::Macro> for it:
 
     $white_can_castle_king_side  = cp_pos_white_king_side_castling_right $pos;
+    # or $white_can_castle_king_side  = $pos->whiteKingSideCastlingRight;
     $white_can_castle_queen_side = cp_pos_white_queen_side_castling_right $pos;
+    # or $white_can_castle_queen_side  = $pos->whiteQueenSideCastlingRight;
     $black_can_castle_king_side  = cp_pos_black_king_side_castling_right $pos;
+    # or $black_can_castle_king_side  = $pos->blackKingSideCastlingRight;
     $black_can_castle_queen_side = cp_pos_black_queen_side_castling_right $pos;
+    # or $black_can_castle_queen_side  = $pos->blackKingSideCastlingRight;
 
 =head3 En Passant
 
-You should also use a macro from L<Chess::Plisco::Macro>:
+Find out on which square en-passant capturing is possible:
 
-    $en_passant_shift = cp_pos_en_passant_shift $pos;
+    $en_passant_shift = $pos->enPassantShift;
+    # or $en_passant_shift = cp_pos_en_passant_shift $pos;
 
 This will be 0 if capturing en passant is not possible in the particular
 position.  You may have to be careful to use this information because 0 is
@@ -779,9 +785,9 @@ the king, and a knight can jump over other pieces.
 This information is always stored in a L<Chess::Plisco> object:
 
     $evasion_strategy = cp_pos_evasion $pos;
-    } if (CP_EVASION_KING_MOVE == $evasion_strategy) {
+    if (CP_EVASION_KING_MOVE == $evasion_strategy) {
         say "king must move";
-    } elsif (CP_EVASION_CAPTURE) {
+    } elsif (CP_EVASION_CAPTURE == $evasion_strategy) {
         say "king can move or piece giving check can be captured";
     } elsif (CP_EVASION_ALL == $evasion_strategy) {
         say "king can move, piece can be captured, or check can be blocked:",
@@ -895,7 +901,8 @@ directly as an index into the object itself:
     $piece = CP_ROOK; # or $piece = $pos->movePiece($move);
     $bitboard = $pos->[$piece];
 
-The variable C<$bitboard> now contains the correct bitboard for the piece.
+The variable C<$bitboard> now contains the correct bitboard for the piece, no
+matter what exact piece it is.
 
 =head3 Accessing Own Pieces and Opponent's Pieces
 
