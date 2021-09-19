@@ -13,8 +13,8 @@ use strict;
 use integer;
 
 use Test::More tests => 6 * 64;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 # The array elements are:
 #
@@ -97,7 +97,7 @@ my @tests = (
 	['h8', 7, 7, 63, CP_ROOK, CP_BLACK],
 );
 
-my $pos = Chess::Position->new;
+my $pos = Chess::Plisco->new;
 foreach my $test (@tests) {
 	my ($square, $file, $rank, $shift, $wanted_piece, $wanted_color) = @$test;
 

@@ -14,8 +14,8 @@ use integer;
 
 use Test::More;
 use Data::Dumper;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 use Time::HiRes qw(gettimeofday);
 
 sub make_move;
@@ -52,7 +52,7 @@ my @tests = (
 plan tests => @tests << 1;
 
 foreach my $test (@tests) {
-	my $pos = Chess::Position->new($test->{before});
+	my $pos = Chess::Plisco->new($test->{before});
 	my $move = make_move $pos, $test->{move};
 	ok $move, "$test->{name}: parse $test->{move}";
 

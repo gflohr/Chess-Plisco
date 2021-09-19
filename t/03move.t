@@ -13,12 +13,12 @@ use strict;
 use integer;
 
 use Test::More tests => 13;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my ($pos, $move, $from, $to);
 
-$pos = Chess::Position->new;
+$pos = Chess::Plisco->new;
 
 $move = 0;
 $from = cp_square_to_shift 'e2';
@@ -31,7 +31,7 @@ is(cp_move_to($move), $to, 'e2e4 to');
 is(cp_move_promote($move), CP_NO_PIECE, 'e2e4 promote');
 is(cp_move_coordinate_notation($move), 'e2e4', 'e2e4');
 
-$pos = Chess::Position->new('k7/8/8/8/8/8/3p1K2/4N3 b - - 0 1');
+$pos = Chess::Plisco->new('k7/8/8/8/8/8/3p1K2/4N3 b - - 0 1');
 
 $move = 0;
 $from = cp_square_to_shift 'd2';

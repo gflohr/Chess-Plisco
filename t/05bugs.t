@@ -14,12 +14,12 @@ use integer;
 
 use Test::More;
 use Data::Dumper;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my ($pos, $move, $undo_info, $before);
 
-$pos = Chess::Position->new;
+$pos = Chess::Plisco->new;
 $move = $pos->parseMove('g1h3');
 ok $move, 'parse g1h3';
 ok $pos->doMove($move), '1. Nh3';
@@ -34,7 +34,7 @@ ok $pos->[CP_POS_PAWNS] & (CP_H_MASK & CP_7_MASK),
 	'undo 1. ...h6, pawn should be back on h7';
 
 # Typo. In-check was not undone correctly.
-$pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/7N/PPPPPPPP/RNBQKB1R w KQkq - 2 2');
+$pos = Chess::Plisco->new('rnbqkb1r/pppppppp/7n/8/8/7N/PPPPPPPP/RNBQKB1R w KQkq - 2 2');
 $before = $pos->copy;
 $move = $pos->parseMove('b1c3');
 ok $move, 'parse b1c3';
@@ -45,7 +45,7 @@ is "$pos", "$before";
 ok $pos->equals($before);
 
 # Queen moves were not undone correctly.
-$pos = Chess::Position->new('rnbqkb1r/pppppppp/7n/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 1 2');
+$pos = Chess::Plisco->new('rnbqkb1r/pppppppp/7n/8/8/4P3/PPPP1PPP/RNBQKBNR w KQkq - 1 2');
 $before = $pos->copy;
 $move = $pos->parseMove('d1e2');
 ok $move, 'parse d1e2';
@@ -56,7 +56,7 @@ is "$pos", "$before";
 ok $pos->equals($before);
 
 # 2. ...Bxh3 is not undone correctly.
-$pos = Chess::Position->new('rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2');
+$pos = Chess::Plisco->new('rnbqkbnr/ppp1pppp/3p4/8/7P/7R/PPPPPPP1/RNBQKBN1 b kq - 0 2');
 $before = $pos->copy;
 $move = $pos->parseMove('c8h3');
 ok $move, 'parse c8h3';

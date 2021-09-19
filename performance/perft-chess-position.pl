@@ -5,7 +5,7 @@ use integer;
 use v5.10;
 
 use lib '../lib';
-use Chess::Position qw(:all);
+use Chess::Plisco qw(:all);
 
 use constant COPY => 1;
 
@@ -18,7 +18,7 @@ my @moves = qw();
 
 autoflush STDOUT, 1;
 
-my $pos = Chess::Position->new($fen);
+my $pos = Chess::Plisco->new($fen);
 foreach my $move (@moves) {
 	$pos->doMove($pos->parseMove($move));
 }

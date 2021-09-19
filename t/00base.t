@@ -13,11 +13,11 @@ use strict;
 use integer;
 
 use Test::More tests => 11;
-use Chess::Position qw(:all);
+use Chess::Plisco qw(:all);
 
 ok 1, 'used';
 
-my $pos = Chess::Position->new;
+my $pos = Chess::Plisco->new;
 ok $pos, 'instantiated';
 
 my $color = $pos->toMove;

@@ -14,8 +14,8 @@ use integer;
 
 use Test::More;
 use Data::Dumper;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 use Time::HiRes qw(gettimeofday);
 
 my ($pos, @moves, @expect);
@@ -144,7 +144,7 @@ my @tests = (
 );
 
 foreach my $test (@tests) {
-	my $pos = Chess::Position->new($test->{before});
+	my $pos = Chess::Plisco->new($test->{before});
 	my $move = $pos->parseMove($test->{move});
 	ok $move, "$test->{name}: parse $test->{move}";
 

@@ -13,8 +13,8 @@ use strict;
 use integer;
 
 use Test::More;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my ($pos, @moves, @expect);
 
@@ -178,7 +178,7 @@ plan tests => 3 * @tests;
 
 foreach my $test (@tests) {
 	my ($fen, $san, $expect, $file, $line) = @$test;
-	my $position = Chess::Position->new($fen);
+	my $position = Chess::Plisco->new($fen);
 	ok $fen, "$file:$line: new $fen";
 
 	my $move = $position->parseMove($san);

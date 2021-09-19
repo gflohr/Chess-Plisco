@@ -14,8 +14,8 @@ use integer;
 
 use Test::More;
 use Data::Dumper;
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 my ($pos, @moves, @expect);
 
@@ -49,7 +49,7 @@ my @tests = (
 );
 
 foreach my $test (@tests) {
-	my $pos = Chess::Position->new($test->{fen});
+	my $pos = Chess::Plisco->new($test->{fen});
 	ok cp_pos_in_check($pos), "$test->{name} wrong checkers mask"
 }
 

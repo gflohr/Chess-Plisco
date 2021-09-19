@@ -15,7 +15,7 @@ use Test::More;
 use File::Basename qw(dirname);
 use File::Spec;
 
-use Chess::Position qw(:all);
+use Chess::Plisco qw(:all);
 
 sub report_failure;
 
@@ -45,7 +45,7 @@ my $seconds_per_test = $ENV{CP_SECONDS_PER_TEST} || 10;
 my $started = time;
 my $done_tests = 0;
 GAME: while ($pgn->read_game) {
-	my $pos = Chess::Position->new;
+	my $pos = Chess::Plisco->new;
 
 	$pgn->parse_game;
 
@@ -77,7 +77,7 @@ GAME: while ($pgn->read_game) {
 		push @fen, $pos->toFEN;
 		push @signatures, $pos->signature;
 		
-		my $copy_from_fen = Chess::Position->new($fen[-1]);
+		my $copy_from_fen = Chess::Plisco->new($fen[-1]);
 		if ($pos->signature != $copy_from_fen->signature) {
 			my $sig_from_pos = $copy_from_fen->signature;
 			my $sig_from_move = $pos->signature;
