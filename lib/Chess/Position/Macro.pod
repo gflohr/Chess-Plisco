@@ -13,8 +13,8 @@ Chess::Position::Macro - Macros/inline functions for Chess::Position
     my $bitboard = '0x8080808080808080';
     my $popcount;
 
-    cp_bb_popcount $bitboard, $popcount;
-    cp_bb_popcount($bitboard, $popcount); # You can also use parentheses ...
+    cp_bitboard_popcount $bitboard, $popcount;
+    cp_bitboard_popcount($bitboard, $popcount); # You can also use parentheses ...
 
     print "There are $popcount bits set in $bitboard.\n";
 
@@ -316,17 +316,17 @@ own pieces.
 
 =over 4
 
-=item B<cp_bb_popcount(BITBOARD, COUNT)>
+=item B<cp_bitboard_popcount(BITBOARD, COUNT)>
 
 Count the number of bits set in B<BITBOARD> and save it in B<COUNT>.
 
-=item B<cp_bb_clear_but_least_set(BITBOARD)>
+=item B<cp_bitboard_clear_but_least_set(BITBOARD)>
 
 Clear all bits but the least significant one in B<BITBOARD>.
 
 Important! This works only under the "use integer" pragma!
 
-=item B<cp_bb_count_isolated_trailing_zbits(BITBOARD)>
+=item B<cp_bitboard_count_isolated_trailing_zbits(BITBOARD)>
 
 Count trailing zero bits in B<BITBOARD>.  Only works for B<BITBOARD> != 0!
 

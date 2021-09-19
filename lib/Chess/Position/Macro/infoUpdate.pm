@@ -17,7 +17,7 @@
 	my $c = cp_pos_info_to_move($i);
 	my $kings = cp_pos_kings($p)
 		& ($c ? cp_pos_black_pieces($p) : cp_pos_white_pieces($p));
-	my $king_shift = cp_bb_count_isolated_trailing_zbits($kings);
+	my $king_shift = cp_bitboard_count_isolated_trailing_zbits($kings);
 	_cp_pos_info_set_king_shift($i, $king_shift);
 
 	my $checkers = cp_pos_in_check($p) = _cp_pos_color_attacked $p, $c, $king_shift;
@@ -50,7 +50,7 @@
 			cp_pos_evasion_squares($p) = $checkers;
 		} else {
 			_cp_pos_info_set_evasion($i, CP_EVASION_ALL);
-			my $piece_shift = cp_bb_count_isolated_trailing_zbits $checkers;
+			my $piece_shift = cp_bitboard_count_isolated_trailing_zbits $checkers;
 			my ($attack_type, undef, $attack_ray) =
 				@{$common_lines[$king_shift]->[$piece_shift]};
 			if ($attack_ray) {

@@ -483,11 +483,11 @@ sub newFromFEN {
 
 	my $popcount;
 
-	cp_bb_popcount $w_pieces & $kings, $popcount;
+	cp_bitboard_popcount $w_pieces & $kings, $popcount;
 	if ($popcount != 1) {
 		die __"Illegal FEN: White must have exactly one king.\n";
 	}
-	cp_bb_popcount $b_pieces & $kings, $popcount;
+	cp_bitboard_popcount $b_pieces & $kings, $popcount;
 	if ($popcount != 1) {
 		die __"Illegal FEN: Black must have exactly one king.\n";
 	}
@@ -615,7 +615,7 @@ sub pseudoLegalMoves {
 	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
 
-	my $from = cp_bb_count_isolated_trailing_zbits $king_mask;
+	my $from = cp_bitboard_count_isolated_trailing_zbits $king_mask;
 
 	$base_move = ($from << 6 | CP_KING << 15);
 
@@ -656,7 +656,7 @@ sub pseudoLegalMoves {
 	# Generate knight moves.
 	my $knight_mask = $my_pieces & cp_pos_knights $self;
 	while ($knight_mask) {
-		my $from = cp_bb_count_trailing_zbits $knight_mask;
+		my $from = cp_bitboard_count_trailing_zbits $knight_mask;
 
 		$base_move = ($from << 6 | CP_KNIGHT << 15);
 	
@@ -664,13 +664,13 @@ sub pseudoLegalMoves {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$knight_mask = cp_bb_clear_least_set $knight_mask;
+		$knight_mask = cp_bitboard_clear_least_set $knight_mask;
 	}
 
 	# Generate bishop moves.
 	my $bishop_mask = $my_pieces & cp_pos_bishops $self;
 	while ($bishop_mask) {
-		my $from = cp_bb_count_trailing_zbits $bishop_mask;
+		my $from = cp_bitboard_count_trailing_zbits $bishop_mask;
 
 		$base_move = ($from << 6 | CP_BISHOP << 15);
 	
@@ -678,13 +678,13 @@ sub pseudoLegalMoves {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$bishop_mask = cp_bb_clear_least_set $bishop_mask;
+		$bishop_mask = cp_bitboard_clear_least_set $bishop_mask;
 	}
 
 	# Generate rook moves.
 	my $rook_mask = $my_pieces & cp_pos_rooks $self;
 	while ($rook_mask) {
-		my $from = cp_bb_count_trailing_zbits $rook_mask;
+		my $from = cp_bitboard_count_trailing_zbits $rook_mask;
 
 		$base_move = ($from << 6 | CP_ROOK << 15);
 	
@@ -692,13 +692,13 @@ sub pseudoLegalMoves {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$rook_mask = cp_bb_clear_least_set $rook_mask;
+		$rook_mask = cp_bitboard_clear_least_set $rook_mask;
 	}
 
 	# Generate queen moves.
 	my $queen_mask = $my_pieces & cp_pos_queens $self;
 	while ($queen_mask) {
-		my $from = cp_bb_count_trailing_zbits $queen_mask;
+		my $from = cp_bitboard_count_trailing_zbits $queen_mask;
 
 		$base_move = ($from << 6 | CP_QUEEN << 15);
 	
@@ -709,7 +709,7 @@ sub pseudoLegalMoves {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$queen_mask = cp_bb_clear_least_set $queen_mask;
+		$queen_mask = cp_bitboard_clear_least_set $queen_mask;
 	}
 
 	# Generate pawn moves.
@@ -729,19 +729,19 @@ sub pseudoLegalMoves {
 	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
-		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
 
 	# Pawn double steps.
 	$pawn_mask = $my_pieces & $pawns & $double_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 		my $cross_mask = $pawn_single_masks->[$from] & $empty;
 
 		if ($cross_mask) {
@@ -751,19 +751,19 @@ sub pseudoLegalMoves {
 				push @moves, ($from << 6) | $to | CP_PAWN << 15;
 			}
 		}
-		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
 
 	# Pawn promotions including captures.
 	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
-		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
 
 	return @moves;
@@ -785,7 +785,7 @@ sub pseudoLegalAttacks {
 	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
 
-	my $from = cp_bb_count_isolated_trailing_zbits $king_mask;
+	my $from = cp_bitboard_count_isolated_trailing_zbits $king_mask;
 
 	$base_move = ($from << 6 | CP_KING << 15);
 
@@ -796,7 +796,7 @@ sub pseudoLegalAttacks {
 	# Generate knight moves.
 	my $knight_mask = $my_pieces & cp_pos_knights $self;
 	while ($knight_mask) {
-		my $from = cp_bb_count_trailing_zbits $knight_mask;
+		my $from = cp_bitboard_count_trailing_zbits $knight_mask;
 
 		$base_move = ($from << 6 | CP_KNIGHT << 15);
 	
@@ -804,13 +804,13 @@ sub pseudoLegalAttacks {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$knight_mask = cp_bb_clear_least_set $knight_mask;
+		$knight_mask = cp_bitboard_clear_least_set $knight_mask;
 	}
 
 	# Generate bishop moves.
 	my $bishop_mask = $my_pieces & cp_pos_bishops $self;
 	while ($bishop_mask) {
-		my $from = cp_bb_count_trailing_zbits $bishop_mask;
+		my $from = cp_bitboard_count_trailing_zbits $bishop_mask;
 
 		$base_move = ($from << 6 | CP_BISHOP << 15);
 	
@@ -818,13 +818,13 @@ sub pseudoLegalAttacks {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$bishop_mask = cp_bb_clear_least_set $bishop_mask;
+		$bishop_mask = cp_bitboard_clear_least_set $bishop_mask;
 	}
 
 	# Generate rook moves.
 	my $rook_mask = $my_pieces & cp_pos_rooks $self;
 	while ($rook_mask) {
-		my $from = cp_bb_count_trailing_zbits $rook_mask;
+		my $from = cp_bitboard_count_trailing_zbits $rook_mask;
 
 		$base_move = ($from << 6 | CP_ROOK << 15);
 	
@@ -832,13 +832,13 @@ sub pseudoLegalAttacks {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$rook_mask = cp_bb_clear_least_set $rook_mask;
+		$rook_mask = cp_bitboard_clear_least_set $rook_mask;
 	}
 
 	# Generate queen moves.
 	my $queen_mask = $my_pieces & cp_pos_queens $self;
 	while ($queen_mask) {
-		my $from = cp_bb_count_trailing_zbits $queen_mask;
+		my $from = cp_bitboard_count_trailing_zbits $queen_mask;
 
 		$base_move = ($from << 6 | CP_QUEEN << 15);
 	
@@ -849,7 +849,7 @@ sub pseudoLegalAttacks {
 
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 
-		$queen_mask = cp_bb_clear_least_set $queen_mask;
+		$queen_mask = cp_bitboard_clear_least_set $queen_mask;
 	}
 
 	# Generate pawn moves.
@@ -869,24 +869,24 @@ sub pseudoLegalAttacks {
 	# Pawn captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
-		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
 
 	# Pawn promotions including captures.
 	$pawn_mask = $my_pieces & $pawns & ~$regular_mask;
 	while ($pawn_mask) {
-		my $from = cp_bb_count_trailing_zbits $pawn_mask;
+		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
 		$target_mask = ($pawn_single_masks->[$from] & ~$her_pieces)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
-		$pawn_mask = cp_bb_clear_least_set $pawn_mask;
+		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
 
 	return @moves;
@@ -1337,35 +1337,35 @@ sub SEE {
 	$mask = $pawn_masks[CP_BLACK]->[2]->[$to] & $pawns
 		& $white & $not_from_mask;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_pawn_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 	$mask = $pawn_masks[CP_WHITE]->[2]->[$to] & $pawns
 		& $black & $not_from_mask;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @black_attackers, ($afrom | $shifted_pawn_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 
 	my $knights = cp_pos_knights($self);
 	my $shifted_knight_value = CP_KNIGHT_VALUE << 8;
 	$mask = $knight_attack_masks[$to] & $knights & $white & $not_from_mask;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_knight_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 	$mask = $knight_attack_masks[$to] & $knights & $black & $not_from_mask;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @black_attackers, ($afrom | $shifted_knight_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 
 	my $bishop_mask = cp_mm_bmagic($to, $occupancy) & $not_from_mask;
@@ -1376,64 +1376,64 @@ sub SEE {
 	my $shifted_bishop_value = CP_BISHOP_VALUE << 8;
 	$mask = $bishop_mask & $bishops & $white;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_bishop_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 	$mask = $bishop_mask & $bishops & $black;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @black_attackers, ($afrom | $shifted_bishop_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 
 	my $rooks = cp_pos_rooks($self);
 	my $shifted_rook_value = CP_ROOK_VALUE << 8;
 	$mask = $rook_mask & $rooks & $white;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_rook_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 	$mask = $rook_mask & $rooks & $black;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @black_attackers, ($afrom | $shifted_rook_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 
 	my $queens = cp_pos_queens($self);
 	my $shifted_queen_value = CP_QUEEN_VALUE << 8;
 	$mask = $queen_mask & $queens & $white;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_queen_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 	$mask = $queen_mask & $queens & $black;
 	while ($mask) {
-		my $afrom = cp_bb_count_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_trailing_zbits $mask;
 
 		push @black_attackers, ($afrom | $shifted_queen_value);
-		$mask = cp_bb_clear_least_set($mask);
+		$mask = cp_bitboard_clear_least_set($mask);
 	}
 
 	my $kings = cp_pos_kings($self);
 	my $shifted_king_value = 9999 << 8;
 	$mask = $king_attack_masks[$to] & $kings & $white;
 	if ($mask) {
-		my $afrom = cp_bb_count_isolated_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_isolated_trailing_zbits $mask;
 
 		push @white_attackers, ($afrom | $shifted_king_value);
 	}
 	$mask = $king_attack_masks[$to] & $kings & $black;
 	if ($mask) {
-		my $afrom = cp_bb_count_isolated_trailing_zbits $mask;
+		my $afrom = cp_bitboard_count_isolated_trailing_zbits $mask;
 
 		push @black_attackers, ($afrom | $shifted_king_value);
 	}
@@ -1497,9 +1497,9 @@ sub SEE {
 				my $piece_mask;
 
 				if ($from > $to) {
-					$piece_mask = cp_bb_clear_but_most_set($obscured_mask & $mask);
+					$piece_mask = cp_bitboard_clear_but_most_set($obscured_mask & $mask);
 				} else {
-					$piece_mask = cp_bb_clear_but_least_set($obscured_mask & $mask);
+					$piece_mask = cp_bitboard_clear_but_least_set($obscured_mask & $mask);
 				}
 				if ($piece_mask) {
 					my $color;
@@ -1517,7 +1517,7 @@ sub SEE {
 					# unmasked comparison.
 					my $attackers_array = $attackers[$color];
 					my $item = ($piece_values[$piece] << 8)
-						| cp_bb_count_isolated_trailing_zbits($piece_mask);
+						| cp_bitboard_count_isolated_trailing_zbits($piece_mask);
 					unshift @$attackers_array, $item;
 					foreach my $i (0.. @$attackers_array - 2) {
 						last if $attackers_array->[$i] <= $attackers_array->[$i + 1];
@@ -1622,7 +1622,7 @@ sub bitboardPopcount {
 	my (undef, $bitboard) = @_;
 
 	my $count;
-	cp_bb_popcount $bitboard, $count;
+	cp_bitboard_popcount $bitboard, $count;
 
 	return $count;
 }
@@ -1630,25 +1630,25 @@ sub bitboardPopcount {
 sub bitboardClearLeastSet {
 	my (undef, $bitboard) = @_;
 
-	return cp_bb_clear_least_set $bitboard;
+	return cp_bitboard_clear_least_set $bitboard;
 }
 
 sub bitboardClearButLeastSet {
 	my (undef, $bitboard) = @_;
 
-	return cp_bb_clear_but_least_set $bitboard;
+	return cp_bitboard_clear_but_least_set $bitboard;
 }
 
 sub bitboardCountIsolatedTrailingZbits {
 	my (undef, $bitboard) = @_;
 
-	return cp_bb_count_isolated_trailing_zbits $bitboard;
+	return cp_bitboard_count_isolated_trailing_zbits $bitboard;
 }
 
 sub bitboardCountTrailingZbits {
 	my (undef, $bitboard) = @_;
 
-	return cp_bb_count_trailing_zbits $bitboard;
+	return cp_bitboard_count_trailing_zbits $bitboard;
 }
 
 sub __updateZobristKey {
@@ -1662,86 +1662,86 @@ sub __updateZobristKey {
 
 	$piece_mask = $pawns & $white;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_PAWN, CP_WHITE, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $pawns & $black;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_PAWN, CP_BLACK, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $knights & $white;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_KNIGHT, CP_WHITE, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $knights & $black;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_KNIGHT, CP_BLACK, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $bishops & $white;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_BISHOP, CP_WHITE, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $bishops & $black;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_BISHOP, CP_BLACK, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $rooks & $white;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_ROOK, CP_WHITE, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $rooks & $black;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_ROOK, CP_BLACK, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $queens & $white;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_QUEEN, CP_WHITE, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $queens & $black;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_QUEEN, CP_BLACK, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $kings & $white;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_KING, CP_WHITE, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	$piece_mask = $kings & $black;
 	while ($piece_mask) {
-		my $shift = cp_bb_count_trailing_zbits $piece_mask;
+		my $shift = cp_bitboard_count_trailing_zbits $piece_mask;
 		$signature ^= _cp_zk_lookup(CP_KING, CP_BLACK, $shift);
-		$piece_mask = cp_bb_clear_least_set $piece_mask;
+		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
 	my $pos_info = cp_pos_info $self;

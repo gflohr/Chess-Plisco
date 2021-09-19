@@ -175,19 +175,19 @@ _define cp_move_equivalent => '$m1', '$m2', '(($m1 & 0x7fff) == ($m2 & 0x7fff))'
 sub cp_move_equivalent {}
 
 # Bitboard macros.
-_define cp_bb_popcount => '$b', '$c',
+_define cp_bitboard_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';
 sub cp_bitboard_popcount {}
-_define cp_bb_clear_but_least_set => '$b', '(($b) & -($b))';
+_define cp_bitboard_clear_but_least_set => '$b', '(($b) & -($b))';
 sub cp_bitboard_clear_but_least_set {}
-_define_from_file cp_bb_clear_but_most_set => '$bb', 'clearButMostSet.pm';
+_define_from_file cp_bitboard_clear_but_most_set => '$bb', 'clearButMostSet.pm';
 sub cp_bitboard_clear_but_most_set {}
-_define_from_file cp_bb_count_isolated_trailing_zbits => '$bb',
+_define_from_file cp_bitboard_count_isolated_trailing_zbits => '$bb',
 		'countIsolatedTrailingZbits.pm';
 sub cp_bitboard_count_isolated_trailing_zbits {}
-_define_from_file cp_bb_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
+_define_from_file cp_bitboard_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
 sub cp_bitboard_count_isolated_zbits {}
-_define cp_bb_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
+_define cp_bitboard_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 sub cp_bitboard_clear_least_set {}
 
 # Magic moves.

@@ -434,10 +434,10 @@ Task: Count the number of white pawns on the board.
  my $pos = Chess::Position->new;
  my $white_pawns = cp_pos_white_pieces($pos) & cp_pos_pawns($pos);
  my $count;
- cp_bb_popcount $white_pawns, $count;
+ cp_bitboard_popcount $white_pawns, $count;
  print "There are $count white pawns on the board.\n";
 
-The important line is the last but one. The macro C<cp_bb_popcount>
+The important line is the last but one. The macro C<cp_bitboard_popcount>
 counts the number of bits set in an integer, and this is exactly what
 you need here.
 
@@ -481,16 +481,16 @@ faster:
     my $white_pawn_mask = cp_pos_white_pieces($pos) & cp_pos_pawns($pos);
 
     while ($white_pawn_mask) {
-        my $shift = cp_bb_count_trailing_zbits $shift_mask;
+        my $shift = cp_bitboard_count_trailing_zbits $shift_mask;
 
         my $square = cp_shift_to_square $shift;
         print "There is a white pawn on $square.\n";
 
-        $white_pawn_mask = cp_bb_clear_least_set $white_pawn_mask;
+        $white_pawn_mask = cp_bitboard_clear_least_set $white_pawn_mask;
     }
 
 If you count the trailing zero bits with the macro
-C<cp_bb_count_trailing_zbits()> you get the position of that bit in the
+C<cp_bitboard_count_trailing_zbits()> you get the position of that bit in the
 bitboard and you can now use that information for whatever you want to do.
 
 At the end of the loop body, you clear the least significant bit of the
@@ -794,7 +794,7 @@ Example:
     $occupancy = $pos->whitePieces | $pos->blackPieces;
     # or $occupancy = cp_pos_white_pieces($pos) | cp_pos_black_pieces($pos);
     $number_of_pieces = $pos->bitboardPopcount($pos->occupancy);
-    # or $number_of_pieces = cp_bb_popcount $occupancy;
+    # or $number_of_pieces = cp_bitboard_popcount $occupancy;
 
 =head3 Is a Pawn Move a capture?
 
