@@ -22,10 +22,13 @@ manager for "PPI" and "libintl-perl".
 Alternatively, install the command "cpanm" and do:
 
 ```shell
-$ cpanm PPI::Document Locale::TextDomain
+$ cpanm Chess::Plisco
 ```
 
-The software itself is built and installed with the usual commands:
+This installs the last release of the software.
+
+If you want to use the latest sources from git, build and install it with the
+usual sequence of commands:
 
 ```shell
 $ perl Makefile.PL
