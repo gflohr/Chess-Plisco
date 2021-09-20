@@ -114,3 +114,19 @@ is(cp_bitboard_clear_but_most_set($bitboard), 0x8000_0000_0000_0000,
 $bitboard = 0x0000_0010_0000_0000;
 is(cp_bitboard_clear_but_most_set($bitboard), 0x0000_0010_0000_0000,
 	"cp_bitboard_clear_but_most_set($bitboard)");
+
+$bitboard = 0x0000_0100_0000_0000;
+ok(cp_bitboard_is_single_bit($bitboard),
+	"cp_bitboard_is_single_bit($bitboard)");
+
+$bitboard = 0x8000_0000_0000_0000;
+ok(cp_bitboard_is_single_bit($bitboard),
+	"cp_bitboard_is_single_bit($bitboard)");
+
+$bitboard = 0x8000_0100_0000_0000;
+ok(!cp_bitboard_is_single_bit($bitboard),
+	"!cp_bitboard_is_single_bit($bitboard)");
+
+$bitboard = 0x0000_0100_0000_0001;
+ok(!cp_bitboard_is_single_bit($bitboard),
+	"!cp_bitboard_is_single_bit($bitboard)");

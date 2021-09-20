@@ -2900,6 +2900,21 @@ sub unapplyMove {
 	return $self->undoMove($state);
 }
 
+sub insufficientMaterial {
+	my ($self) = @_;
+
+	# FIXME! Once we distinguish black and white material (should we?),
+	# we can try to take an early exit here if any of the two sides has
+	# more material than a bishop.
+
+	# All of these are sufficient to mate.
+	if ($self->[CP_POS_PAWNS] | $self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) {
+		return;
+	}
+
+	return 1;
+}
+
 sub dumpAll {
 	my ($self) = @_;
 
