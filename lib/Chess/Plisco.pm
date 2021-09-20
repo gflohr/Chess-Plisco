@@ -1697,6 +1697,12 @@ sub bitboardCountTrailingZbits {
 	return cp_bitboard_count_trailing_zbits $bitboard;
 }
 
+sub bitboardMoreThanOneSet {
+	my (undef, $bitboard) = @_;
+
+	return cp_bitboard_is_power_of_2 $bitboard;
+}
+
 sub __updateZobristKey {
 	my ($self) = @_;
 
