@@ -1700,7 +1700,56 @@ sub bitboardCountTrailingZbits {
 sub bitboardMoreThanOneSet {
 	my (undef, $bitboard) = @_;
 
-	return cp_bitboard_is_power_of_2 $bitboard;
+	return cp_bitboard_more_than_one_set $bitboard;
+}
+
+sub insufficientMaterial {
+	my ($self) = @_;
+
+	# FIXME! Once we distinguish black and white material (should we?),
+	# we can try to take an early exit here if any of the two sides has
+	# more material than a bishop.
+
+	# All of these are sufficient to mate.
+	if (cp_pos_pawns($self) | cp_pos_rooks($self) | cp_pos_queens($self)) {
+		return;
+	}
+
+	# There is neither a queen nor a rook.  Two knights can theoretically
+	# mate.  Two bishops only, when they sit on different colors of the board.
+	my $white = $self->[CP_POS_WHITE_PIECES];
+	my $bishops = $self->[CP_POS_BISHOPS];
+	if (cp_bitboard_more_than_one_set($white & $bishops)) {
+		return;
+	}
+
+	my $black = $self->[CP_POS_BLACK_PIECES];
+	if (cp_bitboard_more_than_one_set($black & $bishops)) {
+		return;
+	}
+
+	my $knights = $self->[CP_POS_KNIGHTS];
+	if (cp_bitboard_more_than_one_set($white & $knights)) {
+		return;
+	}
+
+	if (cp_bitboard_more_than_one_set($black & $knights)) {
+		return;
+	}
+
+
+	if (cp_bitboard_more_than_one_set($white & $knights)) {
+		return;
+	}
+
+	# Every side has one bishop.  It is not necessarily a draw, if they are
+	# on different colored squares.
+	if (!!($white & $bishops & 0xaa55aa55aa55aa55)
+	    != !!($black & $bishops & 0xaa55aa55aa55aa55)) {
+		return;
+	}
+
+	return 1;
 }
 
 sub __updateZobristKey {
@@ -2904,21 +2953,6 @@ sub unapplyMove {
 	return if 'ARRAY' ne reftype $state;
 
 	return $self->undoMove($state);
-}
-
-sub insufficientMaterial {
-	my ($self) = @_;
-
-	# FIXME! Once we distinguish black and white material (should we?),
-	# we can try to take an early exit here if any of the two sides has
-	# more material than a bishop.
-
-	# All of these are sufficient to mate.
-	if ($self->[CP_POS_PAWNS] | $self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) {
-		return;
-	}
-
-	return 1;
 }
 
 sub dumpAll {
