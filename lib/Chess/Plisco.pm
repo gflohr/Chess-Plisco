@@ -1049,13 +1049,11 @@ sub doMove {
 		} else {
 			_cp_pos_info_set_en_passant_shift($pos_info, 0);
 		}
-	} elsif (($her_pieces & $to_mask) || ($new_castling != $old_castling)) {
+	} elsif ($her_pieces & $to_mask) {
+		# No need to check for en passant because pawn moves reset the
+		# half-move clock anyway.
 		$self->[CP_POS_HALF_MOVE_CLOCK] = 0;
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
-		if ($old_castling != $new_castling) {
-			$zk_update ^= $zk_castling[$old_castling]
-				^ $zk_castling[$new_castling];
-		}
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
@@ -1094,6 +1092,11 @@ sub doMove {
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
 	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
+
+	if ($old_castling != $new_castling) {
+		$zk_update ^= $zk_castling[$old_castling]
+			^ $zk_castling[$new_castling];
+	}
 
 	# For the signature lookup we have to replace the real captured piece
 	# because it may be a king which is interpreted as a pawn captured en
@@ -2898,6 +2901,21 @@ sub unapplyMove {
 	return if 'ARRAY' ne reftype $state;
 
 	return $self->undoMove($state);
+}
+
+sub insufficientMaterial {
+	my ($self) = @_;
+
+	# FIXME! Once we distinguish black and white material (should we?),
+	# we can try to take an early exit here if any of the two sides has
+	# more material than a bishop.
+
+	# All of these are sufficient to mate.
+	if ($self->[CP_POS_PAWNS] | $self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) {
+		return;
+	}
+
+	return 1;
 }
 
 sub dumpAll {
