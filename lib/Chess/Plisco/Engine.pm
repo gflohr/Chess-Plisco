@@ -223,6 +223,7 @@ sub __onUciCmdHelp {
         uci - switch to UCI mode (no-op)
         debug (on|off) - switch debugging on or off
         isready - ping the engine
+        stop - move immediately
         help - show available commands
         quit - quit the engine immediately
 

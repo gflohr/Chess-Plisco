@@ -21,23 +21,23 @@ use Time::HiRes qw(gettimeofday);
 sub new {
 	my ($class, $tree, %params) = @_;
 
-	my $white_on_move = 0;
+	my $black_to_move = $tree->{position}->toMove;
 
 	my $self = {
 		__tree => $tree,
 	};
 	bless $self, $class;
 
-	if ($white_on_move) {
-		$params{mytime} = delete $params{wtime};
-		$params{myinc} = delete $params{winc};
-		$params{hertime} = delete $params{btime};
-		$params{herinc} = delete $params{binc};
-	} else {
+	if ($black_to_move) {
 		$params{mytime} = delete $params{btime};
 		$params{myinc} = delete $params{binc};
 		$params{hertime} = delete $params{wtime};
 		$params{herinc} = delete $params{winc};
+	} else {
+		$params{mytime} = delete $params{wtime};
+		$params{myinc} = delete $params{winc};
+		$params{hertime} = delete $params{btime};
+		$params{herinc} = delete $params{binc};
 	}
 
 	if ($params{mate}) {
