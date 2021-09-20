@@ -235,7 +235,7 @@ sub quiesce {
 		my $state = $position->doMove($move);
 		$is_pv = $is_pv && !$legal;
 		++$self->{nodes};
-		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $is_pv);
+		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $pline, $is_pv);
 		$position->undoMove($state);
 		if ($val >= $beta) {
 			return $beta;
