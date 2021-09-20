@@ -17,7 +17,6 @@ use integer;
 use Chess::Position qw(:all);
 
 use Chess::Plisco::Engine::Position;
-
 use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
 use Chess::Plisco::Engine::InputWatcher;
@@ -131,7 +130,14 @@ sub __onUciCmdGo {
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 
 	$self->{__tree} = $tree;
-	my $bestmove = $tree->think($tree, $self->{__watcher});
+	my $bestmove;
+	eval {
+		$bestmove = $tree->think($tree, $self->{__watcher});
+		delete $self->{__tree};
+	};
+	if ($@) {
+		$self->__output("unexpected exception: $@");
+	}
 	if ($bestmove) {
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
 		$self->__output("bestmove $cn");
@@ -150,7 +156,7 @@ sub __onUciCmdStop {
 	my ($self) = @_;
 
 	if ($self->{__tree}) {
-		$self->{__tree}->{move_now} = 1;
+		die "PLISCO_ABORTED\n";
 	}
 
 	return $self;

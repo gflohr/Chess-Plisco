@@ -44,6 +44,8 @@ sub new {
 sub checkTime {
 	my ($self) = @_;
 
+	$self->{watcher}->check;
+
 	no integer;
 
 	my $elapsed = 1000 * tv_interval($self->{start_time});
