@@ -42,9 +42,9 @@ sub onEof {
 }
 
 sub check {
-	my ($self, $timeout) = @_;
+	my ($self) = @_;
 
-	while (my @ready = $self->{__sel}->can_read($timeout)) {
+	while (my @ready = $self->{__sel}->can_read(0)) {
 		foreach my $fh (@ready) {
 			my $offset = length $self->{__input};
 			my $bytes = $fh->sysread($self->{__input}, 2, $offset);
