@@ -199,6 +199,8 @@ _define_from_file cp_bitboard_count_trailing_zbits => '$bb', 'countTrailingZbits
 sub cp_bitboard_count_trailing_zbits {}
 _define cp_bitboard_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';
 sub cp_bitboard_clear_least_set {}
+_define cp_bitboard_more_than_one_set => '$bb', '($bb && ($bb & ($bb - 1)))';
+sub cp_bitboard_more_than_one_set {}
 
 # Magic moves.
 _define cp_mm_bmagic => '$s', '$o',

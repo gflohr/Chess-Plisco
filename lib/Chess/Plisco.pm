@@ -201,6 +201,9 @@ use constant CP_RANK_6 => (5);
 use constant CP_RANK_7 => (6);
 use constant CP_RANK_8 => (7);
 
+use constant CP_WHITE_MASK => 0x5555555555555555;
+use constant CP_BLACK_MASK => 0xaaaaaaaaaaaaaaaa;
+
 use constant CP_PIECE_CHARS => [
 	['', 'P', 'N', 'B', 'R', 'Q', 'K'],
 	['', 'p', 'n', 'b', 'r', 'q', 'k'],
@@ -1700,6 +1703,63 @@ sub bitboardCountTrailingZbits {
 	return cp_bitboard_count_trailing_zbits $bitboard;
 }
 
+sub bitboardMoreThanOneSet {
+	my (undef, $bitboard) = @_;
+
+	return cp_bitboard_more_than_one_set $bitboard;
+}
+
+sub insufficientMaterial {
+	my ($self) = @_;
+
+	# FIXME! Once we distinguish black and white material (should we?),
+	# we can try to take an early exit here if any of the two sides has
+	# more material than a bishop.
+
+	# All of these are sufficient to mate.
+	if (cp_pos_pawns($self) | cp_pos_rooks($self) | cp_pos_queens($self)) {
+		return;
+	}
+
+	# There is neither a queen nor a rook nor a pawn.  Two or more minor
+	# pieces on one side can always mate.
+	my $not_kings = ~$self->[CP_POS_KINGS];
+
+	my $white = $self->[CP_POS_WHITE_PIECES];
+	my $white_minor_pieces = $white & $not_kings;
+	if (cp_bitboard_more_than_one_set($white_minor_pieces)) {
+		return;
+	}
+
+	my $black = $self->[CP_POS_BLACK_PIECES];
+	my $black_minor_pieces = $black & $not_kings;
+	if (cp_bitboard_more_than_one_set($black_minor_pieces)) {
+		return;
+	}
+
+	# One minor piece against a lone king cannot mate.
+	if(!($white_minor_pieces && $black_minor_pieces)) {
+		return 1;
+	}
+
+	# Both sides have exactly one minor piece.  The only combination that
+	# is a draw is KBKB with bishops of different color.  That means, that
+	# both sides can mate if a knight is on the board.
+	if ($self->[CP_POS_KNIGHTS]) {
+		return;
+	}
+
+	# Every side has one bishop.  It is not necessarily a draw, if they are
+	# on different colored squares.
+	my $bishops = $self->[CP_POS_BISHOPS];
+	if (!!($white & $bishops & CP_WHITE_MASK)
+	    != !!($black & $bishops & CP_BLACK_MASK)) {
+		return;
+	}
+
+	return 1;
+}
+
 sub __updateZobristKey {
 	my ($self) = @_;
 
@@ -1900,6 +1960,7 @@ my @export_board = qw(
 	CP_E_MASK CP_F_MASK CP_G_MASK CP_H_MASK
 	CP_1_MASK CP_2_MASK CP_3_MASK CP_4_MASK
 	CP_5_MASK CP_6_MASK CP_7_MASK CP_8_MASK
+	CP_WHITE_MASK CP_BLACK_MASK
 );
 
 my @export_pieces = qw(
