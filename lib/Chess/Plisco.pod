@@ -715,6 +715,19 @@ These methods can be used to analyze features of the current position.
 
 =over 4
 
+=item B<insufficientMaterial>
+
+Returns true if none of the two sides has sufficient material to win, false
+otherwise.
+
+This is B<not> a general-purpose draw detection but only checks the material
+of both sides.  If one side has at least a pawn, rook, or queen, the material
+is sufficient to mate.  A mate is also possible when both sides have at least
+one minor piece with the exception of king and bishop vs king and bishop.  This
+can only be won if the two bishops move on differently colored squares.
+
+One minor piece against a lone king is always a draw.
+
 =item B<attacked(SHIFT)>
 
 Returns true if the ssquare indicated by B<SHIFT> is attacked by a piece of
@@ -795,6 +808,11 @@ undefined.
 
 This does the same as the builtin function C<__builtin_ctzll> of the C
 compilers llvm and gcc.
+
+=item B<bitboardMoreThanOneSet(BITBOARD)>
+
+Returns a truthy value if more than one bit in B<BITBOARD> is set, false
+otherwise.
 
 =back
 

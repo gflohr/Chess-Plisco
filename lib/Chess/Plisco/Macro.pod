@@ -464,17 +464,21 @@ Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_clear_least_set(BITBOARD)>
 
-Same as L<Chess::Plisco/clearLeastSet> but modifies B<BITBOARD> directly.
+Same as L<Chess::Plisco/bitboardClearLeastSet> but modifies B<BITBOARD> directly.
 
 Important! This works only under the "use integer" pragma!
 
 =item B<cp_bitboard_count_trailing_zbits(BITBOARD)>
 
-Same as L<Chess::Plisco/countTrailingZbits>.
+Same as L<Chess::Plisco/bitboardCountTrailingZbits>.
 
 =item B<cp_bitboard_count_isolated_trailing_zbits(BITBOARD)>
 
-Same as L<Chess::Plisco/countIsolatedTrailingZbits>.
+Same as L<Chess::Plisco/bitboardCountIsolatedTrailingZbits>.
+
+=item B<cp_bitboard_more_than_one_set(BITBOARD)>
+
+Same as L<Chess::Plisco/bitboardMoreThanOneSet>.
 
 =back
 
