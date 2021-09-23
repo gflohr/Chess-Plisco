@@ -174,7 +174,7 @@ sub alphabeta {
 					-$beta, -$alpha, \@line, $is_pv && !$legal);
 		}
 		$position->undoMove($state);
-		if ($val > $beta) {
+		if ($val >= $beta) {
 			return $beta;
 		}
 		if ($val > $alpha) {
