@@ -150,21 +150,20 @@ sub alphabeta {
 	my $pv_found;
 	foreach my $move (@moves) {
 		my $state = $position->doMove($move) or next;
-		$is_pv = $is_pv && !$legal;
 		++$legal;
 		++$self->{nodes};
 		my $val;
 		if ($pv_found) {
 			$val = -$self->alphabeta($ply + 1, $depth - 1,
-					-$alpha - 1, -$alpha, \@line, $is_pv);
+					-$alpha - 1, -$alpha, \@line, $is_pv && !$legal);
 
 			if (($val > $alpha) && ($val < $beta)) {
 				$val = -$self->alphabeta($ply + 1, $depth - 1,
-						-$beta, -$alpha, \@line, $is_pv);
+						-$beta, -$alpha, \@line, $is_pv && !$legal);
 			}
 		} else {
 			$val = -$self->alphabeta($ply + 1, $depth - 1,
-					-$beta, -$alpha, \@line, $is_pv);
+					-$beta, -$alpha, \@line, $is_pv && !$legal);
 		}
 		$position->undoMove($state);
 		if ($val > $beta) {
