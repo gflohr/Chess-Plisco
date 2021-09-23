@@ -211,9 +211,9 @@ sub evaluate {
 	my $white_king_shift = cp_bb_count_trailing_zbits $white_kings;
 	my $black_king_shift = cp_bb_count_trailing_zbits $black_kings;
 	my $opening_score = $score + $king_middle_game_square_table[63 - $white_king_shift]
-		+ $king_middle_game_square_table[$black_king_shift];
+		- $king_middle_game_square_table[$black_king_shift];
 	my $endgame_score = $score + $king_end_game_square_table[63 - $white_king_shift]
-		+ $king_end_game_square_table[$black_king_shift];
+		- $king_end_game_square_table[$black_king_shift];
 	$score = (($opening_score * (TOTAL_PHASE - $phase))
 			+ ($endgame_score * $phase)) / TOTAL_PHASE
 		+ $self->material;
