@@ -24,7 +24,6 @@ lib/Chess/Plisco/Macro.pm
 lib/Chess/Plisco/Macro.pod
 lib/Chess/Plisco/Macro/abs.pm
 lib/Chess/Plisco/Macro/attacked.pm
-lib/Chess/Plisco/Macro/attackedMove.pm
 lib/Chess/Plisco/Macro/clearButMostSet.pm
 lib/Chess/Plisco/Macro/countIsolatedTrailingZbits.pm
 lib/Chess/Plisco/Macro/countTrailingZbits.pm
@@ -32,7 +31,6 @@ lib/Chess/Plisco/Macro/infoUpdate.pm
 lib/Chess/Plisco/Macro/moveAttacked.pm
 lib/Chess/Plisco/Macro/movePinned.pm
 lib/Chess/Plisco/Macro/movesFromMask.pm
-lib/Chess/Plisco/Macro/pinnedMove.pm
 lib/Chess/Plisco/Macro/promotionMovesFromMask.pm
 lib/Chess/Plisco/Tutorial.pod
 performance/README.md
@@ -44,7 +42,6 @@ perlcritic.rc
 t/00base.t
 t/01expand-placeholders.t
 t/01pre-process.t
-t/02bit-fiddling.t
 t/02bit-twiddling.t
 t/02piece-at.t
 t/02square-conversion.t
@@ -57,6 +54,7 @@ t/03parse-san.t
 t/03san.t
 t/04check-check.t
 t/04do-move.t
+t/04insufficient-material.t
 t/04king-shift.t
 t/04legal-moves.t
 t/04material.t

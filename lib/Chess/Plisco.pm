@@ -1931,6 +1931,57 @@ sub __zobristKeyDump {
 	return $output;
 }
 
+sub insufficientMaterial {
+	my ($self) = @_;
+
+	# FIXME! Once we distinguish black and white material (should we?),
+	# we can try to take an early exit here if any of the two sides has
+	# more material than a bishop.
+
+	# All of these are sufficient to mate.
+	if (cp_pos_pawns($self) | cp_pos_rooks($self) | cp_pos_queens($self)) {
+		return;
+	}
+
+	# There is neither a queen nor a rook nor a pawn.  Two or more minor
+	# pieces on one side can always mate.
+	my $not_kings = ~$self->[CP_POS_KINGS];
+
+	my $white = $self->[CP_POS_WHITE_PIECES];
+	my $white_minor_pieces = $white & $not_kings;
+	if (cp_bitboard_more_than_one_set($white_minor_pieces)) {
+		return;
+	}
+
+	my $black = $self->[CP_POS_BLACK_PIECES];
+	my $black_minor_pieces = $black & $not_kings;
+	if (cp_bitboard_more_than_one_set($black_minor_pieces)) {
+		return;
+	}
+
+	# One minor piece against a lone king cannot mate.
+	if(!($white_minor_pieces && $black_minor_pieces)) {
+		return 1;
+	}
+
+	# Both sides have exactly one minor piece.  The only combination that
+	# is a draw is KBKB with bishops of different color.  That means, that
+	# both sides can mate if a knight is on the board.
+	if ($self->[CP_POS_KNIGHTS]) {
+		return;
+	}
+
+	# Every side has one bishop.  It is not necessarily a draw, if they are
+	# on different colored squares.
+	my $bishops = $self->[CP_POS_BISHOPS];
+	if (!!($white & $bishops & CP_WHITE_MASK)
+	    != !!($black & $bishops & CP_BLACK_MASK)) {
+		return;
+	}
+
+	return 1;
+}
+
 # Do not remove this line!
 # __END_MACROS__
 
@@ -2962,21 +3013,6 @@ sub unapplyMove {
 	return if 'ARRAY' ne reftype $state;
 
 	return $self->undoMove($state);
-}
-
-sub insufficientMaterial {
-	my ($self) = @_;
-
-	# FIXME! Once we distinguish black and white material (should we?),
-	# we can try to take an early exit here if any of the two sides has
-	# more material than a bishop.
-
-	# All of these are sufficient to mate.
-	if ($self->[CP_POS_PAWNS] | $self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) {
-		return;
-	}
-
-	return 1;
 }
 
 sub dumpAll {
