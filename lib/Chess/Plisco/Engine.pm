@@ -21,6 +21,11 @@ use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
 use Chess::Plisco::Engine::InputWatcher;
 
+# These figures are taken from 
+use constant MIN_HASH_SIZE => 1;
+use constant DEFAULT_HASH_SIZE => 16;
+use constant MAX_HASH_SIZE => 33554432;
+
 sub new {
 	my ($class) = @_;
 
@@ -28,6 +33,10 @@ sub new {
 		__position => Chess::Plisco::Engine::Position->new,
 	};
 	bless $self, $class;
+
+	$self->__ttResize(DEFAULT_HASH_SIZE);
+
+	remove $self;
 }
 
 sub uci {
