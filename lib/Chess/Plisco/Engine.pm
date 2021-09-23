@@ -314,6 +314,9 @@ sub __onUciCmdHelp {
 
         uci - switch to UCI mode (no-op)
         debug (on|off) - switch debugging on or off
+        go [depth, wtime, btime, ... see protocol!]
+        go perft DEPTH - do performance test
+        setoption name NAME[ value VALUE] - set option NAME to VALUE
         isready - ping the engine
         stop - move immediately
         help - show available commands
