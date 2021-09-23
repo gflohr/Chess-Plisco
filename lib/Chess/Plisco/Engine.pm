@@ -14,7 +14,7 @@ package Chess::Plisco::Engine;
 use strict;
 use integer;
 
-use Chess::Position qw(:all);
+use Chess::Plisco qw(:all);
 
 use Chess::Plisco::Engine::Position;
 use Chess::Plisco::Engine::TimeControl;
@@ -149,9 +149,12 @@ sub __onUciCmdGo {
 		         || 'winc' eq $arg || 'binc' eq $arg
 		         || 'movestogo' eq $arg || 'depth' eq $arg
 		         || 'nodes' eq $arg || 'mate' eq $arg
-		         || 'movetime' eq $arg) {
+		         || 'movetime' eq $arg
+		         || 'perft' eq $arg) {
 			my $val = shift @args;
-			unless (defined $val && length $val) {
+			$val ||= 0;
+			$val = +$val;
+			unless ($val) {
 				$self->__info("error: argument '$arg' expects an integer > 0");
 				return;
 			}
@@ -163,6 +166,12 @@ sub __onUciCmdGo {
 		my ($msg) = @_;
 		$self->__output("info $msg");
 	};
+
+	if ($params{perft}) {
+		$self->{__position}->perftByCopyWithOutput($params{perft},
+		                                           $self->{__out});
+		return $self;
+	}
 
 	my $tree = Chess::Plisco::Engine::Tree->new($self->{__position}->copy, $info);
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
@@ -315,7 +324,7 @@ sub __onUciCmdHelp {
         uci - switch to UCI mode (no-op)
         debug (on|off) - switch debugging on or off
         go [depth, wtime, btime, ... see protocol!]
-        go perft DEPTH - do performance test
+        go perft DEPTH - do performance test (blocks engine, hit CTRL-C ...)
         setoption name NAME[ value VALUE] - set option NAME to VALUE
         isready - ping the engine
         stop - move immediately

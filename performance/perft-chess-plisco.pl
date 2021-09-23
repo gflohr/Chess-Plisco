@@ -24,9 +24,9 @@ foreach my $move (@moves) {
 }
 
 if (COPY) {
-	$pos->perftByCopyWithOutput($pos, $depth, \*STDOUT);
-} else {
 	$pos->perftByCopyWithOutput($depth, \*STDOUT);
+} else {
+	$pos->perftByUndoWithOutput($depth, \*STDOUT);
 }
 
 my $uci = "UCI equivalent:\nposition ";

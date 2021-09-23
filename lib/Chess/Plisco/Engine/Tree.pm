@@ -14,8 +14,8 @@ package Chess::Plisco::Engine::Tree;
 use strict;
 use integer;
 
-use Chess::Position qw(:all);
-use Chess::Position::Macro;
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 use Time::HiRes qw(tv_interval);
 
@@ -118,7 +118,7 @@ sub alphabeta {
 		my ($to, $promote) = (cp_move_to($move), cp_move_promote($move));
 		my $to_mask = 1 << $to;
 		my $pos_info = cp_pos_info $position;
-		my $ep_shift = cp_pos_info_ep_shift($pos_info);
+		my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
 		my $mover = cp_move_piece $move;
 		# En passant capture?
 		if ($ep_shift && CP_PAWN == $mover && $ep_shift == $to) {

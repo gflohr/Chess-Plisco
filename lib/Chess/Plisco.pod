@@ -829,14 +829,17 @@ is computed from the resulting position, and finally the move is undone.
 
 =over 4
 
-=item B<perftByCopy(DEPTH)>
+=item B<perftByCopy(POSITION, DEPTH)>
 
-Does a performance test for the current position to depth B<DEPTH>.  Returns
+Does a performance test for position B<POSITION> to depth B<DEPTH>.  Returns
 the number of leaf nodes found.
 
 Instead of calling L</undoMove> the moves found are applied to a copy of the
 current position that is discarded later.  This is currently slightly faster
 than undoing the move programatically with L</undoMove>.
+
+Note that you have to pass a B<Chess::Plisco> instance as the first argument
+even when calling it as an instance method! This has performance reason.
 
 =item B<perftByUndo(DEPTH)>
 

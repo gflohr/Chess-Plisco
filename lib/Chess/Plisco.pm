@@ -2717,7 +2717,7 @@ sub perftByUndoWithOutput {
 }
 
 sub perftByCopyWithOutput {
-	my ($class, $pos, $depth, $fh) = @_;
+	my ($self, $depth, $fh) = @_;
 
 	return if $depth <= 0;
 
@@ -2726,9 +2726,9 @@ sub perftByCopyWithOutput {
 
 	my $nodes = 0;
 
-	my @moves = $pos->pseudoLegalMoves;
+	my @moves = $self->pseudoLegalMoves;
 	foreach my $move (@moves) {
-		my $copy = bless [@$pos], 'Chess::Plisco';
+		my $copy = bless [@$self], 'Chess::Plisco';
 		$copy->doMove($move) or next;
 
 		my $movestr = $copy->moveCoordinateNotation($move);
@@ -2738,7 +2738,7 @@ sub perftByCopyWithOutput {
 		my $subnodes;
 
 		if ($depth > 1) {
-			$subnodes = $class->perftByCopy($copy, $depth - 1);
+			$subnodes = $self->perftByCopy($copy, $depth - 1);
 		} else {
 			$subnodes = 1;
 		}
