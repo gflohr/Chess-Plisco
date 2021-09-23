@@ -32,11 +32,12 @@ use constant DRAW => 0;
 my @move_values = (0) x 369;
 
 sub new {
-	my ($class, $position, $tt, $info) = @_;
+	my ($class, $position, $tt, $watcher, $info) = @_;
 
 	my $self = {
 		position => $position,
 		tt => $tt,
+		watcher => $watcher,
 		info => $info || sub {},
 	};
 
@@ -335,14 +336,12 @@ sub rootSearch {
 # __END_MACROS__
 
 sub think {
-	my ($self, $tree, $watcher) = @_;
+	my ($self) = @_;
 
 	my $position = $self->{position};
 	my @legal = $position->legalMoves or return;
 
 	my @line = ($legal[int rand @legal]);
-
-	$self->{watcher} = $watcher;
 
 	$self->{thinking} = 1;
 	$self->{tt_hits} = 0;
