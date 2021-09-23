@@ -173,13 +173,16 @@ sub __onUciCmdGo {
 		return $self;
 	}
 
-	my $tree = Chess::Plisco::Engine::Tree->new($self->{__position}->copy, $info);
+	my $tree = Chess::Plisco::Engine::Tree->new(
+		$self->{__position}->copy,
+		$self->{__tt},
+		$info);
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 
 	$self->{__tree} = $tree;
 	my $bestmove;
 	eval {
-		$bestmove = $tree->think($tree, $self->{__watcher});
+		$bestmove = $tree->think($tree, $self->{__watcher}, $self->{__tt});
 		delete $self->{__tree};
 	};
 	if ($@) {

@@ -24,27 +24,35 @@ ok $tt, "create transposition table";
 my $key = 0x415C0415C0415C0;
 ok !$tt->probe($key), "failed probe on empty table";
 
-$tt->store($key, 5, 7, 2304, 1303);
+my $test_depth = 5;
+my $test_flags = TT_SCORE_EXACT;
+my $test_value = 2304;
+my $test_move = 1303;
 
-my $entry = $tt->probe($key);
+my $test_alpha = 0;
+my $test_beta = 1;
 
-my ($depth, $flags, $value, $move) = @$entry;
+$tt->store($key, $test_depth, $test_flags, $test_value, $test_move);
 
-is $depth, 5, "depth 5";
-is $flags, 7, "flags 7";
+my $value = $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta);
+ok ((defined $value), "table hit");
 is $value, 2304, "value 2304";
-is $move, 1303, "move 1303";
 
 $tt->resize(1);
-ok !$tt->probe($key), "table should be empty after resize";
+ok ((!defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta)),
+	"table should be empty after resize");
 
-$tt->store($key, 5, 7, 2304, 1303);
-ok $tt->probe($key), "store again";
+$tt->store($key, $test_depth, $test_flags, $test_value, $test_move);
+ok defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
+	"store again";
 
 $tt->clear;
-ok !$tt->probe($key), "table should be empty after clear";
+ok !defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
+	"table should be empty after clear";
 
-$tt->store($key, 5, 7, 2304, 1303);
-ok $tt->probe($key), "store again";
+$tt->store($key, $test_depth, $test_flags, $test_value, $test_move);
+ok defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
+	"store again";
 my $collision = $key % scalar @$tt;
-ok !$tt->probe($collision), "type 2 collision";
+ok !defined $tt->probe($collision, $test_depth - 1, $test_alpha, $test_beta),
+	"type 2 collision";

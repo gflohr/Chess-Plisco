@@ -14,7 +14,15 @@ package Chess::Plisco::Engine::TranspositionTable;
 use strict;
 use integer;
 
-use constant ENTRY_SIZE => 16;
+use constant TT_ENTRY_SIZE => 16;
+
+use constant TT_SCORE_EXACT => 0;
+use constant TT_SCORE_ALPHA => 1;
+use constant TT_SCORE_BETA => 2;
+
+our @EXPORT = qw(TT_SCORE_EXACT TT_SCORE_ALPHA TT_SCORE_BETA);
+
+use base qw(Exporter);
 
 sub new {
 	my ($class, $size) = @_;
@@ -40,20 +48,38 @@ sub resize {
 	my ($self, $size) = @_;
 
 	$self->clear;
-	$#$self = (1024 * 1024 / ENTRY_SIZE) - 1;
+	$#$self = (1024 * 1024 / TT_ENTRY_SIZE) - 1;
 
 	return $self;
 }
 
 sub probe {
-	my ($self, $lookup_key) = @_;
+	my ($self, $lookup_key, $depth, $alpha, $beta) = @_;
 
 	my $entry = $self->[$lookup_key % scalar @$self] or return;
 
 	my ($stored_key, $payload) = @$entry;
 	return if $stored_key != $lookup_key;
 
-	return [unpack 'S4', $payload];
+	my ($edepth, $flags, $value, $move) = unpack 'S4', $payload;
+
+	if ($edepth >= $depth) {
+		if ($flags == TT_SCORE_EXACT) {
+			return $value;
+		}
+
+		if (($flags == TT_SCORE_ALPHA) && ($value <= $alpha)) {
+			return $alpha;
+		}
+
+		if (($flags == TT_SCORE_BETA) && ($value >= $beta)) {
+			return $beta;
+		}
+
+		# FIXME! Pass at least best move to caller.
+	}
+
+	return;
 }
 
 sub store {

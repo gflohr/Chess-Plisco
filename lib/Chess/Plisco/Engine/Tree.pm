@@ -16,6 +16,7 @@ use integer;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
+use Chess::Plisco::Engine::TranspositionTable;
 
 use Time::HiRes qw(tv_interval);
 
@@ -31,10 +32,11 @@ use constant DRAW => 0;
 my @move_values = (0) x 369;
 
 sub new {
-	my ($class, $position, $info) = @_;
+	my ($class, $position, $tt, $info) = @_;
 
 	my $self = {
 		position => $position,
+		tt => $tt,
 		info => $info || sub {},
 	};
 
@@ -93,6 +95,7 @@ sub printPV {
 	my $seldepth = @$pline;
 	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
 			. " score $scorestr nodes $nodes nps $nps time $time pv $pv");
+	$self->{info}->("tt_hits $self->{tt_hits}");
 }
 
 sub alphabeta {
@@ -106,7 +109,19 @@ sub alphabeta {
 		$self->checkTime;
 	}
 
+	# FIXME! Check for draw by repetition etc.
+
 	my $position = $self->{position};
+
+	my $tt = $self->{tt};
+	my $signature = $position->signature;
+	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta);
+
+	if (defined $tt_value) {
+		++$self->{tt_hits};
+		return $tt_value;
+	}
+
 	if ($depth <= 0) {
 		return $self->quiesce($ply, $alpha, $beta, $pline, $is_pv);
 	}
@@ -156,6 +171,8 @@ sub alphabeta {
 
 	my $legal = 0;
 	my $pv_found;
+	my $tt_type = TT_SCORE_ALPHA;
+	my $best_move = 0;
 	foreach my $move (@moves) {
 		my $state = $position->doMove($move) or next;
 		++$legal;
@@ -175,19 +192,25 @@ sub alphabeta {
 		}
 		$position->undoMove($state);
 		if ($val >= $beta) {
+			$tt->store($signature, $depth, TT_SCORE_BETA, $val, $move);
 			return $beta;
 		}
 		if ($val > $alpha) {
 			$alpha = $val;
 			$pv_found = 1;
 			@$pline = ($move, @line);
-
+			$tt_type = TT_SCORE_EXACT;
+			$best_move = $move;
+	
 			if ($is_pv) {
 				$self->{score} = $val;
 				$self->printPV($pline);
 			}
 		}
+
 	}
+
+	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
 
 	if (!$legal) {
 		# Mate or stalemate.
@@ -214,12 +237,27 @@ sub quiesce {
 		return $self->alphabeta($ply, 1, $alpha, $beta, \@line, $is_pv);
 	}
 
+	my $tt = $self->{tt};
+	my $signature = $position->signature;
+	my $tt_value = $tt->probe($signature, 0, $alpha, $beta);
+
+	if (defined $tt_value) {
+		++$self->{tt_hits};
+		return $tt_value;
+	}
+
 	my $val = $position->evaluate;
 	if ($val >= $beta) {
+		# FIXME! Is that correct?
+		$tt->store($signature, 0, TT_SCORE_EXACT, $val, 0);
 		return $beta;
 	}
+
+	my $tt_type = TT_SCORE_ALPHA;
 	if ($val > $alpha) {
 		$alpha = $val;
+		# FIXME! Correct?
+		$tt_type = TT_SCORE_EXACT;
 	}
 
 	my @pseudo_legal = $position->pseudoLegalAttacks;
@@ -240,6 +278,8 @@ sub quiesce {
 	}
 
 	my $legal = 0;
+	my $tt_type = TT_SCORE_ALPHA;
+	my $best_move = 0;
 	foreach my $move (sort { $b <=> $a } @moves) {
 		my $state = $position->doMove($move);
 		$is_pv = $is_pv && !$legal;
@@ -247,13 +287,17 @@ sub quiesce {
 		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $pline, $is_pv);
 		$position->undoMove($state);
 		if ($val >= $beta) {
+			$tt->store($signature, 0, TT_SCORE_BETA, $val, $move);
 			return $beta;
 		}
 		if ($val > $alpha) {
 			$alpha = $val;
 			@$pline = ($move, @line);
+			$tt_type = TT_SCORE_EXACT;
+			$best_move = $move;
 		}
 	}
+	$tt->store($signature, 0, $tt_type, $val, $best_move);
 
 	return $alpha;
 }
@@ -301,6 +345,7 @@ sub think {
 	$self->{watcher} = $watcher;
 
 	$self->{thinking} = 1;
+	$self->{tt_hits} = 0;
 
 	$self->rootSearch(\@line);
 
