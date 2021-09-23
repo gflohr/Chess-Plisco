@@ -20,23 +20,49 @@ use Chess::Plisco::Engine::Position;
 use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
 use Chess::Plisco::Engine::InputWatcher;
+use Chess::Plisco::Engine::TranspositionTable;
 
 # These figures are taken from 
 use constant MIN_HASH_SIZE => 1;
 use constant DEFAULT_HASH_SIZE => 16;
 use constant MAX_HASH_SIZE => 33554432;
 
+use constant UCI_OPTIONS => [
+	{
+		name => 'Hash',
+		type => 'spin',
+		default => DEFAULT_HASH_SIZE,
+		min => MIN_HASH_SIZE,
+		max => MAX_HASH_SIZE,
+		callback => '__resizeTranspositionTable',
+	},
+	{
+		name => 'Clear Hash',
+		type => 'button',
+		callback => '__clearTranspositionTable',
+	},
+];
+
+my $uci_options = UCI_OPTIONS;
+my %uci_options = map { $_->{name} => $_ } @$uci_options;
+
 sub new {
 	my ($class) = @_;
 
 	my $self = {
 		__position => Chess::Plisco::Engine::Position->new,
+		__options => {},
 	};
+
+	my $options = UCI_OPTIONS;
+	foreach my $option (@$options) {
+		$self->{__options}->{$option->{name}} = $option->{default};
+	}
+
+	my $tt_size = $self->{__options}->{Hash};
+	$self->{__tt} = Chess::Plisco::Engine::TranspositionTable->new($tt_size);
+
 	bless $self, $class;
-
-	$self->__ttResize(DEFAULT_HASH_SIZE);
-
-	remove $self;
 }
 
 sub uci {
@@ -161,7 +187,63 @@ sub __onUciCmdGo {
 sub __onUciCmdUcinewgame {
 	my ($self) = @_;
 
+	$self->{__tt}->clear;
+
 	return $self;
+}
+
+sub __onUciCmdSetoption {
+	my ($self, $args) = @_;
+
+	if ($args !~ /^name[ \t]+(.*?)(?:value[ \t]+(.*))?$/) {
+		$self->__output("info ERROR: usage setoption name NAME[ value VALUE]");
+		return $self;
+	}
+
+	my ($name, $value) = map { $self->__trim($_) } ($1, $2);
+	if (!exists $uci_options{$name}) {
+		$self->__output("info ERROR: unsupported option '$name'");
+		return $self;
+	}
+
+	my $option = $uci_options{$name};
+
+	if (exists $option->{min}) {
+		my $min = $option->{min};
+		if (($value || 0) < $min) {
+			$self->__output("info ERROR: minimum value for '$name' is $min");
+			return $self;
+		}
+	}
+
+	if (exists $option->{max}) {
+		my $max = $option->{max};
+		if (($value || 0) > $max) {
+			$self->__output("info ERROR: maximum value for '$name' is $max");
+			return $self;
+		}
+	}
+
+	$self->{__options}->{$name} = $value;
+
+	if (exists $option->{callback}) {
+		my $method = $option->{callback};
+		$self->$method($value);
+	}
+
+	return $self;
+}
+
+sub __resizeTranspositionTable {
+	my ($self, $size) = @_;
+
+	$self->{__tt}->resize($size);
+}
+
+sub __clearTranspositionTable {
+	my ($self, $size) = @_;
+
+	$self->{__tt}->clear;
 }
 
 sub __onUciCmdStop {
@@ -257,6 +339,16 @@ sub __onUciCmdUci {
 	my $version = $Chess::Plisco::Engine::VERSION || 'development version';
 	$self->__output("id Plisco $version");
 	$self->__output("id author Guido Flohr <guido.flohr\@cantanea.com>");
+
+	my $options = UCI_OPTIONS;
+	foreach my $option (@{$options}) {
+		my $output = "option name $option->{name} type $option->{type}";
+		$output .= " default $option->{default}" if exists $option->{default};
+		$output .= " min $option->{min}" if exists $option->{min};
+		$output .= " max $option->{max}" if exists $option->{max};
+		$self->__output($output);
+	}
+
 	$self->__output("uciok");
 
 	return;
