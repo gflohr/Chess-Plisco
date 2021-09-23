@@ -178,6 +178,8 @@ sub __onUciCmdGo {
 		$self->{__tt},
 		$self->{__watcher},
 		$info);
+	$tree->{debug} = 1 if $self->{__debug};
+
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 
 	$self->{__tree} = $tree;

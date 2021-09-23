@@ -96,7 +96,9 @@ sub printPV {
 	my $seldepth = @$pline;
 	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
 			. " score $scorestr nodes $nodes nps $nps time $time pv $pv");
-	$self->{info}->("tt_hits $self->{tt_hits}");
+	if ($self->{__debug}) {
+		$self->{info}->("tt_hits $self->{tt_hits}") if $self->{__debug};
+	}
 }
 
 sub alphabeta {
@@ -345,6 +347,10 @@ sub think {
 
 	$self->{thinking} = 1;
 	$self->{tt_hits} = 0;
+
+	if ($self->{debug}) {
+		$self->{info}->("allocated time: $self->{allocated_time}");
+	}
 
 	$self->rootSearch(\@line);
 
