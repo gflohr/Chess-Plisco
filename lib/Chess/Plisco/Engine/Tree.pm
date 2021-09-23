@@ -51,17 +51,25 @@ sub checkTime {
 	my $elapsed = 1000 * tv_interval($self->{start_time});
 	my $allocated = $self->{allocated_time};
 	my $eta = $allocated - $elapsed;
-	if ($eta < 4) {
+	if ($eta < 4 && !$self->{max_depth} && !$self->{max_nodes}) {
 		die "PLISCO_ABORTED\n";
 	}
 
 	my $nodes = $self->{nodes};
 	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
 	my $max_nodes_to_tc = $nps >> 3;
-	my $nodes_to_tc = int(($eta * $nps) / 2000);
 
-	$self->{nodes_to_tc} = $nodes + 
-		(($nodes_to_tc < $max_nodes_to_tc) ? $nodes_to_tc : $max_nodes_to_tc);
+	if ($self->{max_depth}) {
+		$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
+	} elsif ($self->{max_nodes}) {
+		$self->{nodes_to_tc} =
+			cp_min($nodes + $max_nodes_to_tc, $self->{max_nodes});
+	} else {
+		my $nodes_to_tc = int(($eta * $nps) / 2000);
+
+		$self->{nodes_to_tc} = $nodes + 
+			(($nodes_to_tc < $max_nodes_to_tc) ? $nodes_to_tc : $max_nodes_to_tc);
+	}
 }
 
 # __BEGIN_MACROS
@@ -94,7 +102,7 @@ sub alphabeta {
 
 	# FIXME! Rather use local variables for all this stuff in order to save
 	# hash dereferences.
-	if (!$self->{max_depth} && ($self->{nodes} >= $self->{nodes_to_tc})) {
+	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
 	}
 
@@ -194,7 +202,7 @@ sub alphabeta {
 sub quiesce {
 	my ($self, $ply, $alpha, $beta, $pline, $is_pv) = @_;
 
-	if (!$self->{max_depth} && ($self->{nodes} >= $self->{nodes_to_tc})) {
+	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
 	}
 

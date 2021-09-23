@@ -83,7 +83,10 @@ sub __onUciInput {
 	my $method = '__onUciCmd' . ucfirst lc $cmd;
 	$args = $self->__trim($args);
 	if ($self->can($method)) {
-		$self->$method($args)
+		my $stop_if_thinking = $self->$method($args);
+		if ($self->{__tree} && $stop_if_thinking) {
+			die "PLISCO_ABORTED\n";
+		}
 	} else {
 		$self->{__out}->print("info unknown command '$cmd'\n");
 	}
@@ -155,9 +158,7 @@ sub __onUciCmdUcinewgame {
 sub __onUciCmdStop {
 	my ($self) = @_;
 
-	if ($self->{__tree}) {
-		die "PLISCO_ABORTED\n";
-	}
+	# Ignored. Any valid command will terminate the search.
 
 	return $self;
 }
@@ -215,7 +216,7 @@ sub __onUciCmdPosition {
 sub __onUciCmdHelp {
 	my ($self) = @_;
 
-	$self->__output(<<"EOF")
+	$self->__output(<<"EOF");
     The Plisco Chess Engine
 
     The engine understands the following commands:
@@ -230,15 +231,13 @@ sub __onUciCmdHelp {
     See http://wbec-ridderkerk.nl/html/UCIProtocol.html for more information!
 EOF
 
+	return;
 }
 
 sub __onUciCmdQuit {
 	my ($self) = @_;
 
 	$self->{__abort} = 1;
-	if ($self->{__tree}) {
-		$self->{__tree}->{aborted} = 1;
-	}
 
 	return $self;
 }
@@ -250,6 +249,8 @@ sub __onUciCmdUci {
 	$self->__output("id Plisco $version");
 	$self->__output("id author Guido Flohr <guido.flohr\@cantanea.com>");
 	$self->__output("uciok");
+
+	return;
 }
 
 sub __onUciCmdIsready {
@@ -257,7 +258,7 @@ sub __onUciCmdIsready {
 
 	$self->__output("readyok");
 
-	return $self;
+	return;
 }
 
 sub __onUciCmdDebug {
@@ -273,7 +274,7 @@ sub __onUciCmdDebug {
 		$self->__info("usage debug on|off");
 	}
 
-	return $self;
+	return;
 }
 
 sub __output {
