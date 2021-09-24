@@ -14,7 +14,7 @@
 
 use strict;
 
-use Test::More tests => 11;
+use Test::More tests => 9;
 
 use Chess::Plisco::Engine::TranspositionTable;
 
