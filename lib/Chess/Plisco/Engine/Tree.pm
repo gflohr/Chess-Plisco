@@ -25,6 +25,11 @@ use constant INF => ((-(MATE)) << 1);
 use constant MAX_PLY => 512;
 use constant DRAW => 0;
 
+# These values get stored in the upper 32 bits of a moves so that they are
+# searched first.
+use constant MOVE_ORDERING_PV => 1 << 62;
+use constant MOVE_ORDERING_TT => 1 << 61;
+
 # For all combinations of promotion piece and captured piece, calculate a
 # value suitable for sorting.  We choose the raw material balance minus the
 # piece that moves.  That way, captures that the queen makes are less
@@ -118,7 +123,8 @@ sub alphabeta {
 
 	my $tt = $self->{tt};
 	my $signature = $position->signature;
-	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta);
+	my $tt_move;
+	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
 
 	if (defined $tt_value) {
 		++$self->{tt_hits};
@@ -130,59 +136,61 @@ sub alphabeta {
 	}
 
 	my @moves = $position->pseudoLegalMoves;
+
 	# Expand the moves with a score so that they can be sorted.
+	my ($pawns, $knights, $bishops, $rooks, $queens) = 
+		@$position[CP_POS_PAWNS .. CP_POS_QUEENS];
+	my $pos_info = cp_pos_info $position;
+	my $her_pieces = $position->[CP_POS_WHITE_PIECES + cp_pos_info_to_move $pos_info];
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
+	my $pv_move = $pline->[$ply - 1] if @$pline >= $ply;
 	foreach my $move (@moves) {
-		my $victim = CP_NO_PIECE;
-		my ($to, $promote) = (cp_move_to($move), cp_move_promote($move));
+		my ($to, $mover) = (cp_move_to($move), cp_move_piece($move));
 		my $to_mask = 1 << $to;
-		my $pos_info = cp_pos_info $position;
-		my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
-		my $mover = cp_move_piece $move;
-		# En passant capture?
-		if ($ep_shift && CP_PAWN == $mover && $ep_shift == $to) {
-			$victim = CP_PAWN;
-		}
-		next if !($promote || ($to_mask & $position->[CP_POS_WHITE_PIECES
-			+ !cp_pos_info_to_move($pos_info)]));
-		if (!$victim) {
-			if ($to_mask & cp_pos_pawns($position)) {
-				$victim = CP_PAWN;
-			} elsif ($to_mask & cp_pos_knights($position)) {
-				$victim = CP_KNIGHT;
-			} elsif ($to_mask & cp_pos_bishops($position)) {
-				$victim = CP_BISHOP;
-			} elsif ($to_mask & cp_pos_rooks($position)) {
-				$victim = CP_ROOK;
-			} else {
-				$victim = CP_QUEEN;
-			}
-		}
 
-		$move |= ($move_values[($victim << 6) | ($mover << 3) | $promote] << 32);
+		if ($move == $tt_move) {
+			$move |= MOVE_ORDERING_TT;
+		} elsif ($move == $pv_move) {
+			$move |= MOVE_ORDERING_PV;
+		} else {
+			my $victim = CP_NO_PIECE;
+			my $promote = cp_move_promote($move);
+			my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
+			my $mover = cp_move_piece $move;
+			# En passant capture?
+			if ($ep_shift && CP_PAWN == $mover && $ep_shift == $to) {
+				$move |= CP_PAWN_VALUE << 32;
+			} elsif (($to_mask & $her_pieces) || $promote) {
+				if ($to_mask & $pawns) {
+					$victim = CP_PAWN;
+				} elsif ($to_mask & $knights) {
+					$victim = CP_KNIGHT;
+				} elsif ($to_mask & $bishops) {
+					$victim = CP_BISHOP;
+				} elsif ($to_mask & $rooks) {
+					$victim = CP_ROOK;
+				} elsif ($to_mask & $queens) {
+					$victim = CP_QUEEN;
+				}
+				$move |= ($move_values[($victim << 6) | ($mover << 3) | $promote] << 32);
+			}
+
+		}
 	}
 
-	# Sort the moves according to the material gain.
+	# Now sort the moves according to the material gain.
 	@moves = sort { $b <=> $a } @moves;
-
-	# Move the PV move to the front.
-	if (@$pline >= $ply) {
-		my $bestmove = $pline->[$ply - 1];
-		for (my $i = 1; $i < @moves; ++$i) {
-			if (cp_move_equivalent $moves[$i], $bestmove) {
-				unshift @moves, splice @moves, $i, 1;
-				last;
-			}
-		}
-	}
 
 	my $legal = 0;
 	my $pv_found;
 	my $tt_type = TT_SCORE_ALPHA;
 	my $best_move = 0;
+	my $print_current_move = $ply == 1;
 	foreach my $move (@moves) {
 		my $state = $position->doMove($move) or next;
 		++$legal;
 		++$self->{nodes};
+		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
 		my $val;
 		if ($pv_found) {
 			$val = -$self->alphabeta($ply + 1, $depth - 1,
@@ -244,7 +252,8 @@ sub quiesce {
 
 	my $tt = $self->{tt};
 	my $signature = $position->signature;
-	my $tt_value = $tt->probe($signature, 0, $alpha, $beta);
+	my $tt_move;
+	my $tt_value = $tt->probe($signature, 0, $alpha, $beta, \$tt_move);
 
 	if (defined $tt_value) {
 		++$self->{tt_hits};
@@ -279,7 +288,12 @@ sub quiesce {
 		# values.  But we want to ignore that.
 		next if $see <= -CP_PAWN_VALUE;
 
-		push @moves, ($see << 32) | $move;
+		# FIXME! Do we have a PV move here?
+		if ($move == $tt_move) {
+			push @moves, MOVE_ORDERING_TT | $move;
+		} else {
+			push @moves, ($see << 32) | $move;
+		}
 	}
 
 	my $legal = 0;
@@ -338,6 +352,15 @@ sub rootSearch {
 	@$pline = @line;
 }
 # __END_MACROS__
+
+sub printCurrentMove {
+	my ($self, $depth, $move, $moveno) = @_;
+
+	my $position = $self->{position};
+	my $cn = $position->moveCoordinateNotation($move);
+
+	$self->{info}->("depth $depth currmove $cn currmovenumber $moveno");
+}
 
 sub think {
 	my ($self) = @_;

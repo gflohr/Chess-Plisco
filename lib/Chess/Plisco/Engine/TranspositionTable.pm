@@ -54,7 +54,7 @@ sub resize {
 }
 
 sub probe {
-	my ($self, $lookup_key, $depth, $alpha, $beta) = @_;
+	my ($self, $lookup_key, $depth, $alpha, $beta, $bestmove) = @_;
 
 	my $entry = $self->[$lookup_key % scalar @$self] or return;
 
@@ -62,6 +62,8 @@ sub probe {
 	return if $stored_key != $lookup_key;
 
 	my ($edepth, $flags, $value, $move) = unpack 's4', $payload;
+	$$bestmove = $move if $move;
+
 	if ($edepth >= $depth) {
 		if ($flags == TT_SCORE_EXACT) {
 			return $value;
