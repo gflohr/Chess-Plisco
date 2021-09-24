@@ -61,8 +61,7 @@ sub probe {
 	my ($stored_key, $payload) = @$entry;
 	return if $stored_key != $lookup_key;
 
-	my ($edepth, $flags, $value, $move) = unpack 'S4', $payload;
-
+	my ($edepth, $flags, $value, $move) = unpack 's4', $payload;
 	if ($edepth >= $depth) {
 		if ($flags == TT_SCORE_EXACT) {
 			return $value;
@@ -86,7 +85,7 @@ sub store {
 	my ($self, $key, $depth, $flags, $value, $move) = @_;
 
 	# Replacement scheme is currently replace-always.
-	my $payload = pack 'S4', $depth, $flags, $value, $move;
+	my $payload = pack 's4', $depth, $flags, $value, $move;
 
 	$self->[$key % scalar @$self] = [$key, $payload];
 }

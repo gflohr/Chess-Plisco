@@ -161,7 +161,10 @@ sub alphabeta {
 		$move |= ($move_values[($victim << 6) | ($mover << 3) | $promote] << 32);
 	}
 
+	# Sort the moves according to the material gain.
 	@moves = sort { $b <=> $a } @moves;
+
+	# Move the PV move to the front.
 	if (@$pline >= $ply) {
 		my $bestmove = $pline->[$ply - 1];
 		for (my $i = 1; $i < @moves; ++$i) {
@@ -210,7 +213,6 @@ sub alphabeta {
 				$self->printPV($pline);
 			}
 		}
-
 	}
 
 	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
