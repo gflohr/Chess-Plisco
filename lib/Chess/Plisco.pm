@@ -89,7 +89,7 @@ use constant CP_POS_HALF_MOVE_CLOCK => 9;
 use constant CP_POS_INFO => 10;
 use constant CP_POS_EVASION_SQUARES => 11;
 use constant CP_POS_SIGNATURE => 12;
-use constant CP_POS_IRREVERSIBLE_CLOCK => 13;
+use constant CP_POS_REVERSIBLE_CLOCK => 13;
 use constant CP_POS_IN_CHECK => 14;
 
 # How to evade a check?
@@ -362,7 +362,7 @@ sub new {
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK);
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
 	cp_pos_half_move_clock($self) = 0;
-	cp_pos_irreversible_clock($self) = 0;
+	cp_pos_reversible_clock($self) = 0;
 	cp_pos_half_moves($self) = 0;
 
 	my $info = 0;
@@ -578,7 +578,7 @@ sub newFromFEN {
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
 	}
-	$self->[CP_POS_HALF_MOVE_CLOCK] = $self->[CP_POS_IRREVERSIBLE_CLOCK] = $hmc;
+	$self->[CP_POS_HALF_MOVE_CLOCK] = $self->[CP_POS_REVERSIBLE_CLOCK] = $hmc;
 
 	if ($moveno !~ /^[1-9][0-9]*$/) {
 		$moveno = 1;
@@ -1055,7 +1055,7 @@ sub doMove {
 			$zk_captured = CP_KING; # This is interpreted as an ep capture.
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK]
-				= $self->[CP_POS_IRREVERSIBLE_CLOCK] = 0;
+				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
 			_cp_pos_info_set_en_passant_shift($pos_info, ($from + (($to - $from) >> 1)));
 		} else {
@@ -1065,15 +1065,15 @@ sub doMove {
 		# No need to check for en passant because pawn moves reset the
 		# half-move clock anyway.
 		$self->[CP_POS_HALF_MOVE_CLOCK]
-				= $self->[CP_POS_IRREVERSIBLE_CLOCK] = 0;
+				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 	} elsif ($old_castling != $new_castling) {
-		$self->[CP_POS_IRREVERSIBLE_CLOCK] = 0;
+		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
-		++$self->[CP_POS_IRREVERSIBLE_CLOCK];
+		++$self->[CP_POS_REVERSIBLE_CLOCK];
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 	}
 
@@ -2004,8 +2004,8 @@ my @export_accessors = qw(
 	CP_POS_WHITE_PIECES CP_POS_BLACK_PIECES
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
-	CP_POS_HALF_MOVE_CLOCK CP_POS_IRREVERSIBLE_CLOCK CP_POS_HALF_MOVES
-	CP_POS_INFO
+	CP_POS_HALF_MOVE_CLOCK CP_POS_REVERSIBLE_CLOCK CP_POS_HALF_MOVES
+	CP_POS_INFO CP_POS_SIGNATURE
 	CP_POS_IN_CHECK CP_POS_EVASION_SQUARES
 );
 
@@ -2261,8 +2261,8 @@ sub halfMoveClock {
 	shift->[CP_POS_HALF_MOVE_CLOCK];
 }
 
-sub irreversibleClock {
-	shift->[CP_POS_IRREVERSIBLE_CLOCK];
+sub reversibleClock {
+	shift->[CP_POS_REVERSIBLE_CLOCK];
 }
 
 sub info {

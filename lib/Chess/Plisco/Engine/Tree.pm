@@ -37,10 +37,12 @@ use constant MOVE_ORDERING_TT => 1 << 61;
 my @move_values = (0) x 369;
 
 sub new {
-	my ($class, $position, $tt, $watcher, $info) = @_;
+	my ($class, $position, $tt, $watcher, $info, $signatures) = @_;
 
 	my $self = {
 		position => $position,
+		signatures => $signatures,
+		history_length => -1 + scalar @$signatures,
 		tt => $tt,
 		watcher => $watcher,
 		info => $info || sub {},
@@ -80,7 +82,7 @@ sub checkTime {
 	}
 }
 
-# __BEGIN_MACROS
+# __BEGIN_MACROS__
 sub printPV {
 	my ($self, $pline) = @_;
 
@@ -119,14 +121,24 @@ sub alphabeta {
 
 	my $position = $self->{position};
 
-	if (cp_pos_half_move_clock >= 100) {
+	if (cp_pos_half_move_clock($position) >= 100
 		|| $position->insufficientMaterial) {
-		# FIXME! Check draw by repetition.
-		return DRAW:
+		return DRAW;
+	}
+
+	# Check draw by repetition.  FIXME! Try to find near repetitions with
+	# cuckoo tables.
+	my $rc = $position->reversibleClock;
+	my $signatures = $self->{signatures};
+	my $signature = $position->[CP_POS_SIGNATURE];
+	my $wayback = $#$signatures - $rc;
+	for (my $n = $#$signatures - 4; $n >= $wayback; $n -= 2) {
+		if ($signatures->[$n] == $signature) {
+			return DRAW;
+		}
 	}
 
 	my $tt = $self->{tt};
-	my $signature = $position->signature;
 	my $tt_move;
 	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
 
@@ -189,8 +201,10 @@ sub alphabeta {
 	my $tt_type = TT_SCORE_ALPHA;
 	my $best_move = 0;
 	my $print_current_move = $ply == 1;
+	my $signature_slot = $self->{history_length} + $ply;
 	foreach my $move (@moves) {
 		my $state = $position->doMove($move) or next;
+		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$legal;
 		++$self->{nodes};
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
@@ -256,7 +270,7 @@ sub quiesce {
 	}
 
 	my $tt = $self->{tt};
-	my $signature = $position->signature;
+	my $signature = cp_pos_signature $position;
 	my $tt_move;
 	my $tt_value = $tt->probe($signature, 0, $alpha, $beta, \$tt_move);
 

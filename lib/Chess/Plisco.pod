@@ -272,7 +272,7 @@ Returns the number of half-moves made.  Initially, this is 0.  After white has
 made their first move, it is 1. After black has made their first move, it is
 2, and so on.
 
-=item B<irreversibleClock>
+=item B<reversibleClock>
 
 Returns the number of reversible moves immediately leading to the current
 position.  The following moves are irreversible:

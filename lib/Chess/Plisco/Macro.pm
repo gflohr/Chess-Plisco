@@ -47,8 +47,6 @@ _define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 sub cp_pos_kings {}
 _define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
 sub cp_pos_half_move_clock {}
-_define cp_pos_irreversible_clock => '$p', '$p->[CP_POS_IRREVERSIBLE_CLOCK]';
-sub cp_pos_irreversible_clock {}
 _define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
 sub cp_pos_in_check {}
 _define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
@@ -57,6 +55,8 @@ _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
 sub cp_pos_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 sub cp_pos_info {}
+_define cp_pos_reversible_clock => '$p', '$p->[CP_POS_REVERSIBLE_CLOCK]';
+sub cp_pos_reversible_clock {}
 
 _define cp_pos_info_castling_rights => '$i', '$i & 0xf';
 sub cp_pos_info_castling_rights {}

@@ -177,7 +177,8 @@ sub __onUciCmdGo {
 		$self->{__position}->copy,
 		$self->{__tt},
 		$self->{__watcher},
-		$info);
+		$info,
+		$self->{__signatures});
 	$tree->{debug} = 1 if $self->{__debug};
 
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
@@ -304,6 +305,8 @@ sub __onUciCmdPosition {
 		return;
 	}
 
+	$self->{__moves} = [];
+	my @signatures = ($position->signature);
 	if ('moves' eq shift @moves) {
 		foreach my $move (@moves) {
 			my $status = $position->applyMove($move);
@@ -311,10 +314,12 @@ sub __onUciCmdPosition {
 				$self->__info("error: invalid or illegal move '$move'");
 				return;
 			}
+			push @signatures, $position->signature;
 		}
 	}
 
 	$self->{__position} = $position;
+	$self->{__signatures} = \@signatures;
 
 	return $self;
 }

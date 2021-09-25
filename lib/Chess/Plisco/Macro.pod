@@ -255,9 +255,9 @@ Same as L<Chess::Plisco/blackQueenSideCastlingRight>.
 
 Same as L<Chess::Plisco/halfMoveClock>.
 
-=item B<cp_pos_irreversible_clock(POS)>
+=item B<cp_pos_reversible_clock(POS)>
 
-Same as L<Chess::Plisco/irreversibleClock>.
+Same as L<Chess::Plisco/reversibleClock>.
 
 =item B<cp_pos_half_moves(POS)>
 
