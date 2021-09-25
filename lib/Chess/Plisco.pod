@@ -272,7 +272,7 @@ Returns the number of half-moves made.  Initially, this is 0.  After white has
 made their first move, it is 1. After black has made their first move, it is
 2, and so on.
 
-=item B<halfMoveClock>
+=item B<irreversibleClock>
 
 Returns the number of reversible moves immediately leading to the current
 position.  The following moves are irreversible:
@@ -304,6 +304,12 @@ the fact that they are necessarily the first king move.
 
 The half-move-clock is important because both players can claim a draw, when
 the half-move clock has reached 50.
+
+=item B<halfMoveClock>
+
+Like L</irreversibleClock> but only captures and pawn moves are considered
+irreversible. Changes to the castling state are ignored.  This is the value
+that is relevant for claiming a draw according to the 50-move Rule.
 
 =item B<signature>
 
@@ -1027,6 +1033,10 @@ The number of half-moves made.  See also L</halfMoves>.
 =item B<POS-E<gt>[CP_POS_HALF_MOVE_CLOCK]>
 
 The current value of the half-move clock.  See also L</halfMoveClock>.
+
+=item B<POS-E<gt>[CP_POS_IRREVERSIBLE_CLOCK]>
+
+The current value of the irreversible clock.  See also L</irreversibleClock>.
 
 =item B<POS-E<gt>[CP_POS_IN_CHECK]>
 

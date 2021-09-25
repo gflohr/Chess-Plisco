@@ -117,9 +117,13 @@ sub alphabeta {
 		$self->checkTime;
 	}
 
-	# FIXME! Check for draw by repetition etc.
-
 	my $position = $self->{position};
+
+	if (cp_pos_half_move_clock >= 100) {
+		|| $position->insufficientMaterial) {
+		# FIXME! Check draw by repetition.
+		return DRAW:
+	}
 
 	my $tt = $self->{tt};
 	my $signature = $position->signature;
