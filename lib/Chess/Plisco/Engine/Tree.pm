@@ -148,10 +148,10 @@ sub alphabeta {
 		my ($to, $mover) = (cp_move_to($move), cp_move_piece($move));
 		my $to_mask = 1 << $to;
 
-		if ($move == $tt_move) {
-			$move |= MOVE_ORDERING_TT;
-		} elsif ($move == $pv_move) {
+		if (cp_move_equivalent $move, $pv_move) {
 			$move |= MOVE_ORDERING_PV;
+		} elsif (cp_move_equivalent $move, $tt_move) {
+			$move |= MOVE_ORDERING_TT;
 		} else {
 			my $victim = CP_NO_PIECE;
 			my $promote = cp_move_promote($move);
@@ -174,7 +174,6 @@ sub alphabeta {
 				}
 				$move |= ($move_values[($victim << 6) | ($mover << 3) | $promote] << 32);
 			}
-
 		}
 	}
 
@@ -223,6 +222,8 @@ sub alphabeta {
 		}
 	}
 
+	# FIXME! If we find a draw or mate that also has to be stored in the
+	# transposition table.
 	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
 
 	if (!$legal) {
@@ -336,6 +337,7 @@ sub rootSearch {
 	my @line = @$pline;
 	eval {
 		while (++$depth <= $max_depth) {
+$DB::single = 1;
 			$self->{depth} = $depth;
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
 			# FIXME! No need for abs() here?!

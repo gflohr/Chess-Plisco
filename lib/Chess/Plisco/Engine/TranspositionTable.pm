@@ -86,8 +86,9 @@ sub probe {
 sub store {
 	my ($self, $key, $depth, $flags, $value, $move) = @_;
 
-	# Replacement scheme is currently replace-always.
-	my $payload = pack 's4', $depth, $flags, $value, $move;
+	# Replacement scheme is currently replace-always.  We must make sure that
+	# only the significant bits of the best move are stored.
+	my $payload = pack 's4', $depth, $flags, $value, $move & 0x7fff;
 
 	$self->[$key % scalar @$self] = [$key, $payload];
 }

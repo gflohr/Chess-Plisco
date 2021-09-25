@@ -482,6 +482,20 @@ Returns true if the significant parts of B<MOVE1> and B<MOVE2> are equivalent.
 This is the case, when the start and destination square, and a possible
 promotion piece are equal.
 
+Note that the piece that moves is I<not> significant because it can be
+retrieved from the position.  Nevertheless, the piece that moves is set by
+the methods L</pseudoLegalMoves> and L</pseudoLegalAttacks> on the moves
+returned.  If you store a best move in a transposition table make sure to
+keep that in mind, when you compare moves.
+
+Although, this is technically a class method you should keep in mind that 
+the redundant parts of the moves depend on the current position.
+
+=item B<moveSignificant(MOVE)>
+
+Returns B<MOVE> with all insignificant bits stripped off.  See
+L</moveEquivalent> for what is considered significant.
+
 Although, this is technically a class method you should keep in mind that 
 the redundant parts of the moves depend on the current position.
 

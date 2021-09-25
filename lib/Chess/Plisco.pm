@@ -936,6 +936,12 @@ sub moveEquivalent {
 	return cp_move_equivalent $m1, $m2;
 }
 
+sub moveSignificant {
+	my ($self, $move) = @_;
+
+	return cp_move_significant $move;
+}
+
 sub doMove {
 	my ($self, $move) = @_;
 

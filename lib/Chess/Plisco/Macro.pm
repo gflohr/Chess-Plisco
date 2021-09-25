@@ -181,7 +181,10 @@ _define cp_move_set_color => '$m', '$c',
 sub cp_move_set_captured {}
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 sub cp_move_coordinate_notation {}
-_define cp_move_equivalent => '$m1', '$m2', '(($m1 & 0x7fff) == ($m2 & 0x7fff))';
+_define cp_move_significant => '$m', '($m & 0x7fff)';
+sub cp_move_significant {}
+_define cp_move_equivalent => '$m1', '$m2',
+		'(cp_move_significant($m1) == cp_move_significant($m2))';
 sub cp_move_equivalent {}
 
 # Bitboard macros.
