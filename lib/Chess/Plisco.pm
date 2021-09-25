@@ -2541,8 +2541,16 @@ sub RNG {
 sub __parseSAN {
 	my ($self, $move) = @_;
 
-	# First clean-up.
+	# First clean-up but in multiple steps.
 	my $san = $move;
+
+	# First delete whitespace and dots.
+	$san =~ s/[ \011-\015\.]//g;
+
+	# So that we can strip-off s possible en-passant notation.
+	$san =~ s/ep//gi;
+
+	# And now other noise.
 	$san =~ s/[^a-h0-8pnbrqko]//gi;
 
 	my $pattern;
