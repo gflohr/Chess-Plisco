@@ -23,4 +23,11 @@ use Chess::Plisco::EPD;
 my $t_dir = dirname abs_path __FILE__;
 my $epd_file = "$t_dir/epd/dm1.epd";
 
-EPDSolver->new($epd_file)->solve;
+my $limit;
+if ($ENV{CP_STRESS_TEST}) {
+	$limit = $ENV{CP_STRESS_TEST};
+} else {
+	$limit = 400;
+}
+
+EPDSolver->new($epd_file, $limit)->solve;

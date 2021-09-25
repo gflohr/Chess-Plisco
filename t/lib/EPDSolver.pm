@@ -22,18 +22,28 @@ use Chess::Plisco::Engine::TranspositionTable;
 use Chess::Plisco::Engine::TimeControl;
 
 sub new {
-	my ($class, $epdfile, %params) = @_;
+	my ($class, $epdfile, $limit, %params) = @_;
 
 	%params = (depth => 3) unless %params;
 
 	my $epd = Chess::Plisco::EPD->new($epdfile);
-	plan tests => scalar $epd->records;
+
+	my $num_tests;
+	if ($limit > 0) {
+		my $num_records = scalar $epd->records;
+
+		$num_tests = $limit > $num_records ? $num_records : $limit;
+	} else {
+		$num_tests = scalar $epd->records;
+	}
+	plan tests => $num_tests;
 
 	my $self = bless {
 		__epd => $epd,
 		__filename => $epdfile,
 		__watcher => DummyWatcher->new,
 		__params => \%params,
+		__num_tests => $num_tests,
 	}, $class;
 }
 
@@ -44,27 +54,27 @@ sub epd {
 sub __solve {
 	my ($self, $record, $lineno) = @_;
 
-	my $bm = $record->operation('bm');
-	my $am = $record->operation('am');
+	my @bm = $record->operation('bm');
+	my @am = $record->operation('am');
 	my $id = $record->operation('id');
 	my $location = "$self->{__filename}:$lineno ($id)";
 
-	if (!($bm || $am)) {
+	if (!(@bm || @am)) {
 		die "$location: neither bm no am found";
 	}
 
 	my $position = $record->position;
 	bless $position, 'Chess::Plisco::Engine::Position';
 
-	if ($bm) {
-		my $move = $position->parseMove($bm)
-			or die "$location: illegal or invalid bm '$bm'.";
-		$bm = $position->moveCoordinateNotation($move);
+	foreach my $san (@bm) {
+		my $move = $position->parseMove($san)
+			or die "$location: illegal or invalid bm '$san'.";
+		$san = $position->moveCoordinateNotation($move);
 	}
-	if ($am) {
-		my $move = $position->parseMove($am)
-			or die "$location: illegal or invalid bm '$am'.";
-		$am = $position->moveCoordinateNotation($move);
+	foreach my $san (@am) {
+		my $move = $position->parseMove($san)
+			or die "$location: illegal or invalid am '$san'.";
+		$san = $position->moveCoordinateNotation($move);
 	}
 
 	my $dm = $record->operation('dm');
@@ -81,12 +91,25 @@ sub __solve {
 		[$position->signature],
 	);
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
-$DB::single = 1;
 	my $move = $position->moveCoordinateNotation($tree->think);
-	if ($bm) {
-		is $move, $bm, "$location: best move";
-	} elsif ($am) {
-		isnt $move, $am, "$location: avoid move";
+	if (@bm) {
+		my $found;
+		foreach my $bm (@bm) {
+			if ($bm == $move) {
+				$found = 1;
+				last;
+			}
+		}
+		ok $found, "$location: best move";
+	} elsif (@am) {
+		my $found;
+		foreach my $bm (@bm) {
+			if ($bm == $move) {
+				$found = 1;
+				last;
+			}
+		}
+		ok !$found, "$location: avoid move";
 	}
 }
 
@@ -97,6 +120,7 @@ sub solve {
 
 	my $lineno = 0;
 	foreach my $record (@records) {
+		last if $lineno >= $self->{__num_tests};
 		$self->__solve($record, ++$lineno);
 	}
 }
