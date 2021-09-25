@@ -21,7 +21,6 @@ use Chess::Plisco qw(:all);
 sub new {
 	my ($class, $line) = @_;
 
-$DB::single = 1;
 	my $ws = "[ \011-\015]";
 	$line =~ s/^$ws+//;
 	$line =~ s/ws+$//;
@@ -77,9 +76,15 @@ sub operations {
 }
 
 sub operation {
-	my ($self, $operation) = @_;
+	my ($self, $opcode) = @_;
 
-	return $self->operations->{$operation};
+	if (wantarray) {
+		return @{$self->operations->{$opcode} || []};
+	} elsif (exists $self->operations->{$opcode}) {
+		return $self->operations->{$opcode}->[0];
+	} else {
+		return;
+	}
 }
 
 1;
