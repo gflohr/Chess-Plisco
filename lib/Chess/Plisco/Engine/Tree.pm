@@ -222,16 +222,16 @@ sub alphabeta {
 		}
 	}
 
-	# FIXME! If we find a draw or mate that also has to be stored in the
-	# transposition table.
-	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
-
 	if (!$legal) {
 		# Mate or stalemate.
-		return DRAW if !$position->inCheck;
-
-		return MATE + $ply - 1;
+		if (!$position->inCheck) {
+			$alpha = DRAW;
+		} else {
+			$alpha = MATE + $ply - 1;
+		}
 	}
+
+	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
 
 	return $alpha;
 }
