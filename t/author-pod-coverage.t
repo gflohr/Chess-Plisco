@@ -27,5 +27,7 @@ pod_coverage_ok('Chess::Plisco::Macro', {
 	coverage_class => 'Pod::Coverage::TrustPod',
 	also_private => [qr/^filter$/]
 });
+pod_coverage_ok('Chess::Plisco::EPD', { coverage_class => 'Pod::Coverage::TrustPod' });
+pod_coverage_ok('Chess::Plisco::EPD::Position', { coverage_class => 'Pod::Coverage::TrustPod' });
 
 done_testing;
