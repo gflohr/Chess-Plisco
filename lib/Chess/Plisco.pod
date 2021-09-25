@@ -36,6 +36,8 @@ coordinate notation
 
 =item FEN (Forsyth-Edwards Notation) import and export
 
+=item EPD (Extended Position Notation) parser
+
 =item Static Exchange Evaluation (SEE)
 
 =item Zobrist Keys
