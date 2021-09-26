@@ -144,17 +144,19 @@ sub alphabeta {
 	#
 	# We know that the reversible clock is never pointing beyond the known
 	# positions/signatures because that gets adjusted in the constructor.
-	my $rc = $position->reversibleClock;
 	my $signatures = $self->{signatures};
 	my $signature = $position->[CP_POS_SIGNATURE];
-	my $history_length = $self->{history_length};
-	my $signature_slot = $history_length + $ply;
-	my $repetitions = 0;
-	for (my $n = $signature_slot - 5; $n >= 0; $n -= 2) {
-		if ($signatures->[$n] == $signature) {
-			++$repetitions;
-			if ($repetitions >= 2 || $n >= $history_length) {
-				return DRAW;
+	if ($ply > 1) {
+		my $rc = $position->reversibleClock; # FIXME! Use this!!!
+		my $history_length = $self->{history_length};
+		my $signature_slot = $history_length + $ply;
+		my $repetitions = 0;
+		for (my $n = $signature_slot - 5; $n >= 0; $n -= 2) {
+			if ($signatures->[$n] == $signature) {
+				++$repetitions;
+				if ($repetitions >= 2 || $n >= $history_length) {
+					return DRAW;
+				}
 			}
 		}
 	}
@@ -165,7 +167,13 @@ sub alphabeta {
 
 	if (defined $tt_value) {
 		++$self->{tt_hits};
-		return $tt_value;
+		if ($ply > 1) {
+			return $tt_value;
+		} elsif ($tt_move) {
+			@$pline = ($tt_move);
+			$self->{score} = $tt_value;
+			return $tt_value;
+		}
 	}
 
 	if ($depth <= 0) {
@@ -386,6 +394,7 @@ sub rootSearch {
 	eval {
 		while (++$depth <= $max_depth) {
 			$self->{depth} = $depth;
+print "info deepening depth to $depth\n";
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
 			if (cp_abs($score) > -(MATE + MAX_PLY)) {
 				last;
@@ -433,7 +442,13 @@ sub think {
 
 	delete $self->{thinking};
 
-	$self->printPV(\@line);
+	if (@line) {
+		$self->printPV(\@line);
+	} else {
+		# Search has returned no move.
+		$self->{info}->("Error: pick a random move because of search failure.");
+		$line[0] = $legal[int rand @legal];
+	}
 
 	return $line[0];
 }
