@@ -39,6 +39,12 @@ my @move_values = (0) x 369;
 sub new {
 	my ($class, $position, $tt, $watcher, $info, $signatures) = @_;
 
+	# Make sure that the reversible clock does not look beyond the know
+	# positions.  This will simplify the detection of a draw by repetition.
+	if ($position->[CP_POS_REVERSIBLE_CLOCK] >= @$signatures) {
+		$position->[CP_POS_REVERSIBLE_CLOCK] = @$signatures - 1;
+	}
+
 	my $self = {
 		position => $position,
 		signatures => $signatures,
@@ -128,13 +134,20 @@ sub alphabeta {
 
 	# Check draw by repetition.  FIXME! Try to find near repetitions with
 	# cuckoo tables.
+	#
+	# We know that the reversible clock is never pointing beyond the known
+	# positions/signatures because that gets adjusted in the constructor.
 	my $rc = $position->reversibleClock;
 	my $signatures = $self->{signatures};
 	my $signature = $position->[CP_POS_SIGNATURE];
-	my $wayback = $#$signatures - $rc;
-	for (my $n = $#$signatures - 4; $n >= $wayback; $n -= 2) {
+	my $current_idx = $#$signatures;
+	my $repetitions = 0;
+	for (my $n = $current_idx - 4; $n >= 0; $n -= 2) {
 		if ($signatures->[$n] == $signature) {
-			return DRAW;
+			++$repetitions;
+			if ($repetitions >= 2 || $n > $current_idx - $ply) {
+				return DRAW;
+			}
 		}
 	}
 

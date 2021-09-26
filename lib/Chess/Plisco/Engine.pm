@@ -273,6 +273,7 @@ sub __onUciCmdStop {
 sub __onUciCmdPosition {
 	my ($self, $args) = @_;
 
+$DB::single = 1;
 	unless (defined $args && length $args) {
 		$self->__info("error: usage: position FEN POSITION | startpos [MOVES...]");
 		return;
@@ -287,9 +288,10 @@ sub __onUciCmdPosition {
 			return;
 		}
 		while (@moves) {
-			my $token = shift @moves;
-			last if 'moves' eq lc $token;
-			$fen .= ' ' . $token;
+			if ('moves' eq $moves[0]) {
+				last;
+			}
+			$fen .= ' ' . shift @moves;
 		}
 		eval {
 			$position = Chess::Plisco::Engine::Position->new($fen);
