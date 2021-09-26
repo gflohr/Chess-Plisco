@@ -210,6 +210,11 @@ sub alphabeta {
 	# Now sort the moves according to the material gain.
 	@moves = sort { $b <=> $a } @moves;
 
+	# Expand the search, when in check.
+	if (cp_pos_in_check $position) {
+		++$depth;
+	}
+
 	my $legal = 0;
 	my $pv_found;
 	my $tt_type = TT_SCORE_ALPHA;
@@ -278,9 +283,6 @@ sub quiesce {
 
 	my @line;
 	my $position = $self->{position};
-	if (cp_pos_in_check($position)) {
-		return $self->alphabeta($ply, 1, $alpha, $beta, \@line, $is_pv);
-	}
 
 	my $tt = $self->{tt};
 	my $signature = cp_pos_signature $position;
@@ -349,6 +351,10 @@ sub quiesce {
 			@$pline = ($move, @line);
 			$tt_type = TT_SCORE_EXACT;
 			$best_move = $move;
+			if ($is_pv) {
+				$self->{score} = $val;
+				$self->printPV($pline);
+			}
 		}
 	}
 	$tt->store($signature, 0, $tt_type, $val, $best_move);
