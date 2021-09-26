@@ -752,7 +752,7 @@ One minor piece against a lone king is always a draw.
 
 =item B<attacked(SHIFT)>
 
-Returns true if the ssquare indicated by B<SHIFT> is attacked by a piece of
+Returns true if the square indicated by B<SHIFT> is attacked by a piece of
 the opponent.
 
 =item B<moveAttacked(MOVE|NOTATION)>
