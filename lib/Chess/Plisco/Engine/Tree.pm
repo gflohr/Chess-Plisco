@@ -190,6 +190,7 @@ sub alphabeta {
 	my $her_pieces = $position->[CP_POS_WHITE_PIECES + cp_pos_info_to_move $pos_info];
 	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $pv_move = $pline->[$ply - 1] if @$pline >= $ply;
+	my $found = 0;
 	foreach my $move (@moves) {
 		my ($to, $mover) = (cp_move_to($move), cp_move_piece($move));
 		my $to_mask = 1 << $to;

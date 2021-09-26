@@ -131,6 +131,37 @@ sub __onUciInput {
 	return $self;
 }
 
+sub __onUciCmdEvaluate {
+	my ($self) = @_;
+
+	my $score = $self->{__position}->evaluate;
+
+	$self->{__out}->print("$score cp\n");
+
+	return $self;
+}
+
+sub __onUciCmdSee {
+	my ($self, $args) = @_;
+
+	my $san = $self->__trim($args);
+	if (!length $san) {
+		$self->{__out}->print("usage: see MOVE\n");
+		return $self;
+	}
+	my $position = $self->{__position};
+	my $move = $position->parseMove($san);
+	if (!$move) {
+		$self->{__out}->print("error: invalid or illegal move '$san'\n");
+		return $self;
+	}
+
+	my $score = $position->SEE($move);
+	$self->{__out}->print("$score cp\n");
+
+	return $self;
+}
+
 sub __onUciCmdGo {
 	my ($self, $args) = @_;
 
@@ -342,6 +373,8 @@ sub __onUciCmdHelp {
         setoption name NAME[ value VALUE] - set option NAME to VALUE
         isready - ping the engine
         stop - move immediately
+        evaluate - print the static score of the current position
+        see MOVE - do a static exchange evaluation for MOVE
         help - show available commands
         quit - quit the engine immediately
 
