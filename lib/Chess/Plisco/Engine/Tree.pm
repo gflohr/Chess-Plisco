@@ -128,8 +128,6 @@ sub alphabeta {
 
 	my @line;
 
-	# FIXME! Rather use local variables for all this stuff in order to save
-	# hash dereferences.
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
 	}
@@ -219,11 +217,6 @@ sub alphabeta {
 	# Now sort the moves according to the material gain.
 	@moves = sort { $b <=> $a } @moves;
 
-	# Expand the search, when in check.
-	if (cp_pos_in_check $position) {
-		++$depth;
-	}
-
 	my $legal = 0;
 	my $pv_found;
 	my $tt_type = TT_SCORE_ALPHA;
@@ -293,6 +286,11 @@ sub quiesce {
 
 	my @line;
 	my $position = $self->{position};
+
+	# Expand the search, when in check.
+	if (cp_pos_in_check($position)) {
+			return $self->alphabeta($ply, 1, $alpha, $beta, $pline, $is_pv);
+	}
 
 	my $tt = $self->{tt};
 	my $signature = cp_pos_signature $position;
@@ -387,7 +385,6 @@ sub rootSearch {
 	my @line = @$pline;
 	eval {
 		while (++$depth <= $max_depth) {
-$DB::single = 1;
 			$self->{depth} = $depth;
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
 			if (cp_abs($score) > -(MATE + MAX_PLY)) {
