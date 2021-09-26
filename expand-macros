@@ -1,0 +1,52 @@
+#! /usr/bin/env perl
+
+# Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
+# all rights reserved.
+
+# This program is free software. It comes without any warranty, to
+# the extent permitted by applicable law. You can redistribute it
+# and/or modify it under the terms of the Do What the Fuck You Want
+# to Public License, Version 2, as published by Sam Hocevar. See
+# http://www.wtfpl.net/ for more details.
+
+use strict;
+use integer;
+
+use File::Find;
+
+my ($directory) = @ARGV or die;
+
+use lib 'lib';
+require Chess::Plisco::Macro;
+
+my @files;
+find sub {
+	my $filename = $File::Find::name;
+	if (-f $_ && /\.(?:pm|t)$/) {
+		open my $fh, '<', $_ or die "$filename: $!";
+		my $code = join '', <$fh>;
+		if ($code =~ /^use[ \t]+Chess::Plisco::Macro;/m) {
+			push @files, $filename;
+		}
+	}
+}, "$directory/lib", "$directory/t";
+
+@files = ("$directory/lib/Chess/Plisco.pm");
+
+autoflush STDOUT, 1;
+
+foreach my $source_file (@files) {
+	print "expanding macros in $source_file...";
+	open my $fh, '<', $source_file or die "$source_file: $!";
+	my $source = join '', <$fh>;
+
+	$source = Chess::Plisco::Macro::preprocess($source);
+
+	my $warning = "# Macros from Chess::Plisco::Macro are already expanded here!";
+	$source =~ s/^use[ \t]+Chess::Plisco::Macro;/$warning/m or die "$source_file: huh?";
+
+	open my $fh, '>', $source_file or die "$source_file: $!";
+	$fh->print($source) or die "$source_file: $!";
+	$fh->close or die "$source_file: $!";
+	print " done\n";
+}
