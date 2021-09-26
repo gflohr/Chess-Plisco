@@ -49,8 +49,10 @@ my %uci_options = map { $_->{name} => $_ } @$uci_options;
 sub new {
 	my ($class) = @_;
 
+	my $position = Chess::Plisco::Engine::Position->new;
 	my $self = {
-		__position => Chess::Plisco::Engine::Position->new,
+		__position => $position,
+		__signatures => [$position->signature],
 		__options => {},
 	};
 
@@ -273,7 +275,6 @@ sub __onUciCmdStop {
 sub __onUciCmdPosition {
 	my ($self, $args) = @_;
 
-$DB::single = 1;
 	unless (defined $args && length $args) {
 		$self->__info("error: usage: position FEN POSITION | startpos [MOVES...]");
 		return;
