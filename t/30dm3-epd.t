@@ -27,7 +27,7 @@ my $limit;
 if ($ENV{CP_STRESS_TEST}) {
 	$limit = $ENV{CP_STRESS_TEST};
 } else {
-	$limit = 10;
+	$limit = 5;
 }
 
 EPDSolver->new($epd_file, $limit)->solve;
