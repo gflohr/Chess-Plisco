@@ -140,12 +140,13 @@ sub alphabeta {
 	my $rc = $position->reversibleClock;
 	my $signatures = $self->{signatures};
 	my $signature = $position->[CP_POS_SIGNATURE];
-	my $current_idx = $#$signatures;
+	my $history_length = $self->{history_length};
+	my $signature_slot = $history_length + $ply;
 	my $repetitions = 0;
-	for (my $n = $current_idx - 4; $n >= 0; $n -= 2) {
+	for (my $n = $signature_slot - 5; $n >= 0; $n -= 2) {
 		if ($signatures->[$n] == $signature) {
 			++$repetitions;
-			if ($repetitions >= 2 || $n > $current_idx - $ply) {
+			if ($repetitions >= 2 || $n >= $history_length) {
 				return DRAW;
 			}
 		}
@@ -214,7 +215,6 @@ sub alphabeta {
 	my $tt_type = TT_SCORE_ALPHA;
 	my $best_move = 0;
 	my $print_current_move = $ply == 1;
-	my $signature_slot = $self->{history_length} + $ply;
 	foreach my $move (@moves) {
 		my $state = $position->doMove($move) or next;
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
@@ -311,8 +311,11 @@ sub quiesce {
 	my $her_pieces = $position->[CP_POS_WHITE_PIECES
 			+ !cp_pos_to_move($position)];
 	my (@moves);
+	my $signatures = $self->{signatures};
+	my $signature_slot = $self->{history_length} + $ply;
 	foreach my $move (@pseudo_legal) {
 		my $state = $position->doMove($move) or next;
+		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		$position->undoMove($state);
 		my $see = $position->SEE($move);
 
