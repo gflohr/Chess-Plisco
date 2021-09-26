@@ -14,6 +14,8 @@ package Chess::Plisco::Engine::Tree;
 use strict;
 use integer;
 
+use Locale::TextDomain qw('Chess-Plisco');
+
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::TranspositionTable;
@@ -65,6 +67,13 @@ sub checkTime {
 	no integer;
 
 	my $elapsed = 1000 * tv_interval($self->{start_time});
+
+	# Taken from Stockfish: Start printing the current move after 0.5 s.
+	# Otherwise the output is getting messy in the beginning.  Stockfish is
+	# using 3 s but we are slower.
+	if ($elapsed > 500) {
+		$self->{print_current_move} = 1;
+	}
 	my $allocated = $self->{allocated_time};
 	my $eta = $allocated - $elapsed;
 	if ($eta < 4 && !$self->{max_depth} && !$self->{max_nodes}) {
@@ -219,7 +228,8 @@ sub alphabeta {
 	my $pv_found;
 	my $tt_type = TT_SCORE_ALPHA;
 	my $best_move = 0;
-	my $print_current_move = $ply == 1;
+	my $print_current_move = $ply == 1 && $self->{print_current_move};
+	my $signature_slot = $self->{history_length} + $ply;
 	foreach my $move (@moves) {
 		my $state = $position->doMove($move) or next;
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
@@ -377,6 +387,7 @@ sub rootSearch {
 	my @line = @$pline;
 	eval {
 		while (++$depth <= $max_depth) {
+$DB::single = 1;
 			$self->{depth} = $depth;
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
 			if (cp_abs($score) > -(MATE + MAX_PLY)) {
@@ -386,7 +397,7 @@ sub rootSearch {
 	};
 	if ($@) {
 		if ($@ ne "PLISCO_ABORTED\n") {
-			$self->{info}->("ERROR: exception raised: $@");
+			$self->{info}->(__"Error: exception raised: $@");
 		}
 	}
 	@$pline = @line;
@@ -406,9 +417,13 @@ sub think {
 	my ($self) = @_;
 
 	my $position = $self->{position};
-	my @legal = $position->legalMoves or return;
+	my @legal = $position->legalMoves;
+	if (!@legal) {
+		$self->{info}->(__"Error: no legal moves");
+		return;
+	}
 
-	my @line = ($legal[int rand @legal]);
+	my @line;
 
 	$self->{thinking} = 1;
 	$self->{tt_hits} = 0;
