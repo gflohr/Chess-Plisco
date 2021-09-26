@@ -368,10 +368,8 @@ sub rootSearch {
 	my @line = @$pline;
 	eval {
 		while (++$depth <= $max_depth) {
-$DB::single = 1;
 			$self->{depth} = $depth;
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
-			# FIXME! No need for abs() here?!
 			if (cp_abs($score) > -(MATE + MAX_PLY)) {
 				last;
 			}
