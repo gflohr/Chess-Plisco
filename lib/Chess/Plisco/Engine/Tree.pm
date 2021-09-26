@@ -196,9 +196,11 @@ sub alphabeta {
 
 		if (cp_move_equivalent $move, $pv_move) {
 			$move |= MOVE_ORDERING_PV;
+			++$found;
 		} elsif (cp_move_equivalent $move, $tt_move) {
 			$move |= MOVE_ORDERING_TT;
-		} else {
+			++$found;
+		} elsif ($depth > 3) {
 			my $victim = CP_NO_PIECE;
 			my $promote = cp_move_promote($move);
 			my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
@@ -220,6 +222,8 @@ sub alphabeta {
 				}
 				$move |= ($move_values[($victim << 6) | ($mover << 3) | $promote] << 32);
 			}
+		} else {
+			last if $found >= 2;
 		}
 	}
 
