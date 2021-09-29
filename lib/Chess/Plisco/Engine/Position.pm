@@ -115,6 +115,7 @@ use constant TOTAL_PHASE => PAWN_PHASE * 16
 sub evaluate {
 	my ($self) = @_;
 
+$DB::single = 1;
 	my $score = 0;
 	my $white_pieces = $self->[CP_POS_WHITE_PIECES];
 	my $black_pieces = $self->[CP_POS_BLACK_PIECES];
@@ -212,10 +213,10 @@ sub evaluate {
 	my $black_king_shift = cp_bitboard_count_trailing_zbits $black_kings;
 	my $opening_score = $score + $king_middle_game_square_table[63 - $white_king_shift]
 		- $king_middle_game_square_table[$black_king_shift];
-	my $endgame_score = $score + $king_end_game_square_table[63 - $black_king_shift]
+	my $endgame_score = $score + $king_end_game_square_table[63 - $white_king_shift]
 		- $king_end_game_square_table[$black_king_shift];
-	$score = (($opening_score * (TOTAL_PHASE - $phase))
-			+ ($endgame_score * $phase)) / TOTAL_PHASE
+	$score = (($opening_score * (256 - $phase))
+			+ ($endgame_score * $phase)) / 256
 		+ $self->material;
 
 	return (cp_pos_to_move($self)) ? -$score : $score;
