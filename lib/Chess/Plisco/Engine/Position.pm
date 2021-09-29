@@ -19,10 +19,6 @@ use Chess::Plisco::Macro;
 
 use base qw(Chess::Plisco);
 
-# Slightly different piece values.
-use constant CP_POS_KNIGHT_VALUE => 320;
-use constant CP_POS_BISHOP_VALUE => 330;
-
 # Piece-square tables.  There are always from black's perspective.
 my @pawn_square_table = (
 	 0,  0,  0,  0,  0,  0,  0,  0,

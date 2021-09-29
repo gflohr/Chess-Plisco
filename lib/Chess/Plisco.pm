@@ -66,8 +66,8 @@ use constant CP_ROOK => 4;
 use constant CP_QUEEN => 5;
 use constant CP_KING => 6;
 use constant CP_PAWN_VALUE => 100;
-use constant CP_KNIGHT_VALUE => 300;
-use constant CP_BISHOP_VALUE => 300;
+use constant CP_KNIGHT_VALUE => 320;
+use constant CP_BISHOP_VALUE => 330;
 use constant CP_ROOK_VALUE => 500;
 use constant CP_QUEEN_VALUE => 900;
 
