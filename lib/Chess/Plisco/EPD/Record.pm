@@ -64,7 +64,7 @@ sub new {
 	bless {
 		__position => $position,
 		__operations => \%operations,
-	}
+	}, $class;
 }
 
 sub position {
