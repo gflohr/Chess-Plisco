@@ -41,6 +41,12 @@ use constant UCI_OPTIONS => [
 		type => 'button',
 		callback => '__clearTranspositionTable',
 	},
+	{
+		name => 'Batch Mode',
+		type => 'check',
+		default => 'false',
+		callback => '__changeBatchMode',
+	},
 ];
 
 my $uci_options = UCI_OPTIONS;
@@ -131,6 +137,14 @@ sub __onUciInput {
 	return $self;
 }
 
+sub __onUciCmdFen {
+	my ($self) = @_;
+
+	$self->{__out}->print("$self->{__position}\n");
+
+	return $self;
+}
+
 sub __onUciCmdEvaluate {
 	my ($self) = @_;
 
@@ -206,10 +220,13 @@ sub __onUciCmdGo {
 		return $self;
 	}
 
+	my $watcher = $self->{__options}->{'Batch Mode'} eq 'true'
+		? BatchWatcher->new : $self->{__watcher};
+
 	my $tree = Chess::Plisco::Engine::Tree->new(
 		$self->{__position}->copy,
 		$self->{__tt},
-		$self->{__watcher},
+		$watcher,
 		$info,
 		$self->{__signatures});
 	$tree->{debug} = 1 if $self->{__debug};
@@ -245,13 +262,13 @@ sub __onUciCmdSetoption {
 	my ($self, $args) = @_;
 
 	if ($args !~ /^name[ \t]+(.*?)(?:value[ \t]+(.*))?$/) {
-		$self->__output("info ERROR: usage setoption name NAME[ value VALUE]");
+		$self->__output("info Error: usage setoption name NAME[ value VALUE]");
 		return $self;
 	}
 
 	my ($name, $value) = map { $self->__trim($_) } ($1, $2);
 	if (!exists $uci_options{$name}) {
-		$self->__output("info ERROR: unsupported option '$name'");
+		$self->__output("info Error: unsupported option '$name'");
 		return $self;
 	}
 
@@ -260,7 +277,8 @@ sub __onUciCmdSetoption {
 	if (exists $option->{min}) {
 		my $min = $option->{min};
 		if (($value || 0) < $min) {
-			$self->__output("info ERROR: minimum value for '$name' is $min");
+			$self->__output("info Error: minimum value for option"
+					. " '$name' is $min");
 			return $self;
 		}
 	}
@@ -268,7 +286,16 @@ sub __onUciCmdSetoption {
 	if (exists $option->{max}) {
 		my $max = $option->{max};
 		if (($value || 0) > $max) {
-			$self->__output("info ERROR: maximum value for '$name' is $max");
+			$self->__output("info Error: maximum value for option"
+					." '$name' is $max");
+			return $self;
+		}
+	}
+
+	if ('check' eq $option->{type}) {
+		if ($value ne 'true' && $value ne 'false') {
+			$self->__output("info Error: only 'true' and 'false' are allowed"
+					. " for option '$name'");
 			return $self;
 		}
 	}
@@ -293,6 +320,15 @@ sub __clearTranspositionTable {
 	my ($self, $size) = @_;
 
 	$self->{__tt}->clear;
+}
+
+sub __changeBatchMode {
+	my ($self, $value) = @_;
+
+	if ('true' eq $value) {
+		$self->__output("info all commands are ignored during search in"
+				. " batch mode!")
+	}
 }
 
 sub __onUciCmdStop {
@@ -373,12 +409,15 @@ sub __onUciCmdHelp {
         setoption name NAME[ value VALUE] - set option NAME to VALUE
         isready - ping the engine
         stop - move immediately
+        fen - print the current position as FEN
         evaluate - print the static score of the current position
         see MOVE - do a static exchange evaluation for MOVE
         help - show available commands
         quit - quit the engine immediately
 
     See http://wbec-ridderkerk.nl/html/UCIProtocol.html for more information!
+
+    In batch mode, the engine is unresponsive during searches.
 EOF
 
 	return;
@@ -402,7 +441,7 @@ sub __onUciCmdUci {
 	my $options = UCI_OPTIONS;
 	foreach my $option (@{$options}) {
 		my $output = "option name $option->{name} type $option->{type}";
-		$output .= " default $option->{default}" if exists $option->{default};
+		$output .= " default $option->{default}";
 		$output .= " min $option->{min}" if exists $option->{min};
 		$output .= " max $option->{max}" if exists $option->{max};
 		$self->__output($output);
@@ -467,5 +506,19 @@ sub __trim {
 
 	return $what;
 }
+
+package BatchWatcher;
+
+use strict;
+
+sub new {
+	my ($class) = @_;
+
+	my $self = "";
+
+	bless \$self, $class;
+}
+
+sub check {}
 
 1;

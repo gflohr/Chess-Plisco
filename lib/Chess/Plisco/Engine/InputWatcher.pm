@@ -22,9 +22,16 @@ sub new {
 	my $sel = IO::Select->new($fh);
 
 	bless {
+		__handle => $fh,
 		__sel => $sel,
 		__input => '',
 	}, $class;
+}
+
+sub handle {
+	my ($self) = @_;
+
+	return $self->{__fh};
 }
 
 sub onInput {
