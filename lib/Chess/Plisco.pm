@@ -920,11 +920,12 @@ sub moveAttacked {
 sub moveGivesCheck {
 	my ($self, $move) = @_;
 
+	# FIXME! Check that all of these variables are really needed at least twice!
 	my $pos_info = cp_pos_info $self;
 	my $from = cp_move_from $move;
+	my $from_mask = 1 << $from;
 	my $to = cp_move_to $move;
 	my $to_mask = 1 << $to;
-	my $move_mask = (1 << $from) | $to_mask;
 
 	my $piece = cp_move_piece $move;
 	my $to_move = cp_pos_info_to_move $pos_info;
@@ -947,14 +948,15 @@ sub moveGivesCheck {
 		return 1;
 	} elsif (($piece == CP_KNIGHT)
 	         && ($to_mask & $knight_attack_masks[$her_king_shift])) {
+		# Direct knight check.
 		return 1;
 	} elsif (($piece == CP_BISHOP || $piece == CP_QUEEN)
-	         && (cp_mm_bmagic($her_king_shift, $occupancy ^ $move_mask)
-			     & ($bsliders ^ $move_mask))) {
+	         && (cp_mm_bmagic($her_king_shift, $occupancy) & $to_mask)) {
+		# Direct bishop/queen check.
 		return 1;
 	} elsif (($piece == CP_ROOK || $piece == CP_QUEEN)
-	         && (cp_mm_rmagic($her_king_shift, $occupancy ^ $move_mask)
-			     & ($rsliders ^ $move_mask))) {
+	         && (cp_mm_rmagic($her_king_shift, $occupancy) & $to_mask)) {
+		# Directo rook/queen check.
 		return 1;
 	}
 
