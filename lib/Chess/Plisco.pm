@@ -940,7 +940,9 @@ sub moveGivesCheck {
 			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
 
 	if ($piece == CP_KING) {
-		# FIXME! Check for castling.
+		# FIXME! This is a wrong assumption.  The king can give a discovered
+		# check!  So this branch is just for the case the the rook participating
+		# in castling is giving check.
 		return;
 	} elsif (($piece == CP_PAWN)
 	         && ($to_mask & $pawn_masks[!$to_move]->[2]->[$her_king_shift])) {
