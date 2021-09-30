@@ -419,10 +419,14 @@ sub rootSearch {
 sub printCurrentMove {
 	my ($self, $depth, $move, $moveno) = @_;
 
+	no integer;
+
 	my $position = $self->{position};
 	my $cn = $position->moveCoordinateNotation($move);
+	my $elapsed = int(1000 * tv_interval($self->{start_time}));
 
-	$self->{info}->("depth $depth currmove $cn currmovenumber $moveno");
+	$self->{info}->("depth $depth currmove $cn currmovenumber $moveno"
+		. " time $elapsed");
 }
 
 sub think {
