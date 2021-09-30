@@ -935,6 +935,8 @@ sub moveGivesCheck {
 	my $occupancy = $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
 	my $bsliders = $my_pieces
 			& ($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]);
+	my $rsliders = $my_pieces
+			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
 
 	if ($piece == CP_KING) {
 		# FIXME! Check for castling.
@@ -949,6 +951,10 @@ sub moveGivesCheck {
 	} elsif (($piece == CP_BISHOP || $piece == CP_QUEEN)
 	         && (cp_mm_bmagic($her_king_shift, $occupancy ^ $move_mask)
 			     & ($bsliders ^ $move_mask))) {
+		return 1;
+	} elsif (($piece == CP_ROOK || $piece == CP_QUEEN)
+	         && (cp_mm_rmagic($her_king_shift, $occupancy ^ $move_mask)
+			     & ($rsliders ^ $move_mask))) {
 		return 1;
 	}
 

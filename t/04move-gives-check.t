@@ -95,6 +95,30 @@ my @tests = (
 		move => 'Be5',
 		check => 0,
 	},
+	{
+		name => 'white rook gives check',
+		before => '8/8/4k3/1r6/8/8/2R2K2/8 w - - 0 1',
+		move => 'Rc6+',
+		check => 1,
+	},
+	{
+		name => 'white rook does not give check',
+		before => '8/8/4k3/1r6/8/8/2R2K2/8 w - - 0 1',
+		move => 'Rc3',
+		check => 0,
+	},
+	{
+		name => 'black rook gives check',
+		before => '8/8/4k3/1r6/8/8/2R2K2/8 b - - 0 1',
+		move => 'Rf5+',
+		check => 1,
+	},
+	{
+		name => 'black rook does not give check',
+		before => '8/8/4k3/1r6/8/8/2R2K2/8 b - - 0 1',
+		move => 'Re5',
+		check => 0,
+	},
 );
 
 plan tests => @tests << 1;
