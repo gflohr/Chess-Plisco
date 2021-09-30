@@ -119,6 +119,30 @@ my @tests = (
 		move => 'Re5',
 		check => 0,
 	},
+	{
+		name => 'white gives check by king-side castling',
+		before => '5k2/8/8/8/8/8/8/R3K2R w KQ - 0 1',
+		move => 'O-O',
+		check => 1,
+	},
+	{
+		name => 'white gives check by queen-side castling',
+		before => '3k4/8/8/8/8/8/8/R3K2R w KQ - 0 1',
+		move => 'O-O-O',
+		check => 1,
+	},
+	{
+		name => 'black gives check by king-side castling',
+		before => 'r3k2r/8/8/8/8/8/8/5K2 b kq - 0 1',
+		move => 'O-O',
+		check => 1,
+	},
+	{
+		name => 'black gives check by queen-side castling',
+		before => 'r3k2r/8/8/8/8/8/8/3K4 b kq - 0 1',
+		move => 'O-O-O',
+		check => 1,
+	},
 );
 
 plan tests => @tests << 1;

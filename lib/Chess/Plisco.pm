@@ -939,12 +939,7 @@ sub moveGivesCheck {
 	my $rsliders = $my_pieces
 			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
 
-	if ($piece == CP_KING) {
-		# FIXME! This is a wrong assumption.  The king can give a discovered
-		# check!  So this branch is just for the case the the rook participating
-		# in castling is giving check.
-		return;
-	} elsif (($piece == CP_PAWN)
+	if (($piece == CP_PAWN)
 	         && ($to_mask & $pawn_masks[!$to_move]->[2]->[$her_king_shift])) {
 		# FIXME! En-passant.
 		return 1;
@@ -960,6 +955,8 @@ sub moveGivesCheck {
 	         && (cp_mm_rmagic($her_king_shift, $occupancy) & $to_mask)) {
 		# Directo rook/queen check.
 		return 1;
+	} elsif ($piece == CP_KING) {
+
 	}
 
 	return;
