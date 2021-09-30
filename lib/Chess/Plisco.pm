@@ -917,6 +917,32 @@ sub moveAttacked {
 	return _cp_pos_move_attacked $self, $from, $to;
 }
 
+sub moveGivesCheck {
+	my ($self, $move) = @_;
+
+	my $pos_info = cp_pos_info $self;
+	my $to = cp_move_to $move;
+
+	my $piece = cp_move_piece $move;
+	my $to_move = cp_pos_info_to_move $pos_info;
+	my $to_mask = 1 << $to;
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
+	my $her_king_mask = $self->[CP_POS_KINGS] & $her_pieces;
+	my $her_king_shift = cp_bitboard_count_isolated_trailing_zbits $her_king_mask;
+
+	if ($piece == CP_KING) {
+		return;
+	} elsif (($piece == CP_PAWN)
+	         && ($to_mask & $pawn_masks[!$to_move]->[2]->[$her_king_shift])) {
+		return 1;
+	} elsif (($piece == CP_KNIGHT)
+	         && ($to_mask & $knight_attack_masks[$her_king_shift])) {
+		return 1;
+	}
+
+	return;
+}
+
 sub movePinned {
 	my ($self, $move) = @_;
 
