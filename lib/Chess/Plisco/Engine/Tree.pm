@@ -202,7 +202,7 @@ sub alphabeta {
 		} elsif (cp_move_equivalent $move, $tt_move) {
 			$move |= MOVE_ORDERING_TT;
 			++$found;
-		} elsif ($depth > 2) {
+		} elsif ($depth > 1) {
 			my $victim = CP_NO_PIECE;
 			my $promote = cp_move_promote($move);
 			my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
