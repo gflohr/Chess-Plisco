@@ -921,22 +921,34 @@ sub moveGivesCheck {
 	my ($self, $move) = @_;
 
 	my $pos_info = cp_pos_info $self;
+	my $from = cp_move_from $move;
 	my $to = cp_move_to $move;
+	my $to_mask = 1 << $to;
+	my $move_mask = (1 << $from) | $to_mask;
 
 	my $piece = cp_move_piece $move;
 	my $to_move = cp_pos_info_to_move $pos_info;
-	my $to_mask = 1 << $to;
+	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $her_king_mask = $self->[CP_POS_KINGS] & $her_pieces;
 	my $her_king_shift = cp_bitboard_count_isolated_trailing_zbits $her_king_mask;
+	my $occupancy = $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
+	my $bsliders = $my_pieces
+			& ($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]);
 
 	if ($piece == CP_KING) {
+		# FIXME! Check for castling.
 		return;
 	} elsif (($piece == CP_PAWN)
 	         && ($to_mask & $pawn_masks[!$to_move]->[2]->[$her_king_shift])) {
+		# FIXME! En-passant.
 		return 1;
 	} elsif (($piece == CP_KNIGHT)
 	         && ($to_mask & $knight_attack_masks[$her_king_shift])) {
+		return 1;
+	} elsif (($piece == CP_BISHOP || $piece == CP_QUEEN)
+	         && (cp_mm_bmagic($her_king_shift, $occupancy ^ $move_mask)
+			     & ($bsliders ^ $move_mask))) {
 		return 1;
 	}
 
