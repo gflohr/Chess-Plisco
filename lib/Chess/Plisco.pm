@@ -942,6 +942,12 @@ sub moveGivesCheck {
 			& ($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]);
 	my $rsliders = $my_pieces
 			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
+	if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
+		# Remove the captured piece, as well.
+		$from_mask |= $ep_pawn_masks[$ep_shift];
+		warn $self->dumpBitboard($from_mask);
+	}
 
 	if (($piece == CP_PAWN)
 	         && ($to_mask & $pawn_masks[!$to_move]->[2]->[$her_king_shift])) {
@@ -2439,6 +2445,72 @@ sub toFEN {
 			1 + ($self->[CP_POS_HALF_MOVES] >> 1);
 
 	return $fen;
+}
+
+sub boardCompact {
+	my ($self) = @_;
+
+	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
+	my $b_pieces = $self->[CP_POS_BLACK_PIECES];
+	my $pieces = $w_pieces | $b_pieces;
+	my $pawns = $self->[CP_POS_PAWNS];
+	my $bishops = $self->[CP_POS_BISHOPS];
+	my $knights = $self->[CP_POS_KNIGHTS];
+	my $rooks = $self->[CP_POS_ROOKS];
+	my $queens = $self->[CP_POS_QUEENS];
+
+	my $board = "  a b c d e f g h\n +-+-+-+-+-+-+-+-+\n";
+
+	for (my $rank = CP_RANK_8; $rank >= CP_RANK_1; --$rank) {
+		$board .= ($rank + 1) . '|';
+		for (my $file = CP_FILE_A; $file <= CP_FILE_H; ++$file) {
+			my $shift = $self->coordinatesToShift($file, $rank);
+			my $mask = 1 << $shift;
+
+			$board .= ' ' if $file != CP_FILE_A;
+			if ($mask & $pieces) {
+				if ($mask & $w_pieces) {
+					if ($mask & $pawns) {
+						$board .= 'P';
+					} elsif ($mask & $knights) {
+						$board .= 'N';
+					} elsif ($mask & $bishops) {
+						$board .= 'B';
+					} elsif ($mask & $rooks) {
+						$board .= 'R';
+					} elsif ($mask & $queens) {
+						$board .= 'Q';
+					} else {
+						$board .= 'K';
+					}
+				} elsif ($mask & $b_pieces) {
+					if ($mask & $pawns) {
+						$board .= 'p';
+					} elsif ($mask & $knights) {
+						$board .= 'n';
+					} elsif ($mask & $bishops) {
+						$board .= 'b';
+					} elsif ($mask & $rooks) {
+						$board .= 'r';
+					} elsif ($mask & $queens) {
+						$board .= 'q';
+					} else {
+						$board .= 'k';
+					}
+				}
+			} else {
+				$board .= '.';
+			}
+
+			if ($file == CP_FILE_H) {
+			}
+		}
+		$board .= '|' . ($rank + 1) . "\n";
+	}
+
+	$board .= " +-+-+-+-+-+-+-+-+\n  a b c d e f g h\n";
+
+	return $board;
 }
 
 sub legalMoves {
