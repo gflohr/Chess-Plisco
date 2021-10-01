@@ -295,9 +295,13 @@ my @common_lines;
 # move mask of the rook and the negative mask for the castling rights.
 my @castling_rook_move_masks;
 
-# Information for castlings, part 1. For a1, h1, a8, and h8 remove these
+# Information for castlings, part 2. For a1, h1, a8, and h8 remove these
 # castling rights.
 my @castling_rights_rook_masks;
+
+# Information for castlings, part 3. For the king destination squares c1, g1,
+# c8, and g8, where does the rook move? Needed for moveGivesCheck().
+my @castling_rook_to_mask;
 
 # Change in material.  Looked up via a combined mask of color to move,
 # captured and promotion piece.
@@ -955,8 +959,9 @@ sub moveGivesCheck {
 	         && (cp_mm_rmagic($her_king_shift, $occupancy) & $to_mask)) {
 		# Directo rook/queen check.
 		return 1;
-	} elsif ($piece == CP_KING) {
-
+	} elsif ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)
+		&& (cp_mm_rmagic($her_king_shift, $occupancy) & $castling_rook_to_mask[$to])) {
+		return 1;
 	}
 
 	return;
@@ -3428,6 +3433,11 @@ $castling_rook_move_masks[CP_C1] = CP_1_MASK & (CP_A_MASK | CP_D_MASK);
 $castling_rook_move_masks[CP_G1] = CP_1_MASK & (CP_H_MASK | CP_F_MASK);
 $castling_rook_move_masks[CP_C8] = CP_8_MASK & (CP_A_MASK | CP_D_MASK);
 $castling_rook_move_masks[CP_G8] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
+
+$castling_rook_to_mask[CP_C1] = 1 << CP_D1;
+$castling_rook_to_mask[CP_G1] = 1 << CP_F1;
+$castling_rook_to_mask[CP_C8] = 1 << CP_D8;
+$castling_rook_to_mask[CP_G8] = 1 << CP_F8;
 
 # The indices are the original squares of the rooks.
 @castling_rights_rook_masks = (-1) x 64;
