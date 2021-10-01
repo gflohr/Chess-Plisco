@@ -957,12 +957,24 @@ sub moveGivesCheck {
 		return 1;
 	} elsif (($piece == CP_ROOK || $piece == CP_QUEEN)
 	         && (cp_mm_rmagic($her_king_shift, $occupancy) & $to_mask)) {
-		# Directo rook/queen check.
+		# Direct rook/queen check.
 		return 1;
 	} elsif ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)
 		&& (cp_mm_rmagic($her_king_shift, $occupancy) & $castling_rook_to_mask[$to])) {
 		return 1;
+	} elsif (cp_mm_bmagic($her_king_shift, $occupancy ^ $from_mask)
+		& (($my_pieces & ($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]) & ~$from_mask))) {
+		return 1;
+	} elsif (cp_mm_rmagic($her_king_shift, $occupancy ^ $from_mask)
+		& (($my_pieces & ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) & ~$from_mask))) {
+		return 1;
 	}
+
+my $bitboard;
+$bitboard = $self->dumpBitboard(cp_mm_bmagic($her_king_shift, $occupancy ^ $from));
+$bitboard = $self->dumpBitboard(($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]) ^ $from);
+$bitboard = $self->dumpBitboard(cp_mm_rmagic($her_king_shift, $occupancy ^ $from));
+$bitboard = $self->dumpBitboard(($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) ^ $from);
 
 	return;
 }
