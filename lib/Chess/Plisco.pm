@@ -946,12 +946,10 @@ sub moveGivesCheck {
 	if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
 		# Remove the captured piece, as well.
 		$from_mask |= $ep_pawn_masks[$ep_shift];
-		warn $self->dumpBitboard($from_mask);
 	}
 
 	if (($piece == CP_PAWN)
 	         && ($to_mask & $pawn_masks[!$to_move]->[2]->[$her_king_shift])) {
-		# FIXME! En-passant.
 		return 1;
 	} elsif (($piece == CP_KNIGHT)
 	         && ($to_mask & $knight_attack_masks[$her_king_shift])) {
@@ -975,12 +973,6 @@ sub moveGivesCheck {
 		& (($my_pieces & ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) & ~$from_mask))) {
 		return 1;
 	}
-
-my $bitboard;
-$bitboard = $self->dumpBitboard(cp_mm_bmagic($her_king_shift, $occupancy ^ $from));
-$bitboard = $self->dumpBitboard(($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]) ^ $from);
-$bitboard = $self->dumpBitboard(cp_mm_rmagic($her_king_shift, $occupancy ^ $from));
-$bitboard = $self->dumpBitboard(($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]) ^ $from);
 
 	return;
 }

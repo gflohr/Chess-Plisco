@@ -133,8 +133,8 @@ my @tests = (
 	},
 	{
 		name => 'en-passant discovered check',
-		before => '2k5/8/8/K1pP3R/8/8/8/8 w - c6 0 1',
-		move => 'dxe5+',
+		before => '2K5/8/8/k1pP3R/8/8/8/8 w - c6 0 1',
+		move => 'dxc6+',
 		check => 1,
 	},
 	{
