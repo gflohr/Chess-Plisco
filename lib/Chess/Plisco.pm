@@ -2447,7 +2447,7 @@ sub toFEN {
 	return $fen;
 }
 
-sub boardCompact {
+sub board {
 	my ($self) = @_;
 
 	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
@@ -2459,7 +2459,18 @@ sub boardCompact {
 	my $rooks = $self->[CP_POS_ROOKS];
 	my $queens = $self->[CP_POS_QUEENS];
 
-	my $board = "  a b c d e f g h\n +-+-+-+-+-+-+-+-+\n";
+	my $ep_shift = $self->enPassantShift;
+	my $board = "  a b c d e f g h\n";
+	if ($self->blackQueenSideCastlingRight) {
+		$board .= " +-+-<-<-<-";
+	} else {
+		$board .= " +-+-+-+-+-";
+	}
+	if ($self->blackKingSideCastlingRight) {
+		$board .= ">->-+-+\n";
+	} else {
+		$board .= "+-+-+-+\n";
+	}
 
 	for (my $rank = CP_RANK_8; $rank >= CP_RANK_1; --$rank) {
 		$board .= ($rank + 1) . '|';
@@ -2498,6 +2509,12 @@ sub boardCompact {
 						$board .= 'k';
 					}
 				}
+			} elsif ($ep_shift && $shift == $ep_shift) {
+				if ($self->toMove == CP_WHITE) {
+					$board .= 'v';
+				} else {
+					$board .= '^';
+				}
 			} else {
 				$board .= '.';
 			}
@@ -2508,7 +2525,16 @@ sub boardCompact {
 		$board .= '|' . ($rank + 1) . "\n";
 	}
 
-	$board .= " +-+-+-+-+-+-+-+-+\n  a b c d e f g h\n";
+	if ($self->whiteQueenSideCastlingRight) {
+		$board .= " +-+-<-<-<-";
+	} else {
+		$board .= " +-+-+-+-+-";
+	}
+	if ($self->whiteKingSideCastlingRight) {
+		$board .= ">->-+-+\n";
+	} else {
+		$board .= "+-+-+-+\n";
+	}
 
 	return $board;
 }

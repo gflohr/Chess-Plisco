@@ -148,7 +148,7 @@ sub __onUciCmdFen {
 sub __onUciCmdBoard {
 	my ($self) = @_;
 
-	my $board = $self->{__position}->boardCompact;
+	my $board = $self->{__position}->board;
 	$self->{__out}->print($board);
 
 	return;
@@ -419,7 +419,7 @@ sub __onUciCmdHelp {
         isready - ping the engine
         stop - move immediately
         fen - print the current position as FEN
-        board compact - print a compact representation of the board
+        board - print a compact representation of the board
         evaluate - print the static score of the current position
         see MOVE - do a static exchange evaluation for MOVE
         help - show available commands
