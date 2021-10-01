@@ -193,9 +193,6 @@ sub alphabeta {
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
 	my $found = 0;
 	foreach my $move (@moves) {
-		my ($to, $mover) = (cp_move_to($move), cp_move_piece($move));
-		my $to_mask = 1 << $to;
-
 		if (cp_move_equivalent $move, $pv_move) {
 			$move |= MOVE_ORDERING_PV;
 			++$found;
@@ -203,27 +200,7 @@ sub alphabeta {
 			$move |= MOVE_ORDERING_TT;
 			++$found;
 		} elsif ($depth > 1) {
-			my $victim = CP_NO_PIECE;
-			my $promote = cp_move_promote($move);
-			my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
-			my $mover = cp_move_piece $move;
-			# En passant capture?
-			if ($ep_shift && CP_PAWN == $mover && $ep_shift == $to) {
-				$move |= CP_PAWN_VALUE << 32;
-			} elsif (($to_mask & $her_pieces) || $promote) {
-				if ($to_mask & $pawns) {
-					$victim = CP_PAWN;
-				} elsif ($to_mask & $knights) {
-					$victim = CP_KNIGHT;
-				} elsif ($to_mask & $bishops) {
-					$victim = CP_BISHOP;
-				} elsif ($to_mask & $rooks) {
-					$victim = CP_ROOK;
-				} elsif ($to_mask & $queens) {
-					$victim = CP_QUEEN;
-				}
-				$move |= ($move_values[($victim << 6) | ($mover << 3) | $promote] << 32);
-			}
+			$move |= $position->SEE($move) << 32;
 		} else {
 			last if $found >= 2;
 		}

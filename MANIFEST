@@ -58,6 +58,7 @@ t/04king-shift.t
 t/04legal-moves.t
 t/04material.t
 t/04move-generator.t
+t/04move-gives-check.t
 t/04move-legal.t
 t/04see.t
 t/04zobrist-keys.t
