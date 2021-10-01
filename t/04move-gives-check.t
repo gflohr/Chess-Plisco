@@ -120,6 +120,24 @@ my @tests = (
 		check => 0,
 	},
 	{
+		name => 'white bishop gives discovered check',
+		before => '7k/8/5N2/8/8/8/1B6/K7 w - - 0 1',
+		move => 'Nh5+',
+		check => 1,
+	},
+	{
+		name => 'black queen gives discovered check',
+		before => '7k/8/8/8/1K2b2q/8/8/8 b - - 0 1',
+		move => 'Bb7+',
+		check => 1,
+	},
+	{
+		name => 'en-passant discovered check',
+		before => '2k5/8/8/K1pP3R/8/8/8/8 w - c6 0 1',
+		move => 'dxe5+',
+		check => 1,
+	},
+	{
 		name => 'white gives check by king-side castling',
 		before => '5k2/8/8/8/8/8/8/R3K2R w KQ - 0 1',
 		move => 'O-O',
