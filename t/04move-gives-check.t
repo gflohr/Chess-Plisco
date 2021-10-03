@@ -161,6 +161,15 @@ my @tests = (
 		move => 'O-O-O',
 		check => 1,
 	},
+	# See http://talkchess.com/forum3/viewtopic.php?f=7&t=78285&p=907757
+	{
+		name => 'white rook gives check to king on h1 by castling',
+		before => '8/8/8/8/8/8/8/R3K2k w Q - 40 41',
+		move => 'O-O-O',
+		check => 1,
+	},
+	
+	
 );
 
 plan tests => @tests << 1;
