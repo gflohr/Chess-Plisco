@@ -108,8 +108,6 @@ EOF
 sub __onEof {
 	my ($self, $line) = @_;
 
-	print STDERR "Connection to UI lost.\n";
-	$self->{__tree}->{move_now} = 1 if $self->{__tree};
 	$self->{__abort} = 1;
 
 	return $self;
@@ -229,13 +227,16 @@ sub __onUciCmdGo {
 		return $self;
 	}
 
-	my $watcher = $self->{__options}->{'Batch'} eq 'true'
-		? BatchWatcher->new : $self->{__watcher};
+	if ($self->{__options}->{'Batch'} eq 'true') {
+		$self->{__watcher}->setBatchMode(1);
+	} else {
+		$self->{__watcher}->setBatchMode(0);
+	}
 
 	my $tree = Chess::Plisco::Engine::Tree->new(
 		$self->{__position}->copy,
 		$self->{__tt},
-		$watcher,
+		$self->{__watcher},
 		$info,
 		$self->{__signatures});
 	$tree->{debug} = 1 if $self->{__debug};
@@ -255,6 +256,8 @@ sub __onUciCmdGo {
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
 		$self->__output("bestmove $cn");
 	}
+
+	$self->{__watcher}->setBatchMode(0);
 
 	return $self;
 }
@@ -516,19 +519,5 @@ sub __trim {
 
 	return $what;
 }
-
-package BatchWatcher;
-
-use strict;
-
-sub new {
-	my ($class) = @_;
-
-	my $self = "";
-
-	bless \$self, $class;
-}
-
-sub check {}
 
 1;

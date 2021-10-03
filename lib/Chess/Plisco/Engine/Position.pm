@@ -111,7 +111,6 @@ use constant TOTAL_PHASE => PAWN_PHASE * 16
 sub evaluate {
 	my ($self) = @_;
 
-$DB::single = 1;
 	my $score = 0;
 	my $white_pieces = $self->[CP_POS_WHITE_PIECES];
 	my $black_pieces = $self->[CP_POS_BLACK_PIECES];
