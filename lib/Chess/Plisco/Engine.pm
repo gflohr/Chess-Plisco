@@ -42,7 +42,7 @@ use constant UCI_OPTIONS => [
 		callback => '__clearTranspositionTable',
 	},
 	{
-		name => 'Batch Mode',
+		name => 'Batch',
 		type => 'check',
 		default => 'false',
 		callback => '__changeBatchMode',
@@ -229,7 +229,7 @@ sub __onUciCmdGo {
 		return $self;
 	}
 
-	my $watcher = $self->{__options}->{'Batch Mode'} eq 'true'
+	my $watcher = $self->{__options}->{'Batch'} eq 'true'
 		? BatchWatcher->new : $self->{__watcher};
 
 	my $tree = Chess::Plisco::Engine::Tree->new(
