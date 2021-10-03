@@ -14,6 +14,8 @@ package Chess::Plisco::Engine::TranspositionTable;
 use strict;
 use integer;
 
+use Chess::Plisco::Engine::Tree;
+
 use constant TT_ENTRY_SIZE => 16;
 
 use constant TT_SCORE_EXACT => 0;
@@ -65,6 +67,14 @@ sub probe {
 	$$bestmove = $move if $move;
 
 	if ($edepth >= $depth) {
+		if ($value >= -(Chess::Plisco::Engine::Tree::MATE()
+		    + Chess::Plisco::Engine::Tree::MAX_PLY())) {
+			return $value + $depth - $edepth;
+		} elsif ($value <= (Chess::Plisco::Engine::Tree::MATE()
+		    + Chess::Plisco::Engine::Tree::MAX_PLY())) {
+			return $value - $depth + $edepth;
+		}
+
 		if ($flags == TT_SCORE_EXACT) {
 			return $value;
 		}

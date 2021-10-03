@@ -22,8 +22,8 @@ use Chess::Plisco::Engine::TranspositionTable;
 
 use Time::HiRes qw(tv_interval);
 
-use constant MATE => -10000;
-use constant INF => ((-(MATE)) << 1);
+use constant MATE => -32767;
+use constant INF => 65535;
 use constant MAX_PLY => 512;
 use constant DRAW => 0;
 
@@ -171,13 +171,12 @@ sub alphabeta {
 
 	if (defined $tt_value) {
 		++$self->{tt_hits};
-		if ($ply > 1) {
-			return $tt_value;
-		} elsif ($tt_move) {
+		if ($tt_move && $ply == 1) {
 			@$pline = ($tt_move);
 			$self->{score} = $tt_value;
-			return $tt_value;
 		}
+
+		return $tt_value;
 	}
 
 	if ($depth <= 0) {
