@@ -106,7 +106,10 @@ sub printPV {
 	my $score = $self->{score};
 	my $mate_in;
 	if ($score >= -(MATE + MAX_PLY)) {
-		$mate_in = (-(MATE + $score)) >> 1;
+		$mate_in = (1 - (MATE + $score)) >> 1;
+	} elsif ($score <= (MATE + MAX_PLY)) {
+		use integer;
+		$mate_in = (MATE - $score) >> 1;
 	}
 
 	my $nodes = $self->{nodes};
