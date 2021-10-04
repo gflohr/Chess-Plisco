@@ -67,16 +67,16 @@ sub probe {
 	$$bestmove = $move if $move;
 
 	if ($edepth >= $depth) {
-		if ($value >= -(Chess::Plisco::Engine::Tree::MATE()
-		    + Chess::Plisco::Engine::Tree::MAX_PLY())) {
-			return $value + $depth - $edepth;
-		} elsif ($value <= (Chess::Plisco::Engine::Tree::MATE()
-		    + Chess::Plisco::Engine::Tree::MAX_PLY())) {
-			return $value - $depth + $edepth;
-		}
-
 		if ($flags == TT_SCORE_EXACT) {
-			return $value;
+			if ($value >= -(Chess::Plisco::Engine::Tree::MATE()
+			+ Chess::Plisco::Engine::Tree::MAX_PLY())) {
+				return $value + $depth - $edepth;
+			} elsif ($value <= (Chess::Plisco::Engine::Tree::MATE()
+			+ Chess::Plisco::Engine::Tree::MAX_PLY())) {
+				return $value - $depth + $edepth;
+			} else {
+				return $value;
+			}
 		}
 
 		if (($flags == TT_SCORE_ALPHA) && ($value <= $alpha)) {
