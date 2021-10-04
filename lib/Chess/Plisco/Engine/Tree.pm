@@ -213,7 +213,7 @@ sub alphabeta {
 
 	my $legal = 0;
 	my $pv_found;
-	my $tt_type = TT_SCORE_ALPHA;
+	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
 	my $print_current_move = $ply == 1 && $self->{print_current_move};
 	my $signature_slot = $self->{history_length} + $ply;
@@ -238,14 +238,16 @@ sub alphabeta {
 		}
 		$position->undoMove($state);
 		if ($val >= $beta) {
-			$tt->store($signature, $depth, TT_SCORE_BETA, $val, $move);
+			$tt->store($signature, $depth,
+				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
+				$val, $move);
 			return $beta;
 		}
 		if ($val > $alpha) {
 			$alpha = $val;
 			$pv_found = 1;
 			@$pline = ($move, @line);
-			$tt_type = TT_SCORE_EXACT;
+			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 			$best_move = $move;
 	
 			if ($is_pv) {
@@ -299,15 +301,18 @@ sub quiesce {
 	my $val = $position->evaluate;
 	if ($val >= $beta) {
 		# FIXME! Is that correct?
-		$tt->store($signature, 0, TT_SCORE_EXACT, $val, 0);
+		$tt->store($signature, 0,
+			Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT(),
+			$val, 0
+		);
 		return $beta;
 	}
 
-	my $tt_type = TT_SCORE_ALPHA;
+	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	if ($val > $alpha) {
 		$alpha = $val;
 		# FIXME! Correct?
-		$tt_type = TT_SCORE_EXACT;
+		$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 	}
 
 	my @pseudo_legal = $position->pseudoLegalAttacks;
@@ -336,7 +341,7 @@ sub quiesce {
 	}
 
 	my $legal = 0;
-	my $tt_type = TT_SCORE_ALPHA;
+	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
 	foreach my $move (sort { $b <=> $a } @moves) {
 		my $state = $position->doMove($move);
@@ -345,13 +350,15 @@ sub quiesce {
 		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $pline, $is_pv);
 		$position->undoMove($state);
 		if ($val >= $beta) {
-			$tt->store($signature, 0, TT_SCORE_BETA, $val, $move);
+			$tt->store($signature, 0,
+				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
+				$val, $move);
 			return $beta;
 		}
 		if ($val > $alpha) {
 			$alpha = $val;
 			@$pline = ($move, @line);
-			$tt_type = TT_SCORE_EXACT;
+			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 			$best_move = $move;
 			if ($is_pv) {
 				$self->{score} = $val;
