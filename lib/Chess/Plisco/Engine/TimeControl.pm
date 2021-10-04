@@ -57,6 +57,7 @@ sub new {
 
 	if ($params{movetime}) {
 		$tree->{allocated_time} = $params{movetime};
+		$tree->{fixed_time} = 1;
 	} elsif ($params{infinite}) {
 		$tree->{max_depth} = Plisco::Engine::Tree->MAX_PLY;
 	} elsif ($params{nodes}) {
