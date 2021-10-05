@@ -68,15 +68,7 @@ sub probe {
 
 	if ($edepth >= $depth) {
 		if ($flags == TT_SCORE_EXACT) {
-			if ($value >= -(Chess::Plisco::Engine::Tree::MATE()
-			+ Chess::Plisco::Engine::Tree::MAX_PLY())) {
-				return $value + $depth - $edepth;
-			} elsif ($value <= (Chess::Plisco::Engine::Tree::MATE()
-			+ Chess::Plisco::Engine::Tree::MAX_PLY())) {
-				return $value - $depth + $edepth;
-			} else {
-				return $value;
-			}
+			return $value;
 		}
 
 		if (($flags == TT_SCORE_ALPHA) && ($value <= $alpha)) {

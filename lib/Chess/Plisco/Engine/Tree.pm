@@ -22,7 +22,7 @@ use Chess::Plisco::Engine::TranspositionTable;
 
 use Time::HiRes qw(tv_interval);
 
-use constant DEBUG => 1;
+use constant DEBUG => 0;
 
 use constant MATE => -15000;
 use constant INF => 16383;
@@ -203,7 +203,7 @@ sub alphabeta {
 	my $tt_move;
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		$self->indent($ply, "TT probe $hex_sig");
+		$self->indent($ply, "TT probe $hex_sig \@depth $depth, alpha = $alpha, beta = $beta");
 	}
 	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
 
@@ -391,7 +391,7 @@ sub quiesce {
 	my $tt_move;
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		$self->indent($ply, "quiescence TT probe $hex_sig");
+		$self->indent($ply, "quiescence TT probe $hex_sig \@depth 0, alpha = $alpha, beta = $beta");
 	}
 	my $tt_value = $tt->probe($signature, 0, $alpha, $beta, \$tt_move);
 	if (DEBUG) {
