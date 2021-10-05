@@ -112,7 +112,7 @@ sub indent {
 	my ($self, $ply, $msg) = @_;
 
 	chomp $msg;
-	my $indent = '..' x $ply;
+	my $indent = '..' x ($ply - 1);
 	$self->debug("[$ply] $indent$msg");
 }
 
@@ -203,14 +203,14 @@ sub alphabeta {
 	my $tt_move;
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		$self->indent($ply, "quiescence TT probe $hex_sig");
+		$self->indent($ply, "TT probe $hex_sig");
 	}
 	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
 
 	if (DEBUG) {
 		if ($tt_move) {
 			my $cn = $position->moveCoordinateNotation($tt_move);
-			$self->indent("best move: $cn");
+			$self->indent($ply, "best move: $cn");
 		}
 	}
 	if (defined $tt_value) {
@@ -337,7 +337,7 @@ sub alphabeta {
 			$alpha = MATE + $self->{depth} - $depth + 1;
 		}
 		if (DEBUG) {
-			$self->indent("mate/stalemate, score: $alpha");
+			$self->indent($ply, "mate/stalemate, score: $alpha");
 		}
 	}
 
@@ -397,7 +397,7 @@ sub quiesce {
 	if (DEBUG) {
 		if ($tt_move) {
 			my $cn = $position->moveCoordinateNotation($tt_move);
-			$self->indent("best move: $cn");
+			$self->indent($ply, "best move: $cn");
 		}
 	}
 

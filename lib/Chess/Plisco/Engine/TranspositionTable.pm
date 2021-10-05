@@ -86,8 +86,6 @@ sub probe {
 		if (($flags == TT_SCORE_BETA) && ($value >= $beta)) {
 			return $beta;
 		}
-
-		# FIXME! Pass at least best move to caller.
 	}
 
 	return;
