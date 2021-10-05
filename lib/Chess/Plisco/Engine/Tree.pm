@@ -334,7 +334,7 @@ sub alphabeta {
 		if (!$position->inCheck) {
 			$alpha = DRAW;
 		} else {
-			$alpha = MATE + $ply - 1;
+			$alpha = MATE + $self->{depth} - $depth + 1;
 		}
 		if (DEBUG) {
 			$self->indent("mate/stalemate, score: $alpha");
@@ -383,7 +383,7 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
 		}
-		return $self->alphabeta($ply, 1, $alpha, $beta, $pline, $is_pv);
+		return $self->alphabeta($ply, 1, $alpha, $beta, $pline, 0);
 	}
 
 	my $tt = $self->{tt};
