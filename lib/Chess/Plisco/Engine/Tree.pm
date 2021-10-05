@@ -22,6 +22,8 @@ use Chess::Plisco::Engine::TranspositionTable;
 
 use Time::HiRes qw(tv_interval);
 
+use constant DEBUG => 1;
+
 use constant MATE => -15000;
 use constant INF => 16383;
 use constant MAX_PLY => 512;
@@ -97,6 +99,23 @@ sub checkTime {
 	}
 }
 
+sub debug {
+	my ($self, $msg) = @_;
+
+	chomp $msg;
+	print "DEBUG $msg\n";
+
+	return 1;
+}
+
+sub indent {
+	my ($self, $ply, $msg) = @_;
+
+	chomp $msg;
+	my $indent = '..' x $ply;
+	$self->debug("[$ply] $indent$msg");
+}
+
 # __BEGIN_MACROS__
 sub printPV {
 	my ($self, $pline) = @_;
@@ -137,8 +156,20 @@ sub alphabeta {
 
 	my $position = $self->{position};
 
+	if (DEBUG) {
+		my $hex_signature = sprintf '%016x', $position->signature;
+		$self->indent($ply, "alphabeta: alpha = $alpha, beta = $beta,"
+			. " sig: $hex_signature $position");
+		if ($is_pv) {
+			$self->indent($ply, "in PV");
+		}
+	}
+
 	if (cp_pos_half_move_clock($position) >= 100
 		|| $position->insufficientMaterial) {
+		if (DEBUG) {
+			$self->indent($ply, "draw detected");
+		}
 		return DRAW;
 	}
 
@@ -159,6 +190,9 @@ sub alphabeta {
 			if ($signatures->[$n] == $signature) {
 				++$repetitions;
 				if ($repetitions >= 2 || $n >= $history_length) {
+					if (DEBUG) {
+						$self->indent($ply, "3-fold repetition");
+					}
 					return DRAW;
 				}
 			}
@@ -167,8 +201,18 @@ sub alphabeta {
 
 	my $tt = $self->{tt};
 	my $tt_move;
+	if (DEBUG) {
+		my $hex_sig = sprintf '%016x', $signature;
+		$self->indent($ply, "quiescence TT probe $hex_sig");
+	}
 	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
 
+	if (DEBUG) {
+		if ($tt_move) {
+			my $cn = $position->moveCoordinateNotation($tt_move);
+			$self->indent("best move: $cn");
+		}
+	}
 	if (defined $tt_value) {
 		++$self->{tt_hits};
 		if ($tt_move && $ply == 1) {
@@ -176,6 +220,11 @@ sub alphabeta {
 			$self->{score} = $tt_value;
 		}
 
+		if (DEBUG) {
+			my $hex_sig = sprintf '%016x', $signature;
+			my $cn = $position->moveCoordinateNotation($tt_move);
+			$self->indent($ply, "TT hit for $hex_sig, value $tt_value, best move $cn");
+		}
 		return $tt_value;
 	}
 
@@ -224,20 +273,40 @@ sub alphabeta {
 		++$self->{nodes};
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
 		my $val;
+		if (DEBUG) {
+			my $cn = $position->moveCoordinateNotation($move);
+			$self->indent($ply, "move $cn: start search");
+		}
 		if ($pv_found) {
+			if (DEBUG) {
+				$self->indent($ply, "null window search");
+			}
 			$val = -$self->alphabeta($ply + 1, $depth - 1,
 					-$alpha - 1, -$alpha, \@line, $is_pv && !$legal);
-
 			if (($val > $alpha) && ($val < $beta)) {
+				if (DEBUG) {
+					$self->indent($ply, "value $val outside null window, re-search");
+				}
 				$val = -$self->alphabeta($ply + 1, $depth - 1,
 						-$beta, -$alpha, \@line, $is_pv && !$legal);
 			}
 		} else {
+			if (DEBUG) {
+				$self->indent($ply, "recurse normal search");
+			}
 			$val = -$self->alphabeta($ply + 1, $depth - 1,
 					-$beta, -$alpha, \@line, $is_pv && !$legal);
 		}
+		if (DEBUG) {
+			$self->indent($ply, "value: $val");
+		}
 		$position->undoMove($state);
 		if ($val >= $beta) {
+			if (DEBUG) {
+				my $hex_sig = sprintf '%016x', $signature;
+				my $cn = $position->moveCoordinateNotation($move);
+				$self->indent($ply, "$cn fail high ($val >= $beta), store $val(BETA) \@depth $depth for $hex_sig");
+			}
 			$tt->store($signature, $depth,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
 				$val, $move);
@@ -250,6 +319,9 @@ sub alphabeta {
 			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 			$best_move = $move;
 	
+			if (DEBUG) {
+				$self->indent($ply, "raise alpha to $alpha");
+			}
 			if ($is_pv) {
 				$self->{score} = $val;
 				$self->printPV($pline);
@@ -264,6 +336,20 @@ sub alphabeta {
 		} else {
 			$alpha = MATE + $ply - 1;
 		}
+		if (DEBUG) {
+			$self->indent("mate/stalemate, score: $alpha");
+		}
+	}
+
+	if (DEBUG) {
+		my $hex_sig = sprintf '%016x', $signature;
+		my $type;
+		if ($tt_type == TT_SCORE_ALPHA) {
+			$type = 'ALPHA';
+		} else {
+			$type = 'EXACT';
+		}
+		$self->indent($ply, "returning alpha $alpha, store ($type) \@depth $depth for $hex_sig");
 	}
 
 	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
@@ -283,29 +369,62 @@ sub quiesce {
 	my @line;
 	my $position = $self->{position};
 
+	if (DEBUG) {
+		my $hex_signature = sprintf '%016x', $position->signature;
+		$self->indent($ply, "quiescence: alpha = $alpha, beta = $beta,"
+			. " sig: $hex_signature $position");
+		if ($is_pv) {
+			$self->indent($ply, "in PV");
+		}
+	}
+
 	# Expand the search, when in check.
 	if (cp_pos_in_check($position)) {
-			return $self->alphabeta($ply, 1, $alpha, $beta, $pline, $is_pv);
+		if (DEBUG) {
+			$self->indent($ply, "quiescence check extension");
+		}
+		return $self->alphabeta($ply, 1, $alpha, $beta, $pline, $is_pv);
 	}
 
 	my $tt = $self->{tt};
 	my $signature = cp_pos_signature $position;
 	my $tt_move;
+	if (DEBUG) {
+		my $hex_sig = sprintf '%016x', $signature;
+		$self->indent($ply, "quiescence TT probe $hex_sig");
+	}
 	my $tt_value = $tt->probe($signature, 0, $alpha, $beta, \$tt_move);
+	if (DEBUG) {
+		if ($tt_move) {
+			my $cn = $position->moveCoordinateNotation($tt_move);
+			$self->indent("best move: $cn");
+		}
+	}
 
 	if (defined $tt_value) {
+		if (DEBUG) {
+			my $hex_sig = sprintf '%016x', $signature;
+			$self->indent($ply, "quiescence TT hit for $hex_sig, value $tt_value");
+		}
 		++$self->{tt_hits};
 		return $tt_value;
 	}
 
 	my $val = $position->evaluate;
 	if ($val >= $beta) {
+		if (DEBUG) {
+			my $hex_sig = sprintf '%016x', $signature;
+			$self->indent($ply, "quiescence standing pat ($val >= $beta), store $val(EXACT) \@depth 0 for $hex_sig");
+		}
 		# FIXME! Is that correct?
 		$tt->store($signature, 0,
 			Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT(),
 			$val, 0
 		);
 		return $beta;
+	}
+	if (DEBUG) {
+		$self->indent($ply, "static evaluation: $val");
 	}
 
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
@@ -345,17 +464,32 @@ sub quiesce {
 	my $best_move = 0;
 	foreach my $move (sort { $b <=> $a } @moves) {
 		my $state = $position->doMove($move);
+		if (DEBUG) {
+			my $cn = $position->moveCoordinateNotation($move);
+			$self->indent($ply, "move $cn: start quiescence search");
+		}
 		$is_pv = $is_pv && !$legal;
 		++$self->{nodes};
+		if (DEBUG) {
+			$self->indent($ply, "recurse quiescence search");
+		}
 		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $pline, $is_pv);
 		$position->undoMove($state);
 		if ($val >= $beta) {
+			if (DEBUG) {
+				my $hex_sig = sprintf '%016x', $signature;
+				my $cn = $position->moveCoordinateNotation($move);
+				$self->indent($ply, "$cn quiescence fail high ($val >= $beta), store $val(BETA) \@depth 0 for $hex_sig");
+			}
 			$tt->store($signature, 0,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
 				$val, $move);
 			return $beta;
 		}
 		if ($val > $alpha) {
+			if (DEBUG) {
+				$self->indent($ply, "raise quiescence alpha to $alpha");
+			}
 			$alpha = $val;
 			@$pline = ($move, @line);
 			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
@@ -366,6 +500,18 @@ sub quiesce {
 			}
 		}
 	}
+
+	if (DEBUG) {
+		my $hex_sig = sprintf '%016x', $signature;
+		my $type;
+		if ($tt_type == TT_SCORE_ALPHA) {
+			$type = 'ALPHA';
+		} else {
+			$type = 'EXACT';
+		}
+		$self->indent($ply, "quiescence returning alpha $alpha, store ($type) \@depth 0 for $hex_sig");
+	}
+
 	$tt->store($signature, 0, $tt_type, $val, $best_move);
 
 	return $alpha;
@@ -387,7 +533,13 @@ sub rootSearch {
 	eval {
 		while (++$depth <= $max_depth) {
 			$self->{depth} = $depth;
+			if (DEBUG) {
+				$self->debug("Deepening to depth $depth");
+			}
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
+			if (DEBUG) {
+				$self->debug("Score at depth $depth: $score");
+			}
 			if (cp_abs($score) > -(MATE + MAX_PLY)) {
 				last;
 			}
