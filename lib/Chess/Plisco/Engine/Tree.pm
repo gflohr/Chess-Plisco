@@ -18,16 +18,17 @@ use Locale::TextDomain qw('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::TranspositionTable;
 
 use Time::HiRes qw(tv_interval);
 
-use constant DEBUG => 0;
+use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
 use constant MATE => -15000;
 use constant INF => 16383;
 use constant MAX_PLY => 512;
 use constant DRAW => 0;
+
+use Chess::Plisco::Engine::TranspositionTable;
 
 # These values get stored in the upper 32 bits of a moves so that they are
 # searched first.
@@ -113,7 +114,7 @@ sub indent {
 
 	chomp $msg;
 	my $indent = '..' x ($ply - 1);
-	$self->debug("[$ply] $indent$msg");
+	$self->debug("[$ply/$self->{depth}] $indent$msg");
 }
 
 # __BEGIN_MACROS__
@@ -137,7 +138,6 @@ sub printPV {
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
 	my $pv = join ' ', $position->movesCoordinateNotation(@$pline);
 	my $time = int(0.5 + (1000 * $elapsed));
-	my $seldepth = @$pline;
 	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
 			. " score $scorestr nodes $nodes nps $nps time $time pv $pv");
 	if ($self->{__debug}) {
@@ -158,8 +158,9 @@ sub alphabeta {
 
 	if (DEBUG) {
 		my $hex_signature = sprintf '%016x', $position->signature;
-		$self->indent($ply, "alphabeta: alpha = $alpha, beta = $beta,"
-			. " sig: $hex_signature $position");
+		my $line = join ' ', @{$self->{line}};
+		$self->indent($ply, "alphabeta: alpha = $alpha, beta = $beta, line: $line,"
+			. " depth: $depth, sig: $hex_signature $position");
 		if ($is_pv) {
 			$self->indent($ply, "in PV");
 		}
@@ -276,6 +277,7 @@ sub alphabeta {
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: start search");
+			push @{$self->{line}}, $cn;
 		}
 		if ($pv_found) {
 			if (DEBUG) {
@@ -298,9 +300,13 @@ sub alphabeta {
 					-$beta, -$alpha, \@line, $is_pv && !$legal);
 		}
 		if (DEBUG) {
-			$self->indent($ply, "value: $val");
+			my $cn = $position->moveCoordinateNotation($move);
+			$self->indent($ply, "move $cn: value $val");
 		}
 		$position->undoMove($state);
+		if (DEBUG) {
+			pop @{$self->{line}};
+		}
 		if ($val >= $beta) {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
@@ -334,7 +340,8 @@ sub alphabeta {
 		if (!$position->inCheck) {
 			$alpha = DRAW;
 		} else {
-			$alpha = MATE + $self->{depth} - $depth + 1;
+			#$alpha = MATE + $self->{depth} - $depth + 1;
+			$alpha = MATE + $ply;
 		}
 		if (DEBUG) {
 			$self->indent($ply, "mate/stalemate, score: $alpha");
@@ -371,7 +378,8 @@ sub quiesce {
 
 	if (DEBUG) {
 		my $hex_signature = sprintf '%016x', $position->signature;
-		$self->indent($ply, "quiescence: alpha = $alpha, beta = $beta,"
+		my $line = join ' ', @{$self->{line}};
+		$self->indent($ply, "quiescence: alpha = $alpha, beta = $beta, line: $line,"
 			. " sig: $hex_signature $position");
 		if ($is_pv) {
 			$self->indent($ply, "in PV");
@@ -411,6 +419,9 @@ sub quiesce {
 	}
 
 	my $val = $position->evaluate;
+	if (DEBUG) {
+		$self->indent($ply, "static evaluation: $val");
+	}
 	if ($val >= $beta) {
 		if (DEBUG) {
 			my $hex_sig = sprintf '%016x', $signature;
@@ -422,9 +433,6 @@ sub quiesce {
 			$val, 0
 		);
 		return $beta;
-	}
-	if (DEBUG) {
-		$self->indent($ply, "static evaluation: $val");
 	}
 
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
@@ -466,6 +474,7 @@ sub quiesce {
 		my $state = $position->doMove($move);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
+			push @{$self->{line}}, $position->moveCoordinateNotation($cn);
 			$self->indent($ply, "move $cn: start quiescence search");
 		}
 		$is_pv = $is_pv && !$legal;
@@ -474,6 +483,11 @@ sub quiesce {
 			$self->indent($ply, "recurse quiescence search");
 		}
 		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $pline, $is_pv);
+		if (DEBUG) {
+			my $cn = $position->moveCoordinateNotation($move);
+			$self->indent($ply, "move $cn: value: $val");
+			pop @{$self->{line}};
+		}
 		$position->undoMove($state);
 		if ($val >= $beta) {
 			if (DEBUG) {
@@ -535,6 +549,7 @@ sub rootSearch {
 			$self->{depth} = $depth;
 			if (DEBUG) {
 				$self->debug("Deepening to depth $depth");
+				$self->{line} = [];
 			}
 			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
 			if (DEBUG) {
