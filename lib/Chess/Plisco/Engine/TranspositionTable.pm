@@ -67,6 +67,14 @@ sub probe {
 	$$bestmove = $move if $move;
 
 	if ($edepth >= $depth) {
+		if ($value <= Chess::Plisco::Engine::Tree::MATE
+		    + Chess::Plisco::Engine::Tree::MAX_PLY) {
+			$value += ($edepth - $depth);
+		} elsif ($value >= -Chess::Plisco::Engine::Tree::MATE
+		    - Chess::Plisco::Engine::Tree::MAX_PLY) {
+			$value -= ($edepth - $depth);
+		}
+
 		if ($flags == TT_SCORE_EXACT) {
 			return $value;
 		}
