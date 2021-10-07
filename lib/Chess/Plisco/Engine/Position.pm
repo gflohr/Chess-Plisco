@@ -16,6 +16,7 @@ use integer;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
+use Chess::Plisco::Engine::Tree;
 
 use base qw(Chess::Plisco);
 
@@ -128,11 +129,18 @@ sub evaluate {
 	# But in that case the material delta is B + B - N which is greater
 	# than B.  On the other hand KBB vs KB is a draw and the material balance
 	# in that case is exactly one bishop.
+	# These simple formulas do not take into account that there may be more
+	# than two knights or bishops for one side on the board but in the
+	# exceptional case that this happens, the result would be close enough
+	# anyway.
 	if (!$pawns) {
 		my $delta = cp_abs($material);
 		if ($delta < CP_PAWN_VALUE
-		    || (!$rooks && !$queens && $delta <= CP_BISHOP_VALUE)) {
-			return Chess::Plisco::Engine::Tree::DRAW();
+		    || (!$rooks && !$queens
+		        && (($delta <= CP_BISHOP_VALUE)
+		            || ($delta == 2 * CP_KNIGHT_VALUE)
+			        || ($delta == CP_KNIGHT_VALUE + CP_BISHOP_VALUE)))) {
+			return Chess::Plisco::Engine::Tree::DRAW;
 		}
 	}
 
