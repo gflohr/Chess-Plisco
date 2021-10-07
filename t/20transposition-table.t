@@ -32,29 +32,27 @@ my $test_move = 1303;
 my $test_alpha = 0;
 my $test_beta = 1;
 
-$tt->store($key, $ply, $test_depth, $test_flags, $test_value, $test_move);
+$tt->store($key, $test_depth, $test_flags, $test_value, $test_move);
 
-my $ply = 3;
-
-my $value = $tt->probe($key, $ply, $test_depth - 1, $test_alpha, $test_beta);
+my $value = $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta);
 ok ((defined $value), "table hit");
 is $value, 2304, "value 2304";
 
 $tt->resize(1);
-ok ((!defined $tt->probe($key, $ply, $test_depth - 1, $test_alpha, $test_beta)),
+ok ((!defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta)),
 	"table should be empty after resize");
 
-$tt->store($key, $ply, $test_depth, $test_flags, $test_value, $test_move);
-ok defined $tt->probe($key, $ply, $test_depth - 1, $test_alpha, $test_beta),
+$tt->store($key, $test_depth, $test_flags, $test_value, $test_move);
+ok defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
 	"store again";
 
 $tt->clear;
-ok !defined $tt->probe($key, $ply, $test_depth - 1, $test_alpha, $test_beta),
+ok !defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
 	"table should be empty after clear";
 
-$tt->store($key, $ply, $test_depth, $test_flags, $test_value, $test_move);
-ok defined $tt->probe($key, $ply, $test_depth - 1, $test_alpha, $test_beta),
+$tt->store($key, $test_depth, $test_flags, $test_value, $test_move);
+ok defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
 	"store again";
 my $collision = $key % scalar @$tt;
-ok !defined $tt->probe($collision, $ply, $test_depth - 1, $test_alpha, $test_beta),
+ok !defined $tt->probe($collision, $test_depth - 1, $test_alpha, $test_beta),
 	"type 2 collision";

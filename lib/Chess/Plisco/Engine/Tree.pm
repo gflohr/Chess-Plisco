@@ -166,8 +166,7 @@ sub alphabeta {
 		}
 	}
 
-	if (cp_pos_half_move_clock($position) >= 100
-		|| $position->insufficientMaterial) {
+	if (cp_pos_half_move_clock($position) >= 100) {
 		if (DEBUG) {
 			$self->indent($ply, "draw detected");
 		}
@@ -206,7 +205,7 @@ sub alphabeta {
 		my $hex_sig = sprintf '%016x', $signature;
 		$self->indent($ply, "TT probe $hex_sig \@depth $depth, alpha = $alpha, beta = $beta");
 	}
-	my $tt_value = $tt->probe($signature, $ply, $depth, $alpha, $beta, \$tt_move);
+	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
 
 	if (DEBUG) {
 		if ($tt_move) {
@@ -313,7 +312,7 @@ sub alphabeta {
 				my $cn = $position->moveCoordinateNotation($move);
 				$self->indent($ply, "$cn fail high ($val >= $beta), store $val(BETA) \@depth $depth for $hex_sig");
 			}
-			$tt->store($signature, $ply, $depth,
+			$tt->store($signature, $depth,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
 				$val, $move);
 			return $beta;
@@ -359,7 +358,7 @@ sub alphabeta {
 		$self->indent($ply, "returning alpha $alpha, store ($type) \@depth $depth for $hex_sig");
 	}
 
-	$tt->store($signature, $ply, $depth, $tt_type, $alpha, $best_move);
+	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
 
 	return $alpha;
 }
@@ -401,7 +400,7 @@ sub quiesce {
 		my $hex_sig = sprintf '%016x', $signature;
 		$self->indent($ply, "quiescence TT probe $hex_sig \@depth 0, alpha = $alpha, beta = $beta");
 	}
-	my $tt_value = $tt->probe($signature, $ply, 0, $alpha, $beta, \$tt_move);
+	my $tt_value = $tt->probe($signature, 0, $alpha, $beta, \$tt_move);
 	if (DEBUG) {
 		if ($tt_move) {
 			my $cn = $position->moveCoordinateNotation($tt_move);
@@ -418,7 +417,7 @@ sub quiesce {
 		return $tt_value;
 	}
 
-	my $val = $position->evaluate($ply);
+	my $val = $position->evaluate;
 	if (DEBUG) {
 		$self->indent($ply, "static evaluation: $val");
 	}
@@ -428,7 +427,7 @@ sub quiesce {
 			$self->indent($ply, "quiescence standing pat ($val >= $beta), store $val(EXACT) \@depth 0 for $hex_sig");
 		}
 		# FIXME! Is that correct?
-		$tt->store($signature, $ply, 0,
+		$tt->store($signature, 0,
 			Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT(),
 			$val, 0
 		);
@@ -495,7 +494,7 @@ sub quiesce {
 				my $cn = $position->moveCoordinateNotation($move);
 				$self->indent($ply, "$cn quiescence fail high ($val >= $beta), store $val(BETA) \@depth 0 for $hex_sig");
 			}
-			$tt->store($signature, $ply, 0,
+			$tt->store($signature, 0,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
 				$val, $move);
 			return $beta;
@@ -526,7 +525,7 @@ sub quiesce {
 		$self->indent($ply, "quiescence returning alpha $alpha, store ($type) \@depth 0 for $hex_sig");
 	}
 
-	$tt->store($signature, $ply, 0, $tt_type, $val, $best_move);
+	$tt->store($signature, 0, $tt_type, $val, $best_move);
 
 	return $alpha;
 }

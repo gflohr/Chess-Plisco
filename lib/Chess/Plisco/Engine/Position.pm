@@ -109,23 +109,45 @@ use constant TOTAL_PHASE => PAWN_PHASE * 16
 	+ ROOK_PHASE * 4 + QUEEN_PHASE * 2;
 
 sub evaluate {
-	my ($self, $ply) = @_;
+	my ($self) = @_;
 
 	my $score = 0;
+	my $material = cp_pos_material $self;
 	my $white_pieces = $self->[CP_POS_WHITE_PIECES];
 	my $black_pieces = $self->[CP_POS_BLACK_PIECES];
-	my $white_pawns = $white_pieces & $self->[CP_POS_PAWNS];
-	my $black_pawns = $black_pieces & $self->[CP_POS_PAWNS];
-	my $white_knights = $white_pieces & $self->[CP_POS_KNIGHTS];
-	my $black_knights = $black_pieces & $self->[CP_POS_KNIGHTS];
-	my $white_bishops = $white_pieces & $self->[CP_POS_BISHOPS];
-	my $black_bishops = $black_pieces & $self->[CP_POS_BISHOPS];
-	my $white_rooks = $white_pieces & $self->[CP_POS_ROOKS];
-	my $black_rooks = $black_pieces & $self->[CP_POS_ROOKS];
-	my $white_queens = $white_pieces & $self->[CP_POS_QUEENS];
-	my $black_queens = $black_pieces & $self->[CP_POS_QUEENS];
-	my $white_kings = $white_pieces & $self->[CP_POS_KINGS];
-	my $black_kings = $black_pieces & $self->[CP_POS_KINGS];
+	my $pawns = $self->[CP_POS_PAWNS];
+	my $knights = $self->[CP_POS_KNIGHTS];
+	my $bishops = $self->[CP_POS_BISHOPS];
+	my $rooks = $self->[CP_POS_ROOKS];
+	my $queens = $self->[CP_POS_QUEENS];
+	my $kings = $self->[CP_POS_KINGS];
+
+	# We simply assume that a position without pawns is in general a draw.
+	# If one side is a minor piece ahead, it is considered a draw, when there
+	# are no rooks or queens on the board.  Important exception is KBB vs KN.
+	# But in that case the material delta is B + B - N which is greater
+	# than B.  On the other hand KBB vs KB is a draw and the material balance
+	# in that case is exactly one bishop.
+	if (!$pawns) {
+		my $delta = cp_abs($material);
+		if ($delta < CP_PAWN_VALUE
+		    || (!$rooks && !$queens && $delta <= CP_BISHOP_VALUE)) {
+			return Chess::Plisco::Engine::Tree::DRAW();
+		}
+	}
+
+	my $white_pawns = $white_pieces & $pawns;
+	my $black_pawns = $black_pieces & $pawns;
+	my $white_knights = $white_pieces & $knights;
+	my $black_knights = $black_pieces & $knights;
+	my $white_bishops = $white_pieces & $bishops;
+	my $black_bishops = $black_pieces & $bishops;
+	my $white_rooks = $white_pieces & $rooks;
+	my $black_rooks = $black_pieces & $rooks;
+	my $white_queens = $white_pieces & $queens;
+	my $black_queens = $black_pieces & $queens;
+	my $white_kings = $white_pieces & $kings;
+	my $black_kings = $black_pieces & $kings;
 
 	my $phase = TOTAL_PHASE;
 
@@ -212,13 +234,7 @@ sub evaluate {
 		- $king_end_game_square_table[$black_king_shift];
 	$score = (($opening_score * (256 - $phase))
 			+ ($endgame_score * $phase)) / 256
-		+ $self->material;
-
-	if ($score > Chess::Plisco::Engine::Tree::DRAW()) {
-		$score -= $ply;
-	} else {
-		$score += $ply;
-	}
+		+ $material;
 
 	return (cp_pos_to_move($self)) ? -$score : $score;
 }
