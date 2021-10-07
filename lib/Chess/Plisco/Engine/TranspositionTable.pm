@@ -56,7 +56,7 @@ sub resize {
 }
 
 sub probe {
-	my ($self, $lookup_key, $depth, $alpha, $beta, $bestmove) = @_;
+	my ($self, $lookup_key, $ply, $depth, $alpha, $beta, $bestmove) = @_;
 
 	my $entry = $self->[$lookup_key % scalar @$self] or return;
 
@@ -67,15 +67,13 @@ sub probe {
 	$$bestmove = $move if $move;
 
 	if ($edepth >= $depth) {
-		if ($flags == TT_SCORE_EXACT) {
-			if ($value <= Chess::Plisco::Engine::Tree::MATE
-				+ Chess::Plisco::Engine::Tree::MAX_PLY) {
-				$value += ($edepth - $depth);
-			} elsif ($value >= -Chess::Plisco::Engine::Tree::MATE
-				- Chess::Plisco::Engine::Tree::MAX_PLY) {
-				$value -= ($edepth - $depth);
-			}
+		if ($value > Chess::Plisco::Engine::Tree::DRAW) {
+			$value -= $ply;
+		} else {
+			$value += $ply;
+		}
 
+		if ($flags == TT_SCORE_EXACT) {
 			return $value;
 		}
 
@@ -92,11 +90,18 @@ sub probe {
 }
 
 sub store {
-	my ($self, $key, $depth, $flags, $value, $move) = @_;
+	my ($self, $key, $ply, $depth, $flags, $value, $move) = @_;
 
 	# Replacement scheme is currently replace-always.  We must make sure that
 	# only the significant bits of the best move are stored.
 	my $payload = pack 's4', $depth, $flags, $value, $move & 0x7fff;
+
+	# Normalize the value.
+	if ($value <= Chess::Plisco::Engine::Tree::DRAW) {
+		$value += $ply;
+	} else {
+		$value -= $ply;
+	}
 
 	$self->[$key % scalar @$self] = [$key, $payload];
 }

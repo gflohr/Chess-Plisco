@@ -109,7 +109,7 @@ use constant TOTAL_PHASE => PAWN_PHASE * 16
 	+ ROOK_PHASE * 4 + QUEEN_PHASE * 2;
 
 sub evaluate {
-	my ($self) = @_;
+	my ($self, $ply) = @_;
 
 	my $score = 0;
 	my $white_pieces = $self->[CP_POS_WHITE_PIECES];
@@ -213,6 +213,12 @@ sub evaluate {
 	$score = (($opening_score * (256 - $phase))
 			+ ($endgame_score * $phase)) / 256
 		+ $self->material;
+
+	if ($score > Chess::Plisco::Engine::Tree::DRAW()) {
+		$score -= $ply;
+	} else {
+		$score += $ply;
+	}
 
 	return (cp_pos_to_move($self)) ? -$score : $score;
 }
