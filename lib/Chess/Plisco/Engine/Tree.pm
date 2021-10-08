@@ -18,6 +18,7 @@ use Locale::TextDomain qw('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
+use Chess::Plisco::Engine::Position;
 
 use Time::HiRes qw(tv_interval);
 

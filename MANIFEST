@@ -68,6 +68,7 @@ t/05perft-by-copy.t
 t/05perft-by-undo.t
 t/11evaluate-compare.t
 t/11evaluate-move.t
+t/20draw-detection.t
 t/20transposition-table.t
 t/30dm1-epd.t
 t/30dm2-epd.t

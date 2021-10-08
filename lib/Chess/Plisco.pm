@@ -90,7 +90,8 @@ use constant CP_POS_INFO => 10;
 use constant CP_POS_EVASION_SQUARES => 11;
 use constant CP_POS_SIGNATURE => 12;
 use constant CP_POS_REVERSIBLE_CLOCK => 13;
-use constant CP_POS_IN_CHECK => 14;
+# 3 reserved slots.
+use constant CP_POS_IN_CHECK => 17;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
