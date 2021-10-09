@@ -474,7 +474,7 @@ sub quiesce {
 		my $state = $position->doMove($move);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
-			push @{$self->{line}}, $position->moveCoordinateNotation($cn);
+			push @{$self->{line}}, $cn;
 			$self->indent($ply, "move $cn: start quiescence search");
 		}
 		$is_pv = $is_pv && !$legal;
