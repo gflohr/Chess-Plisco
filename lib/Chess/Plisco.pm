@@ -780,6 +780,7 @@ sub pseudoLegalAttacks {
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
+	my $empty = ~$occupancy;
 
 	my (@moves, $target_mask, $base_move);
 
@@ -886,7 +887,7 @@ sub pseudoLegalAttacks {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
 		$base_move = ($from << 6 | CP_PAWN << 15);
-		$target_mask = ($pawn_single_masks->[$from] & ~$her_pieces)
+		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
