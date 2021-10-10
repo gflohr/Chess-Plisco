@@ -121,13 +121,14 @@ my @piece_phases = (
 	ROOK_PHASE,
 	QUEEN_PHASE,
 );
-
 foreach my $victim (CP_NO_PIECE, CP_PAWN .. CP_QUEEN) {
 	foreach my $promote (CP_NO_PIECE, CP_KNIGHT .. CP_QUEEN) {
+		next if $promote && $victim == CP_PAWN;
+		next if !$victim && !$promote;
 		my $delta = $piece_phases[$victim];
-		if ($victim != CP_PAWN && $promote) {
-			$delta -= Chess::Plisco::Engine::Position::PAWN_PHASE
-				+ $piece_phases[$promote];
+		if ($promote) {
+			$delta += (Chess::Plisco::Engine::Position::PAWN_PHASE
+				- $piece_phases[$promote]);
 		}
 		$move_phase_deltas[($victim << 3) | $promote] = $delta;
 	}
@@ -220,82 +221,67 @@ sub evaluate {
 	my $white_kings = $white_pieces & $kings;
 	my $black_kings = $black_pieces & $kings;
 
-	my $phase = TOTAL_PHASE;
-
 	while ($white_pawns) {
 		my $shift = cp_bitboard_count_trailing_zbits $white_pawns;
 		$score += $pawn_square_table[63 - $shift];
 		$white_pawns = cp_bitboard_clear_least_set $white_pawns;
-		$phase -= PAWN_PHASE;
 	}
 
 	while ($black_pawns) {
 		my $shift = cp_bitboard_count_trailing_zbits $black_pawns;
 		$score -= $pawn_square_table[$shift];
 		$black_pawns = cp_bitboard_clear_least_set $black_pawns;
-		$phase -= PAWN_PHASE;
 	}
 
 	while ($white_knights) {
 		my $shift = cp_bitboard_count_trailing_zbits $white_knights;
 		$score += $knight_square_table[63 - $shift];
 		$white_knights = cp_bitboard_clear_least_set $white_knights;
-		$phase -= KNIGHT_PHASE;
 	}
 
 	while ($black_knights) {
 		my $shift = cp_bitboard_count_trailing_zbits $black_knights;
 		$score -= $knight_square_table[$shift];
 		$black_knights = cp_bitboard_clear_least_set $black_knights;
-		$phase -= KNIGHT_PHASE;
 	}
 
 	while ($white_bishops) {
 		my $shift = cp_bitboard_count_trailing_zbits $white_bishops;
 		$score += $bishop_square_table[63 - $shift];
 		$white_bishops = cp_bitboard_clear_least_set $white_bishops;
-		$phase -= BISHOP_PHASE;
 	}
 
 	while ($black_bishops) {
 		my $shift = cp_bitboard_count_trailing_zbits $black_bishops;
 		$score -= $bishop_square_table[$shift];
 		$black_bishops = cp_bitboard_clear_least_set $black_bishops;
-		$phase -= BISHOP_PHASE;
 	}
 
 	while ($white_rooks) {
 		my $shift = cp_bitboard_count_trailing_zbits $white_rooks;
 		$score += $rook_square_table[63 - $shift];
 		$white_rooks = cp_bitboard_clear_least_set $white_rooks;
-		$phase -= ROOK_PHASE;
 	}
 
 	while ($black_rooks) {
 		my $shift = cp_bitboard_count_trailing_zbits $black_rooks;
 		$score -= $rook_square_table[$shift];
 		$black_rooks = cp_bitboard_clear_least_set $black_rooks;
-		$phase -= ROOK_PHASE;
 	}
 
 	while ($white_queens) {
 		my $shift = cp_bitboard_count_trailing_zbits $white_queens;
 		$score += $queen_square_table[63 - $shift];
 		$white_queens = cp_bitboard_clear_least_set $white_queens;
-		$phase -= QUEEN_PHASE;
 	}
 
 	while ($black_queens) {
 		my $shift = cp_bitboard_count_trailing_zbits $black_queens;
 		$score -= $queen_square_table[$shift];
 		$black_queens = cp_bitboard_clear_least_set $black_queens;
-		$phase -= QUEEN_PHASE;
 	}
 
-	my $pos_phase = $self->[CP_POS_GAME_PHASE];
-	if ($pos_phase != $phase) {
-		warn "ouch: $pos_phase <=> $phase\n";
-	}
+	my $phase = $self->[CP_POS_GAME_PHASE];
 
 	$phase = 0 if $phase < 0;
 	$phase = ($phase * 256 + (TOTAL_PHASE / 2)) / TOTAL_PHASE;
