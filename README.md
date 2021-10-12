@@ -1,7 +1,8 @@
 # Chess-Plisco
 
 Chess::Plisco is a representation of a chess position in Perl.  It also
-contains a UCI compatible chess engine.
+contains a UCI compatible chess engine.  You can challenge the engine most
+of the time at https://lichess.org/@/plisco-bot.
 
 It only works with Perl versions that are compiled with support for 64
 bit integers!
