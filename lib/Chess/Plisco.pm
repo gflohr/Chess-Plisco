@@ -44,6 +44,7 @@ use strict;
 use integer;
 no warnings qw(portable);
 use overload '""' => sub { shift->toFEN };
+no warnings qw(uninitialized);
 
 use Locale::TextDomain qw('Chess-Plisco');
 use Scalar::Util qw(reftype);
