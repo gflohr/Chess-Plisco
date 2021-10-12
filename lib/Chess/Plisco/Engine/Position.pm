@@ -277,10 +277,10 @@ foreach my $move (Chess::Plisco->moveNumbers) {
 	if ($promote) {
 		my $promote_index = ($color << 9) | ($promote << 6) | $to;
 		my $promote_pawn_index = ($color << 9) | (CP_PAWN << 6) | $to;
-		$opening_delta += $mg_table[$promote_index]
-			- $mg_table[$promote_pawn_index];
-		$endgame_delta += $eg_table[$promote_index]
-			- $eg_table[$promote_pawn_index];
+		$opening_delta -= $mg_table[$promote_index]
+			+ $mg_table[$promote_pawn_index];
+		$endgame_delta -= $eg_table[$promote_index]
+			+ $eg_table[$promote_pawn_index];
 	}
 
 	# Handle castlings.
