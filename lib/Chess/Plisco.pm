@@ -327,6 +327,8 @@ my $zk_color;
 
 my @zk_move_masks;
 
+my @move_numbers;
+
 my @magicmovesbdb;
 my @magicmovesrdb;
 
@@ -3323,6 +3325,12 @@ sub movesCoordinateNotation {
 	return @moves;
 }
 
+sub moveNumbers {
+	my ($class);
+
+	return @move_numbers;
+}
+
 ###########################################################################
 # Generate lookup tables.
 ###########################################################################
@@ -3821,6 +3829,8 @@ foreach my $file (CP_FILE_A .. CP_FILE_H) {
 			push @moves, ((CP_KING << 15) | (CP_E8 << 6) | CP_G8) | $mb;
 			push @moves, ((CP_KING << 15) | (CP_E8 << 6) | CP_C8) | $mb;
 		}
+
+		push @move_numbers, @moves;
 
 		foreach my $move (@moves) {
 			my $is_ep;
