@@ -157,7 +157,17 @@ sub __onUciCmdEvaluate {
 
 	my $score = $self->{__position}->evaluate;
 
-	$self->{__out}->print("$score cp\n");
+	my ($cp_pos_game_phase, $cp_pos_opening_score, $cp_pos_endgame_score) = (
+		Chess::Plisco::Engine::Position::CP_POS_GAME_PHASE,
+		Chess::Plisco::Engine::Position::CP_POS_OPENING_SCORE,
+		Chess::Plisco::Engine::Position::CP_POS_ENDGAME_SCORE,
+	);
+
+	my $phase = $self->{__position}->[$cp_pos_game_phase];
+	my $op_score = $self->{__position}->[$cp_pos_opening_score];
+	my $eg_score = $self->{__position}->[$cp_pos_endgame_score];
+
+	$self->{__out}->print("$score cp (phase: $phase, opening: $op_score, endgame: $eg_score)\n");
 
 	return $self;
 }
