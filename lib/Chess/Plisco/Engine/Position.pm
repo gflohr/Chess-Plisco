@@ -43,13 +43,13 @@ use constant PHASE_INC => [
 ];
 
 
-my @mg_value = (0, 82, 337, 365, 477, 1025, 0);
+my @op_value = (0, 82, 337, 365, 477, 1025, 0);
 my @eg_value = (0, 94, 281, 297, 512, 936, 0);
 
 # piece/sq tables
 # values from Rofchade: http://www.talkchess.com/forum3/viewtopic.php?f=2&t=68311&start=19
 
-my @mg_pawn_table = (
+my @op_pawn_table = (
 	  0,   0,   0,   0,   0,   0,  0,   0,
 	 98, 134,  61,  95,  68, 126, 34, -11,
 	 -6,   7,  26,  31,  65,  56, 25, -20,
@@ -72,7 +72,7 @@ my @eg_pawn_table = (
 	  0,   0,   0,   0,   0,   0,   0,   0,
 );
 
-my @mg_knight_table = (
+my @op_knight_table = (
 	-167, -89, -34, -49,  61, -97, -15, -107,
 	 -73, -41,  72,  36,  23,  62,   7,  -17,
 	 -47,  60,  37,  65,  84, 129,  73,   44,
@@ -94,7 +94,7 @@ my @eg_knight_table = (
 	-29, -51, -23, -15, -22, -18, -50, -64,
 );
 
-my @mg_bishop_table = (
+my @op_bishop_table = (
 	-29,   4, -82, -37, -25, -42,   7,  -8,
 	-26,  16, -18, -13,  30,  59,  18, -47,
 	-16,  37,  43,  40,  35,  50,  37,  -2,
@@ -116,7 +116,7 @@ my @eg_bishop_table = (
 	-23,  -9, -23,  -5, -9, -16,  -5, -17,
 );
 
-my @mg_rook_table = (
+my @op_rook_table = (
      32,  42,  32,  51, 63,  9,  31,  43,
      27,  32,  58,  62, 80, 67,  26,  44,
      -5,  19,  26,  36, 17, 45,  61,  16,
@@ -138,7 +138,7 @@ my @eg_rook_table = (
 	-9,  2,  3, -1, -5, -13,   4, -20,
 );
 
-my @mg_queen_table = (
+my @op_queen_table = (
 	-28,   0,  29,  12,  59,  44,  43,  45,
 	-24, -39,  -5,   1, -16,  57,  28,  54,
 	-13, -17,   7,   8,  29,  56,  47,  57,
@@ -160,7 +160,7 @@ my @eg_queen_table = (
 	-33, -28, -22, -43,  -5, -32, -20, -41,
 );
 
-my @mg_king_table = (
+my @op_king_table = (
 	-65,  23,  16, -15, -56, -34,   2,  13,
 	 29,  -1, -20,  -7,  -8,  -4, -38, -29,
 	 -9,  24,   2, -16, -20,   6,  22, -22,
@@ -182,14 +182,14 @@ my @eg_king_table = (
 	-53, -34, -21, -11, -28, -14, -24, -43
 );
 
-my @mg_pesto_table = (
+my @op_pesto_table = (
 	undef,
-	\@mg_pawn_table,
-	\@mg_knight_table,
-	\@mg_bishop_table,
-	\@mg_rook_table,
-	\@mg_queen_table,
-	\@mg_king_table
+	\@op_pawn_table,
+	\@op_knight_table,
+	\@op_bishop_table,
+	\@op_rook_table,
+	\@op_queen_table,
+	\@op_king_table
 );
 
 my @eg_pesto_table = (
@@ -202,7 +202,7 @@ my @eg_pesto_table = (
 	\@eg_king_table
 );
 
-my @mg_table;
+my @op_table;
 my @eg_table;
 
 # Init tables.
@@ -210,11 +210,24 @@ for (my $piece = CP_PAWN; $piece <= CP_KING; ++$piece) {
 	for (my $shift = 0; $shift < 64; ++$shift) {
 		my $windex = (CP_WHITE << 9) | ($piece << 6) | $shift;
 		my $bindex = (CP_BLACK << 9) | ($piece << 6) | $shift;
-		$mg_table[$windex] = $mg_value[$piece] + $mg_pesto_table[$piece]->[$shift ^ 56];
+		$op_table[$windex] = $op_value[$piece] + $op_pesto_table[$piece]->[$shift ^ 56];
 		$eg_table[$windex] = $eg_value[$piece] + $eg_pesto_table[$piece]->[$shift ^ 56];
-		$mg_table[$bindex] = $mg_value[$piece] + $mg_pesto_table[$piece]->[$shift];
+		$op_table[$bindex] = $op_value[$piece] + $op_pesto_table[$piece]->[$shift];
 		$eg_table[$bindex] = $eg_value[$piece] + $eg_pesto_table[$piece]->[$shift];
 	}
+}
+
+my @pieces = (' ', 'P', 'N', 'B', 'R', 'Q', 'K');
+for (my $i = 0; $i < @op_table; ++$i) {
+	my $op_score = $op_table[$i];
+	next if !defined $op_score;
+	my $eg_score = $eg_table[$i];
+	my $shift = $i & 0x3f;
+	my $piece = ($i >> 6) & 0x7;
+	my $color = ($i >> 9);
+	my $piece_char = $pieces[$piece];
+	$piece_char = lc $piece_char if $color;
+	my $square = Chess::Plisco->shiftToSquare($shift);
 }
 
 # For all combinations of victim and promotion piece, calculate the change in
@@ -255,7 +268,7 @@ foreach my $move (Chess::Plisco->moveNumbers) {
 
 	my $from_index = ($color << 9) | ($piece << 6) | $from;
 	my $to_index = ($color << 9) | ($piece << 6) | $to;
-	my $opening_delta = $mg_table[$from_index] - $mg_table[$to_index];
+	my $opening_delta = $op_table[$from_index] - $op_table[$to_index];
 	my $endgame_delta = $eg_table[$from_index] - $eg_table[$to_index];
 	if ($is_ep) {
 		my $ep_to;
@@ -265,22 +278,22 @@ foreach my $move (Chess::Plisco->moveNumbers) {
 			$ep_to = $to + 8;
 		}
 		my $ep_index = ($color << 9) | (CP_PAWN) << 6 | $ep_to;
-		$opening_delta -= $mg_table[$ep_index];
+		$opening_delta -= $op_table[$ep_index];
 		$endgame_delta -= $eg_table[$ep_index];
 	} elsif ($captured) {
 		# The captured piece must be viewed from the other side.
 		my $captured_index = ((!$color) << 9) | ($captured << 6) | $to;
-		$opening_delta -= $mg_table[$captured_index];
+		$opening_delta -= $op_table[$captured_index];
 		$endgame_delta -= $eg_table[$captured_index];
 	}
 
 	if ($promote) {
 		my $promote_index = ($color << 9) | ($promote << 6) | $to;
 		my $promote_pawn_index = ($color << 9) | (CP_PAWN << 6) | $to;
-		$opening_delta -= $mg_table[$promote_index]
-			+ $mg_table[$promote_pawn_index];
+		$opening_delta -= $op_table[$promote_index]
+			- $op_table[$promote_pawn_index];
 		$endgame_delta -= $eg_table[$promote_index]
-			+ $eg_table[$promote_pawn_index];
+			- $eg_table[$promote_pawn_index];
 	}
 
 	# Handle castlings.
@@ -288,32 +301,32 @@ foreach my $move (Chess::Plisco->moveNumbers) {
 		if (CP_C8 == $to) {
 			my $rook_a8_index = (CP_BLACK << 9) | (CP_ROOK << 6) | CP_A8;
 			my $rook_d8_index = (CP_BLACK << 9) | (CP_ROOK << 6) | CP_D8;
-			$opening_delta += $mg_table[$rook_d8_index]
-				- $mg_table[$rook_a8_index];
-			$endgame_delta += $eg_table[$rook_d8_index]
+			$opening_delta -= $op_table[$rook_d8_index]
+				- $op_table[$rook_a8_index];
+			$endgame_delta -= $eg_table[$rook_d8_index]
 				- $eg_table[$rook_a8_index];
 		} elsif (CP_G8 == $to) {
 			my $rook_h8_index = (CP_BLACK << 9) | (CP_ROOK << 6) | CP_H8;
 			my $rook_f8_index = (CP_BLACK << 9) | (CP_ROOK << 6) | CP_F8;
-			$opening_delta += $mg_table[$rook_f8_index]
-				- $mg_table[$rook_h8_index];
-			$endgame_delta += $eg_table[$rook_f8_index]
+			$opening_delta -= $op_table[$rook_f8_index]
+				- $op_table[$rook_h8_index];
+			$endgame_delta -= $eg_table[$rook_f8_index]
 				- $eg_table[$rook_h8_index];
 		}
 	} elsif (CP_KING == $piece && CP_E1 == $from) {
 		if (CP_C1 == $to) {
 			my $rook_a1_index = (CP_WHITE << 9) | (CP_ROOK << 6) | CP_A1;
 			my $rook_d1_index = (CP_WHITE << 9) | (CP_ROOK << 6) | CP_D1;
-			$opening_delta += $mg_table[$rook_d1_index]
-				- $mg_table[$rook_a1_index];
-			$endgame_delta += $eg_table[$rook_d1_index]
+			$opening_delta -= $op_table[$rook_d1_index]
+				- $op_table[$rook_a1_index];
+			$endgame_delta -= $eg_table[$rook_d1_index]
 				- $eg_table[$rook_a1_index];
 		} elsif (CP_G1 == $to) {
-			my $rook_h1_index = (CP_BLACK << 9) | (CP_ROOK << 6) | CP_H1;
-			my $rook_f1_index = (CP_BLACK << 9) | (CP_ROOK << 6) | CP_F1;
-			$opening_delta += $mg_table[$rook_f1_index]
-				- $mg_table[$rook_h1_index];
-			$endgame_delta += $eg_table[$rook_f1_index]
+			my $rook_h1_index = (CP_WHITE << 9) | (CP_ROOK << 6) | CP_H1;
+			my $rook_f1_index = (CP_WHITE << 9) | (CP_ROOK << 6) | CP_F1;
+			$opening_delta -= $op_table[$rook_f1_index]
+				- $op_table[$rook_h1_index];
+			$endgame_delta -= $eg_table[$rook_f1_index]
 				- $eg_table[$rook_h1_index];
 		}
 	}
@@ -329,8 +342,8 @@ sub new {
 
 	my $self = $class->SUPER::new(@args);
 
-	my $mg_phase = 0;
-	my $mg_score = 0;
+	my $op_phase = 0;
+	my $op_score = 0;
 	my $eg_score = 0;
 	my $white = $self->[CP_POS_WHITE_PIECES];
 	my $black = $self->[CP_POS_BLACK_PIECES];
@@ -343,25 +356,25 @@ sub new {
 		while ($white_pieces) {
 			my $shift = cp_bitboard_count_trailing_zbits $white_pieces;
 			my $idx = (CP_WHITE << 9) | ($piece << 6) | $shift;
-			$mg_score += $mg_table[$idx];
+			$op_score += $op_table[$idx];
 			$eg_score += $eg_table[$idx];
 			$white_pieces = cp_bitboard_clear_least_set $white_pieces;
-			$mg_phase += $phase_inc;
+			$op_phase += $phase_inc;
 		}
 		while ($black_pieces) {
 			my $shift = cp_bitboard_count_trailing_zbits $black_pieces;
 			my $idx = (CP_BLACK << 9) | ($piece << 6) | $shift;
-			$mg_score -= $mg_table[$idx];
+			$op_score -= $op_table[$idx];
 			$eg_score -= $eg_table[$idx];
 			$black_pieces = cp_bitboard_clear_least_set $black_pieces;
-			$mg_phase += $phase_inc;
+			$op_phase += $phase_inc;
 		}
 	}
 
-	$self->[CP_POS_OPENING_SCORE] = $mg_score;
+	$self->[CP_POS_OPENING_SCORE] = $op_score;
 	$self->[CP_POS_ENDGAME_SCORE] = $eg_score;
 
-	$self->[CP_POS_GAME_PHASE] = $mg_phase;
+	$self->[CP_POS_GAME_PHASE] = $op_phase;
 
 	return $self;
 }
@@ -415,12 +428,12 @@ sub evaluate {
 		}
 	}
 
-	my $mg_phase = $self->[CP_POS_GAME_PHASE];
+	my $op_phase = $self->[CP_POS_GAME_PHASE];
 
-	$mg_phase = TOTAL_PHASE if $mg_phase > TOTAL_PHASE;
-	my $eg_phase = TOTAL_PHASE - $mg_phase;
+	$op_phase = TOTAL_PHASE if $op_phase > TOTAL_PHASE;
+	my $eg_phase = TOTAL_PHASE - $op_phase;
 
-	my $score = ($self->[CP_POS_OPENING_SCORE] * $mg_phase
+	my $score = ($self->[CP_POS_OPENING_SCORE] * $op_phase
 		+ $self->[CP_POS_ENDGAME_SCORE] * $eg_phase) / TOTAL_PHASE;
 
 	return (cp_pos_to_move($self)) ? -$score : $score;
