@@ -31,8 +31,6 @@ find sub {
 	}
 }, "$directory/lib", "$directory/t";
 
-@files = ("$directory/lib/Chess/Plisco.pm");
-
 autoflush STDOUT, 1;
 
 foreach my $source_file (@files) {

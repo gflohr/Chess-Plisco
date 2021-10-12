@@ -70,6 +70,8 @@ t/05perft-by-undo.t
 t/11evaluate-compare.t
 t/11evaluate-move.t
 t/20draw-detection.t
+t/20evaluate-pesto.t
+t/20evaluate-update.t
 t/20game-phase.t
 t/20transposition-table.t
 t/30dm1-epd.t

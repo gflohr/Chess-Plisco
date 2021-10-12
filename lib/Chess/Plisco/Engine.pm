@@ -90,7 +90,7 @@ sub uci {
 	$self->__output(<<"EOF");
 Welcome to Plisco $version!
 
-This engine implements the UCI protocol (see
+Plisco is a chess engine written in Perl that implements the UCI protocol (see
 http://wbec-ridderkerk.nl/html/UCIProtocol.html).
 
 Try 'help' for a list of commands!
