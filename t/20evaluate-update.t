@@ -45,6 +45,21 @@ my @tests = (
 		san => 'O-O-O',
 	},
 	{
+		name => 'White king-side castling',
+		fen => 'k7/8/8/8/8/8/8/4K2R w K - 0 1',
+		san => 'O-O',
+	},
+	{
+		name => 'Black queen-side castling',
+		fen => 'r3k3/8/8/8/8/8/8/7K b q - 0 1',
+		san => 'O-O-O',
+	},
+	{
+		name => 'Black king-side castling',
+		fen => '4k2r/8/8/8/8/8/8/K7 b k - 0 1',
+		san => 'O-O',
+	},
+	{
 		name => 'Black king captures rook',
 		fen => '7k/6R1/8/8/8/8/8/4K3 b - - 0 1',
 		san => 'Kxg7',
