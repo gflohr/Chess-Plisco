@@ -98,7 +98,7 @@ Try 'help' for a list of commands!
 EOF
 
 	while (1) {
-		$self->{__watcher}->check(0.01);
+		$self->{__watcher}->check;
 		last if delete $self->{__abort};
 	}
 
