@@ -95,7 +95,7 @@ sub __solve {
 	if (@bm) {
 		my $found;
 		foreach my $bm (@bm) {
-			if ($bm == $move) {
+			if ($bm eq $move) {
 				$found = 1;
 				last;
 			}
@@ -104,7 +104,7 @@ sub __solve {
 	} elsif (@am) {
 		my $found;
 		foreach my $bm (@bm) {
-			if ($bm == $move) {
+			if ($bm eq $move) {
 				$found = 1;
 				last;
 			}
