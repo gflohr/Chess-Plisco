@@ -100,7 +100,8 @@ sub __solve {
 				last;
 			}
 		}
-		ok $found, "$location: best move";
+		my $moves = '[' . (join ', ', @bm) . ']';
+		ok $found, "$location: best move, $move in $moves";
 	} elsif (@am) {
 		my $found;
 		foreach my $bm (@bm) {
@@ -109,7 +110,8 @@ sub __solve {
 				last;
 			}
 		}
-		ok !$found, "$location: avoid move";
+		my $moves = '[' . (join ', ', @am) . ']';
+		ok !$found, "$location: avoid move, $move not in $moves";
 	}
 }
 

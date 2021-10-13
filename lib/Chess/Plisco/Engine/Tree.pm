@@ -555,7 +555,7 @@ sub rootSearch {
 			if (DEBUG) {
 				$self->debug("Score at depth $depth: $score");
 			}
-			if (cp_abs($score) > -(MATE + MAX_PLY)) {
+			if (($score >= -MATE - $depth) || ($score <= MATE + $depth)) {
 				last;
 			}
 		}
