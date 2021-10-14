@@ -74,6 +74,7 @@ t/20evaluate-pesto.t
 t/20evaluate-update.t
 t/20game-phase.t
 t/20transposition-table.t
+t/30chessnut1071_dm2.t
 t/30dm1-epd.t
 t/30dm2-epd.t
 t/30dm3-epd.t
@@ -81,6 +82,7 @@ t/30draw.t
 t/Flohr.pgn
 t/author-critic.t
 t/author-pod-syntax.t
+t/epd/chessnut1071_dm2.epd
 t/epd/dm1.epd
 t/epd/dm2.epd
 t/epd/dm3.epd

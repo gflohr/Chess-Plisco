@@ -42,7 +42,6 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "Exporter" => 0,
     "Filter::Util::Call" => 0,
-    "IO::Select" => 0,
     "Locale::TextDomain" => 0,
     "PPI::Document" => 0,
     "Scalar::Util" => 0,
@@ -63,7 +62,7 @@ my %WriteMakefileArgs = (
     "Test::More" => 0,
     "lib" => 0
   },
-  "VERSION" => "0.4",
+  "VERSION" => "0.5",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -78,7 +77,6 @@ my %FallbackPrereqs = (
   "File::Basename" => 0,
   "File::Spec" => 0,
   "Filter::Util::Call" => 0,
-  "IO::Select" => 0,
   "Locale::TextDomain" => 0,
   "PPI::Document" => 0,
   "Scalar::Util" => 0,
