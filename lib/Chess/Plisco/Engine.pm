@@ -105,9 +105,10 @@ Try 'help' for a list of commands!
 EOF
 
 	while (1) {
-		$self->{__watcher}->check(0.01);
+		$self->{__watcher}->check;
 		if (delete $self->{__abort}) {
 			$self->DESTROY; # Make sure to clean-up for MS-DOS.
+			last;
 		}
 	}
 
