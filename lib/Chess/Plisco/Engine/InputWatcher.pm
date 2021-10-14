@@ -13,18 +13,18 @@ package Chess::Plisco::Engine::InputWatcher;
 
 use strict;
 
-use Locale::TextDomain qw('Chess-Plisco');
-
+use IO::Select;
+ 
 sub new {
 	my ($class, $fh) = @_;
 
-	$fh->blocking(0)
-		or die __x("Cannot make input non-blocking: {error}!\n",
-			error => $!);
-
 	$fh->autoflush(1);
+	my $sel = IO::Select->new($fh);
+
 	bless {
 		__handle => $fh,
+		__sel => $sel,
+		__input => '',
 	}, $class;
 }
 
@@ -55,16 +55,17 @@ sub check {
 
 	return if $self->{__batch_mode};
 
-	my $buffer;
-	my $bytes_read = $self->{__handle}->sysread($buffer, 8192);
-
-	if (!defined $bytes_read) {
-		return;
-	} if (0 == $bytes_read) {
-		$self->{__on_eof}->() if $self->{__on_eof};
-		return;
-	} else {
-		$self->{__on_input}->($buffer) if $self->{__on_input};
+	while (my @ready = $self->{__sel}->can_read(0)) {
+		foreach my $fh (@ready) {
+			my $offset = length $self->{__input};
+			my $bytes = $fh->sysread($self->{__input}, 1, $offset);
+			if (!$bytes) {
+				$self->{__on_eof}->() if $self->{__on_eof};
+				return;
+			} elsif ($self->{__input} =~ s/^(.*?)\n//) {
+				$self->{__on_input}->($1) if $self->{__on_input};
+			}
+		}
 	}
 }
 
