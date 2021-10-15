@@ -36,6 +36,8 @@ use Chess::Plisco::Engine::TranspositionTable;
 use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
+use constant ASPIRATION_WINDOW => 25;
+
 # For all combinations of promotion piece and captured piece, calculate a
 # value suitable for sorting.  We choose the raw material balance minus the
 # piece that moves.  That way, captures that the queen makes are less
@@ -546,7 +548,6 @@ sub rootSearch {
 	my @line = @$pline;
 	my $alpha = -INF;
 	my $beta = +INF;
-	my $window_size = 25;
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
@@ -586,8 +587,8 @@ sub rootSearch {
 				}
 				redo;
 			} else {
-				$alpha = $score - $window_size;
-				$beta = $score + $window_size;
+				$alpha = $score - ASPIRATION_WINDOW;
+				$beta = $score + ASPIRATION_WINDOW;
 			}
 		}
 	};
@@ -621,6 +622,11 @@ sub think {
 	if (!@legal) {
 		$self->{info}->(__"Error: no legal moves");
 		return;
+	} elsif (1 == @legal) {
+		my $move = $legal[0];
+		$self->printCurrentMove(1, $move, 1);
+		$self->printPV($self, [$move]);
+		return $move;
 	}
 
 	my @line;
