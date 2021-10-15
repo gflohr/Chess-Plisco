@@ -544,19 +544,50 @@ sub rootSearch {
 	my $score = $self->{score} = 0;
 
 	my @line = @$pline;
+	my $alpha = -INF;
+	my $beta = +INF;
+	my $window_size = 25;
 	eval {
 		while (++$depth <= $max_depth) {
+			my @lower_windows = (-50, -100, -INF);
+			my @upper_windows = (50, 100, +INF);
+
 			$self->{depth} = $depth;
 			if (DEBUG) {
 				$self->debug("Deepening to depth $depth");
 				$self->{line} = [];
 			}
-			$score = -$self->alphabeta(1, $depth, -INF, +INF, \@line, 1);
+			$score = -$self->alphabeta(1, $depth, $alpha, $beta, \@line, 1);
 			if (DEBUG) {
 				$self->debug("Score at depth $depth: $score");
 			}
 			if (($score >= -MATE - $depth) || ($score <= MATE + $depth)) {
 				last;
+			}
+
+			if ($score <= $alpha) {
+				if (@lower_windows) {
+					$alpha = $score + shift @lower_windows;
+				} else {
+					$alpha = -INF;
+				}
+				if (DEBUG) {
+					$self->debug("Must re-search with alpha lowered to $alpha.");
+				}
+				redo;
+			} elsif ($score >= $beta) {
+				if (@upper_windows) {
+					$beta = $score + shift @upper_windows;
+				} else {
+					$beta = +INF;
+				}
+				if (DEBUG) {
+					$self->debug("Must re-search with beta increased to $beta.");
+				}
+				redo;
+			} else {
+				$alpha = $score - $window_size;
+				$beta = $score + $window_size;
 			}
 		}
 	};
