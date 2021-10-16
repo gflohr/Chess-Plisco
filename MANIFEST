@@ -23,6 +23,7 @@ lib/Chess/Plisco/Engine/TimeControl.pod
 lib/Chess/Plisco/Engine/TranspositionTable.pm
 lib/Chess/Plisco/Engine/Tree.pm
 lib/Chess/Plisco/Engine/Tree.pod
+lib/Chess/Plisco/Engine/Win32Wrapper.pm
 lib/Chess/Plisco/Macro.pm
 lib/Chess/Plisco/Macro.pod
 lib/Chess/Plisco/Macro/abs.pm
