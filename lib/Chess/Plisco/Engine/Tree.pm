@@ -625,7 +625,7 @@ sub think {
 	} elsif (1 == @legal) {
 		my $move = $legal[0];
 		$self->printCurrentMove(1, $move, 1);
-		$self->printPV($self, [$move]);
+		$self->printPV([$move]);
 		return $move;
 	}
 
