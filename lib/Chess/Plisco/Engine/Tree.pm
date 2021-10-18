@@ -558,7 +558,7 @@ sub rootSearch {
 				$self->debug("Deepening to depth $depth");
 				$self->{line} = [];
 			}
-			$score = -$self->alphabeta(1, $depth, $alpha, $beta, \@line, 1);
+			$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, 1);
 			if (DEBUG) {
 				$self->debug("Score at depth $depth: $score");
 			}
@@ -566,29 +566,13 @@ sub rootSearch {
 				last;
 			}
 
-			if ($score <= $alpha) {
-				if (@lower_windows) {
-					$alpha = $score + shift @lower_windows;
-				} else {
-					$alpha = -INF;
-				}
+			if (($score <= $alpha) || ($score >= $beta)) {
 				if (DEBUG) {
-					$self->debug("Must re-search with alpha lowered to $alpha.");
+					$self->debug("Must re-search with infinite window.");
 				}
-				redo;
-			} elsif ($score >= $beta) {
-				if (@upper_windows) {
-					$beta = $score + shift @upper_windows;
-				} else {
-					$beta = +INF;
-				}
-				if (DEBUG) {
-					$self->debug("Must re-search with beta increased to $beta.");
-				}
-				redo;
-			} else {
 				$alpha = $score - ASPIRATION_WINDOW;
 				$beta = $score + ASPIRATION_WINDOW;
+				redo;
 			}
 		}
 	};
