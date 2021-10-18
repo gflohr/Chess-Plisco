@@ -63,8 +63,7 @@ sub __solve {
 		die "$location: neither bm no am found";
 	}
 
-	my $position = $record->position;
-	bless $position, 'Chess::Plisco::Engine::Position';
+	my $position = Chess::Plisco::Engine::Position->new($record->position->toFEN);
 
 	foreach my $san (@bm) {
 		my $move = $position->parseMove($san)
