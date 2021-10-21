@@ -3332,6 +3332,14 @@ sub moveNumbers {
 	return @move_numbers;
 }
 
+sub kingAttackMask {
+	return [@king_attack_masks];
+}
+
+sub knightAttackMask {
+	return [@knight_attack_masks];
+}
+
 ###########################################################################
 # Generate lookup tables.
 ###########################################################################
