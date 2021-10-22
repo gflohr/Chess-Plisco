@@ -23,13 +23,11 @@ my $fen = '8/8/8/8/8/8/2B2ppp/QKB1nnrk w - - 0 1';
 my $position = Chess::Plisco->new($fen);
 my $sc = Chess::Plisco::TableBase::Syzygy::SEP_CHAR;
 
-TODO: {
-	local $TODO = 'test tablebase files';
-	ok !Chess::Plisco::TableBase::Syzygy->new('foo/bar'), 'non-existent path';
-};
+my $tb = Chess::Plisco::TableBase::Syzygy->new('foo/bar');
+is $tb->largest, 0, 'non-existent path';
 
-my $tb = Chess::Plisco::TableBase::Syzygy->new("foo/bar${sc}t/syzygy");
-ok $tb, 'loaded';
+$tb = Chess::Plisco::TableBase::Syzygy->new("foo/bar${sc}t/syzygy");
+is $tb->largest, 3, 'loaded';
 
 is $tb->__prtStr($position), 'KQBBvKRNNPPP', "prt_str($fen)";
 is $tb->__prtStr($position, 1), 'KRNNPPPvKQBB', "prt_str($fen, 1)";
