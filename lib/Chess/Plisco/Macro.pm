@@ -188,6 +188,8 @@ sub cp_move_significant {}
 _define cp_move_equivalent => '$m1', '$m2',
 		'(cp_move_significant($m1) == cp_move_significant($m2))';
 sub cp_move_equivalent {}
+_define cp_move_capture_or_promotion => '$m', '($m & 0x1c7000)';
+sub cp_move_capture_or_promotion {}
 
 # Bitboard macros.
 _define cp_bitboard_popcount => '$b', '$c',
