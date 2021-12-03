@@ -74,7 +74,6 @@ use constant TB_RESULT_PROMOTES_SHIFT => 16;
 use constant TB_RESULT_EP_SHIFT => 19;
 use constant TB_RESULT_DTZ_SHIFT => 20;
 
-
 use constant TB_RESULT_FAILED => 0xffffffff;
 # Without the parentheses around the constant, Visual Studio Code's syntax
 # highlighting gets messed up.
@@ -86,6 +85,9 @@ use constant TB_RESULT_STALEMATE =>
 use constant TB_MOVE_NONE => 0;
 use constant TB_MOVE_STALEMATE => 0xffff;
 use constant TB_MOVE_CHECKMATE => 0xfffe;
+
+use constant BEST_NONE => 0xffff;
+use constant SCORE_ILLEGAL => 0x7fff;
 
 # Indices into the object.
 use constant TB_LARGEST => 0;
@@ -384,7 +386,7 @@ sub largest {
 
 sub __dtzToWdl {
 	my ($self, $cnt50, $dtz) = @_;
-{
+
 	my $wdl = 0;
 	if ($dtz > 0) {
 		$wdl = ($dtz + $cnt50 <= 100? 2: 1);
@@ -392,7 +394,7 @@ sub __dtzToWdl {
 		$wdl = (-$dtz + $cnt50 <= 100? -2: -1);
 	}
 	
-	return wdl + 2;
+	return $wdl + 2;
 }
 
 
@@ -439,8 +441,8 @@ sub probeRoot {
 		| (($dtz < 0? -$dtz: $dtz) << (TB_RESULT_DTZ_SHIFT) & TB_RESULT_DTZ_MASK)
 		| ((cp_move_from($move)) << (TB_RESULT_FROM_SHIFT) & TB_RESULT_FROM_MASK)
 		| ((cp_move_to($move)) << (TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK)
-		| ((cp_move_promote($move)) << (TB_RESULT_PROMOTE_SHIFT) & TB_RESULT_PROMOTE_MASK)
-		| ($is_ep << (TB_RESULT_EP_SHIFT)) & TB_RESULT_EP_MASK)
+		| ((cp_move_promote($move)) << (TB_RESULT_PROMOTES_SHIFT) & TB_RESULT_PROMOTES_MASK)
+		| (($is_ep << (TB_RESULT_EP_SHIFT)) & TB_RESULT_EP_MASK)
 		;
 	return $res;
 }
@@ -458,6 +460,7 @@ sub __probeRoot {
 	my @scores;
 	my $num_draw = 0;
 	my $i = 0;
+	my $pos_info = $position->[CP_POS_INFO];
 	foreach my $move (@$moves) {
 		my $pos1 = $position->copy;
 		$pos1->doMove($move);
@@ -486,22 +489,80 @@ sub __probeRoot {
 		$scores[$i] = $v;
 
 		if ($results) {
+			my $ep_shift = cp_pos_en_passant_shift($position);
 			my $res = 0;
 			my $is_ep = $ep_shift && ($ep_shift == cp_move_to($move))
 				&& cp_move_captured($move) == CP_PAWN;
+			my $rule50 = cp_pos_half_move_clock($position);
 			$results->[$i] = 
 				($self->__dtzToWdl($rule50, $dtz) << (TB_RESULT_WDL_SHIFT) & TB_RESULT_WDL_MASK)
 				| (($dtz < 0? -$dtz: $dtz) << (TB_RESULT_DTZ_SHIFT) & TB_RESULT_DTZ_MASK)
 				| ((cp_move_from($move)) << (TB_RESULT_FROM_SHIFT) & TB_RESULT_FROM_MASK)
 				| ((cp_move_to($move)) << (TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK)
-				| ((cp_move_promote($move)) << (TB_RESULT_PROMOTE_SHIFT) & TB_RESULT_PROMOTE_MASK)
-				| ($is_ep << (TB_RESULT_EP_SHIFT)) & TB_RESULT_EP_MASK)
+				| ((cp_move_promote($move)) << (TB_RESULT_PROMOTES_SHIFT) & TB_RESULT_PROMOTES_MASK)
+				| (($is_ep << (TB_RESULT_EP_SHIFT)) & TB_RESULT_EP_MASK)
 				;
 		}
 
 		++$i;
 	}
 
+	if ($results) {
+		push @$results, TB_RESULT_FAILED;
+	}
+	if ($score) {
+		$$score = $dtz;
+	}
+
+	if ($dtz > 0) {   
+		my $best = BEST_NONE;
+		my $best_move = 0;
+		for (my $i = 0; $i < @$moves; ++$i) {
+			my $v = $scores[$i];
+			if ($v == SCORE_ILLEGAL) {
+				next;
+			}
+			if ($v > 0 && $v < $best) {
+				$best = $v;
+				$best_move = $moves->[$i];
+			}
+		}
+		return ($best == BEST_NONE ? 0 : $best_move);
+	} elsif ($dtz < 0) {
+		my $best = 0;
+		my $best_move = 0;
+		for (my $i = 0; $i < @$moves; ++$i) {
+			my $v = $scores[$i];
+			if ($v == SCORE_ILLEGAL) {
+				next;
+			}
+			if ($v < $best) {
+				$best = $v;
+				$best_move = $moves->[$i];
+			}
+		}
+		return ($best == 0 ? TB_MOVE_CHECKMATE: $best_move);
+	} else {
+		if ($num_draw == 0) {
+			return TB_MOVE_STALEMATE;
+		}
+
+		my $count = $self->__calcKey($position, !cp_pos_info_to_move($pos_info)) % $num_draw;
+		for (my $i = 0; $i < @$moves; ++$i) {
+			my $v = $scores[$i];
+			if ($v == SCORE_ILLEGAL) {
+				next;
+			}
+			if ($v == 0) {
+				if ($count == 0) {
+					return $moves->[$i];
+				}
+				--$count;
+			}
+		}
+
+		return 0;
+	}
 }
 
 sub __probeDTZ {
@@ -906,6 +967,27 @@ sub __initIndices {
 	}
 
 	return $self;
+}
+
+sub __calcKey {
+	my ($self, $pos, $mirror) = @_;
+
+	my ($pawns, $knights, $bishops, $rooks, $queens, undef, $white, $black)
+		= @$pos[CP_POS_PAWNS .. CP_POS_BLACK_PIECES];
+	if ($mirror) {
+		($white, $black) = ($black, $white);
+	}
+
+	return cp_bitboard_popcount($queens & $white) * PRIME_WHITE_QUEEN
+		+ cp_bitboard_popcount($rooks & $white) * PRIME_WHITE_ROOK
+		+ cp_bitboard_popcount($bishops & $white) * PRIME_WHITE_BISHOP
+		+ cp_bitboard_popcount($knights & $white) * PRIME_WHITE_KNIGHT
+		+ cp_bitboard_popcount($pawns & $white) * PRIME_WHITE_PAWN
+		+ cp_bitboard_popcount($queens & $black) * PRIME_BLACK_QUEEN
+		+ cp_bitboard_popcount($rooks & $black) * PRIME_BLACK_ROOK
+		+ cp_bitboard_popcount($bishops & $black) * PRIME_BLACK_BISHOP
+		+ cp_bitboard_popcount($knights & $black) * PRIME_BLACK_KNIGHT
+		+ cp_bitboard_popcount($pawns & $black) * PRIME_BLACK_PAWN;
 }
 
 sub __calcKeyFromPcs {
