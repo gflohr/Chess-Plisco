@@ -397,56 +397,6 @@ sub __dtzToWdl {
 	return $wdl + 2;
 }
 
-
-# Moves MUST be fully expanded moves with capture information.
-# This is tb_probe_root_impl in Fathom.
-sub probeRoot {
-	my ($self, $position, $moves) = @_;
-
-	if (!@$moves) {
-		if ($position->[CP_POS_IN_CHECK]) {
-			return TB_RESULT_CHECKMATE;
-		} else {
-			return TB_RESULT_STALEMATE;
-		}
-	}
-
-	my $pos_info = cp_pos_info $position;
-	if (cp_pos_info_castling_rights $pos_info) {
-		return TB_RESULT_FAILED;
-	}
-
-	my $rule50 = cp_pos_half_move_clock $position;
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	my $turn = cp_pos_info_to_move $pos_info;
-
-	my $dtz;
-	my @results;
-	my $move = $self->__probeRoot($position, \$dtz, \@results, $moves);
-	if ($move == TB_MOVE_NONE) {
-		return TB_RESULT_FAILED;
-	}
-	if ($move == TB_MOVE_CHECKMATE) {
-		return TB_RESULT_CHECKMATE;
-	}
-	if ($move == TB_MOVE_STALEMATE) {
-		return TB_RESULT_STALEMATE;
-	}
-
-	my $res = 0;
-	my $is_ep = $ep_shift && ($ep_shift == cp_move_to($move))
-		&& cp_move_captured($move) == CP_PAWN;
-	$res =
-		($self->__dtzToWdl($rule50, $dtz) << (TB_RESULT_WDL_SHIFT) & TB_RESULT_WDL_MASK)
-		| (($dtz < 0? -$dtz: $dtz) << (TB_RESULT_DTZ_SHIFT) & TB_RESULT_DTZ_MASK)
-		| ((cp_move_from($move)) << (TB_RESULT_FROM_SHIFT) & TB_RESULT_FROM_MASK)
-		| ((cp_move_to($move)) << (TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK)
-		| ((cp_move_promote($move)) << (TB_RESULT_PROMOTES_SHIFT) & TB_RESULT_PROMOTES_MASK)
-		| (($is_ep << (TB_RESULT_EP_SHIFT)) & TB_RESULT_EP_MASK)
-		;
-	return $res;
-}
-
 # This is probe_root() in Fathom.
 sub __probeRoot {
 	my ($self, $position, $score, $results, $moves) = @_;
@@ -636,8 +586,19 @@ sub __probeDTZ {
 		}
 	}
 
-die;
-	return TB_MOVE_NONE;
+	return $best;
+}
+
+sub __probeWDLTable {
+	my ($self, $position, $success, $moves) = @_;
+
+	return $self->__probeTable($position, 0, $success, WDL, $moves);
+}
+
+sub __probeDTMTable {
+	my ($self, $position, $won, $success, $moves) = @_;
+
+	return $self->__probeTable($position, $won, $success, DTM, $moves);
 }
 
 sub __probeDTZTable {
@@ -647,6 +608,56 @@ sub __probeDTZTable {
 }
 
 # __BEGIN_MACROS__
+
+# Moves MUST be fully expanded moves with capture information.
+# This is tb_probe_root_impl in Fathom.
+sub probeRoot {
+	my ($self, $position, $moves) = @_;
+
+	if (!@$moves) {
+		if ($position->[CP_POS_IN_CHECK]) {
+			return TB_RESULT_CHECKMATE;
+		} else {
+			return TB_RESULT_STALEMATE;
+		}
+	}
+
+	my $pos_info = cp_pos_info $position;
+	if (cp_pos_info_castling_rights $pos_info) {
+		return TB_RESULT_FAILED;
+	}
+
+	my $rule50 = cp_pos_half_move_clock $position;
+	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
+	my $turn = cp_pos_info_to_move $pos_info;
+
+	my $dtz;
+	my @results;
+	my $move = $self->__probeRoot($position, \$dtz, \@results, $moves);
+	if ($move == TB_MOVE_NONE) {
+		return TB_RESULT_FAILED;
+	}
+	if ($move == TB_MOVE_CHECKMATE) {
+		return TB_RESULT_CHECKMATE;
+	}
+	if ($move == TB_MOVE_STALEMATE) {
+		return TB_RESULT_STALEMATE;
+	}
+
+	my $res = 0;
+	my $is_ep = $ep_shift && ($ep_shift == cp_move_to($move))
+		&& cp_move_captured($move) == CP_PAWN;
+	$res =
+		($self->__dtzToWdl($rule50, $dtz) << (TB_RESULT_WDL_SHIFT) & TB_RESULT_WDL_MASK)
+		| (($dtz < 0? -$dtz: $dtz) << (TB_RESULT_DTZ_SHIFT) & TB_RESULT_DTZ_MASK)
+		| ((cp_move_from($move)) << (TB_RESULT_FROM_SHIFT) & TB_RESULT_FROM_MASK)
+		| ((cp_move_to($move)) << (TB_RESULT_TO_SHIFT) & TB_RESULT_TO_MASK)
+		| ((cp_move_promote($move)) << (TB_RESULT_PROMOTES_SHIFT) & TB_RESULT_PROMOTES_MASK)
+		| (($is_ep << (TB_RESULT_EP_SHIFT)) & TB_RESULT_EP_MASK)
+		;
+	return $res;
+}
+
 sub __probeWDL {
 	my ($self, $position, $success, $moves) = @_;
 
@@ -658,7 +669,7 @@ sub __probeWDL {
 
 	my ($best_cap, $best_ep) = (-3, -3);
 	foreach my $move (@$moves) {
-		if (!cp_move_capture_or_promote($move)) {
+		if (!cp_move_capture_or_promotion($move)) {
 			next;
 		}
 
