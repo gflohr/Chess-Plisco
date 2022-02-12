@@ -589,6 +589,58 @@ sub __probeDTZ {
 	return $best;
 }
 
+sub __probeTable {
+	my ($self, $pos, $s, $success, $type) = @_;
+
+	my $key = $self->__calcKey($pos, 0);
+
+	# Check for KvK.
+	if ($type == WDL && $key == 0) {
+		return 0;
+	}
+
+	my $tb_hash = $self->[TB_HASH];
+	my $hash_idx = $key >> (64 - TB_HASHBITS);
+	while ($tb_hash->[$hash_idx]->{key} && $tb_hash->[$hash_idx]->{$key} != $key) {
+		$hash_idx = ($hash_idx + 1) & ((1 << (TB_HASHBITS)) - 1);
+	}
+	if (!$tb_hash->[$hash_idx]->{ptr}) {
+		$$success = 0;
+		return 0;
+	}
+
+	my $be = $tb_hash->[$hash_idx]->{ptr};
+	if (($type == DTM && !$be->{has_dtm}) || ($type == DTZ && !$be->{has_dtz})) {
+		$$success = 0;
+		return 0;
+	}
+
+	if (!$be->{ready}->[$type]) {
+		my $str = $self->__prtStr($pos, $be->{key} != $key);
+		if ($self->__initTable($be, $str, $type)) {
+			undef $tb_hash->[$hash_idx]->{ptr};
+			$$success = 0;
+			return 0;
+		}
+		$be->{ready}->[$type] = 1;
+	}
+
+	my ($bside, $flip);
+	if (!$be->{symmetric}) {
+		$flip = $key != $be->{key};
+		$bside = (pos->turn == WHITE) == flip;
+    if (type == DTM && be->hasPawns && PAWN(be)->dtmSwitched) {
+      flip = !flip;
+      bside = !bside;
+    }
+  } else {
+    flip = pos->turn != WHITE;
+    bside = false;
+  }
+
+die;
+}
+
 sub __probeWDLTable {
 	my ($self, $position, $success, $moves) = @_;
 
@@ -776,6 +828,43 @@ sub __prtStr {
 	}
 
 	return join '', $str1, $str2;
+}
+
+sub __calcKey {
+	my ($self, $pos, $mirror) = @_;
+
+	my ($pawns, $knights, $bishops, $rooks, $queens, undef, $white, $black)
+		= @$pos[CP_POS_PAWNS .. CP_POS_BLACK_PIECES];
+	if ($mirror) {
+		($white, $black) = ($black, $white);
+	}
+
+	my $key = 0;
+	my $popcount = 0;
+
+	cp_bitboard_popcount($queens & $white, $popcount);
+	$key += $popcount * PRIME_WHITE_QUEEN;
+	cp_bitboard_popcount($rooks & $white, $popcount);
+	$key += $popcount * PRIME_WHITE_ROOK;
+	cp_bitboard_popcount($bishops & $white, $popcount);
+	$key += $popcount * PRIME_WHITE_BISHOP;
+	cp_bitboard_popcount($knights & $white, $popcount);
+	$key += $popcount * PRIME_WHITE_KNIGHT;
+	cp_bitboard_popcount($pawns & $white, $popcount);
+	$key += $popcount * PRIME_WHITE_PAWN;
+
+	cp_bitboard_popcount($queens & $black, $popcount);
+	$key += $popcount * PRIME_BLACK_QUEEN;
+	cp_bitboard_popcount($rooks & $black, $popcount);
+	$key += $popcount * PRIME_BLACK_ROOK;
+	cp_bitboard_popcount($bishops & $black, $popcount);
+	$key += $popcount * PRIME_BLACK_BISHOP;
+	cp_bitboard_popcount($knights & $black, $popcount);
+	$key += $popcount * PRIME_BLACK_KNIGHT;
+	cp_bitboard_popcount($pawns & $black, $popcount);
+	$key += $popcount * PRIME_BLACK_PAWN;
+
+	return $key;
 }
 # __END_MACROS__
 
@@ -978,27 +1067,6 @@ sub __initIndices {
 	}
 
 	return $self;
-}
-
-sub __calcKey {
-	my ($self, $pos, $mirror) = @_;
-
-	my ($pawns, $knights, $bishops, $rooks, $queens, undef, $white, $black)
-		= @$pos[CP_POS_PAWNS .. CP_POS_BLACK_PIECES];
-	if ($mirror) {
-		($white, $black) = ($black, $white);
-	}
-
-	return cp_bitboard_popcount($queens & $white) * PRIME_WHITE_QUEEN
-		+ cp_bitboard_popcount($rooks & $white) * PRIME_WHITE_ROOK
-		+ cp_bitboard_popcount($bishops & $white) * PRIME_WHITE_BISHOP
-		+ cp_bitboard_popcount($knights & $white) * PRIME_WHITE_KNIGHT
-		+ cp_bitboard_popcount($pawns & $white) * PRIME_WHITE_PAWN
-		+ cp_bitboard_popcount($queens & $black) * PRIME_BLACK_QUEEN
-		+ cp_bitboard_popcount($rooks & $black) * PRIME_BLACK_ROOK
-		+ cp_bitboard_popcount($bishops & $black) * PRIME_BLACK_BISHOP
-		+ cp_bitboard_popcount($knights & $black) * PRIME_BLACK_KNIGHT
-		+ cp_bitboard_popcount($pawns & $black) * PRIME_BLACK_PAWN;
 }
 
 sub __calcKeyFromPcs {
