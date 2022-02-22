@@ -15,6 +15,8 @@ use integer;
 use Test::More;
 
 use Chess::Plisco::Tablebase::Syzygy;
+use Chess::Plisco::Tablebase::Syzygy::Table::DTZ;
+use Chess::Plisco::Tablebase::Syzygy::Table::WDL;
 
 $DB::single = 1;
 is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('PRPBKQvRKQB'),
@@ -22,12 +24,19 @@ is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('PRPBKQvRKQB'),
 is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('KQvK'), 'KQvK',
 	('normalize: KvQK -> KQvK'));
 
-ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('KvK'), '__isTablename(KvK)');
-ok(Chess::Plisco::Tablebase::Syzygy->__isTablename('KQvK'), '__isTablename(KQvK)');
+ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('KvK'),
+	'__isTablename(KvK)');
+ok(Chess::Plisco::Tablebase::Syzygy->__isTablename('KQvK'),
+	'__isTablename(KQvK)');
 ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('QKvK'),
 	'__isTablename(QKVK)');
 ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('QKvK', normalized => 0),
 	'__isTablename(QKVK, normalized => 0)');
+
+ok(Chess::Plisco::Tablebase::Syzygy::Table::DTZ->new('t/syzygy/KQvK.rtbz'),
+	'DTZ table constructor');
+ok(Chess::Plisco::Tablebase::Syzygy::Table::WDL->new('t/syzygy/KQvK.rtbl'),
+	'WDL table constructor');
 
 my $tb;
 

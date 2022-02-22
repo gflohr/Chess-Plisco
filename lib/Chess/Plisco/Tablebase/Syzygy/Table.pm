@@ -18,6 +18,11 @@ use strict;
 sub __new {
 	my ($class, $path) = @_;
 
+	my $self = bless {
+		__path => $path,
+		__initialized => 0,
+		__data => undef,
+	}, $class;
 }
 
 1;
