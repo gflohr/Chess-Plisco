@@ -11,7 +11,7 @@
 
 # This file is heavily inspired by the source code of python-chess.
 
-package Chess::Plisco::TableBase::Syzygy::Table;
+package Chess::Plisco::Tablebase::Syzygy::Table;
 
 use strict;
 

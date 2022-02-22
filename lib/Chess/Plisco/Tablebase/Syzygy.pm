@@ -11,7 +11,7 @@
 
 # This file is heavily inspired by python-chess.
 
-package Chess::Plisco::TableBase::Syzygy;
+package Chess::Plisco::Tablebase::Syzygy;
 
 use strict;
 use integer;
@@ -20,13 +20,12 @@ use Scalar::Util qw(reftype);
 use Locale::TextDomain qw('Chess-Plisco');
 use File::Spec;
 
-use Chess::Plisco qw(:all);
-
 use base qw(Exporter);
 
 use constant TBPIECES => 7;
 use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
-use constant PCHR => qw('K', 'Q', 'R', 'B', 'N', 'P');
+my $i = 0;
+use constant PCHR => {map { $_ => $i++ } split '', 'KQRBNP'};
 
 our @EXPORTS = qw(open_tablebase);
 
@@ -101,10 +100,16 @@ sub __openTable {
 }
 
 sub __isTablename {
-	my ($self, $name) = @_;
+	my ($self, $name, %options) = @_;
+
+	%options = (
+		normalized => 1,
+		%options,
+	);
 
 	return (
 		$name =~ TABLENAME_REGEX
+		&& (!$options{normalized} || $self->normalizeTablename($name) eq $name)
 		&& $name ne 'KvK' && 'K' eq substr $name, 0, 1 && $name =~ /vK/
 	);
 }
@@ -136,13 +141,19 @@ sub largestDtz {
 sub normalizeTablename {
 	my ($self, $name, $mirror) = @_;
 
-	my ($w, $b) = split 'v', $name;
-	my $i = 0;
-	my %pchr = map { $_ => $i++ } PCHR;
-	$w = join '', sort { $pchr{$a} <=> $pchr{$b} } split //, $w;
-	$b = join '', sort { $pchr{$a} <=> $pchr{$b} } split //, $b;
+	my ($white, $black) = split 'v', $name;
 
-	
+	$white = join '', sort { PCHR->{$a} <=> PCHR->{$b} } split //, $white;
+	$black = join '', sort { PCHR->{$a} <=> PCHR->{$b} } split '', $black;
+
+	if ($mirror
+	    ^ ((length($white) < length($black))
+	       && ((join '', map { PCHR->{$_} } split '', $black)
+		       lt (join '', map { PCHR->{$_} } split '', $white)))) {
+		return join 'v', $black, $white;
+	} else {
+		return join 'v', $white, $black;
+	}
 }
 
 1;
