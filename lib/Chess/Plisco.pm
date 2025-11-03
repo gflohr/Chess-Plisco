@@ -1668,7 +1668,8 @@ sub parseMove {
 	my ($self, $notation) = @_;
 
 	my $move;
-	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/i) {
+
+	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/) {
 		$move = $self->__parseUCIMove(map { lc $_ } ($1, $2, $3))
 			or return;
 	} else {
@@ -2614,8 +2615,9 @@ sub SAN {
 			map { $self->moveSetPromote($_, CP_NO_PIECE) }
 			@cmoves;
 	foreach my $cmove (keys %cmoves) {
-		my ($cfrom, $cto) = ($self->moveFrom($cmove), $self->moveTo($cmove));
+		my ($cfrom, $cto, $cpiece) = ($self->moveFrom($cmove), $self->moveTo($cmove), $self->movePiece($cmove));
 		next if $cto != $to;
+		next if $cpiece != $piece;
 
 		++$candidates;
 		my ($ffile, $frank) = $self->shiftToCoordinates($cfrom);

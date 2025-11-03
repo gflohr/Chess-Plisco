@@ -126,6 +126,18 @@ my @tests = (
 		piece => CP_PAWN,
 		captured => CP_PAWN,
 	},
+	{
+		fen => '3k4/3p4/8/8/8/3B4/3P4/1B1K4 w - - 0 1',
+		move => 'd3c2',
+		san => 'Bdc2',
+		piece => CP_BISHOP,
+	},
+	{
+		fen => '3k4/3p4/8/8/8/3Q4/3P4/1Q1K4 w - - 0 1',
+		move => 'd3c2',
+		san => 'Qdc2',
+		piece => CP_QUEEN,
+	},
 );
 
 plan tests => 10 * @tests;
