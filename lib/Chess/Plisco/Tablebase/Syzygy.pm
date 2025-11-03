@@ -206,6 +206,15 @@ sub __probeAb {
 			fen => $pos->toFEN);
 	}
 
+	# Iterate over all non-ep captures.
+	foreach my $move ($pos->legalMoves) {
+		if (!$pos->moveCaptured($move)) {
+			next;
+		}
+
+		# Check for en-passant.
+	}
+
 	return 2, 1;
 }
 
@@ -213,17 +222,17 @@ sub __probeAb {
 
 =head1 NAME
 
-Chess::Plisco::TableBase::Syzygy - Perl interface to Syzygy end-game table bases
+Chess::Plisco::Tablebase::Syzygy - Perl interface to Syzygy end-game table bases
 
 =head1 SYNOPSIS
 
-    $tb = Chess::Plisco::TableBase::Syzygy->new("./3-4-5");
+    $tb = Chess::Plisco::Tablebase::Syzygy->new("./3-4-5");
 
 =head1 DESCRIPTION
 
 Warning! This is work in progress and not ready!
 
-The module B<Chess::Plisco::TableBase::Syzygy> allows access to end-game
+The module B<Chess::Plisco::Tablebase::Syzygy> allows access to end-game
 table bases in Syzygy format.
 
 =head1 CONSTRUCTOR
