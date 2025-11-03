@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-# Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
+# Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>,
 # all rights reserved.
 
 # This program is free software. It comes without any warranty, to
@@ -41,7 +41,7 @@ my $fen = join ' ', @ARGV;
 usage_error __"No position as FEN given!"
     if !length $fen;
 
-my $tb = Chess::Plisco::TableBase::Syzygy->new($options{path});
+my $tb = Chess::Plisco::Tablebase::Syzygy->new($options{path});
 my $largest = $tb->largest;
 if (!defined $largest) {
 	usage_error __"Error initializing tablebase.";
@@ -63,12 +63,11 @@ if ($num_pieces > $largest) {
 		pieces => $num_pieces, largest => $largest);
 }
 
-my @legal_moves = $position->legalMoves;
-my $res = $tb->probeRoot($position, \@legal_moves);
-if ($res == TB_RESULT_FAILED) {
-	die __"Tablebase probe failed; position not found in tablebase or "
-		. "invalid.\n";
+my $res = $tb->getWdl($position);
+if (!defined $res) {
+	die __"Position not found in tablebase!\n"
 }
+warn "Result: $res";
 
 sub display_usage {
 	print __x(<<EOF, program => $0);
@@ -128,7 +127,7 @@ sub version_information {
 
 	print __x(<<EOF, program => $0, package => $package, version => $version);
 {program} ({package}) {version}
-Copyright (C) 2021 Guido Flohr <guido.flohr\@cantanea.com>.
+Copyright (C) 2021-2025 Guido Flohr <guido.flohr\@cantanea.com>.
 License: WTFPL2 <http://www.wtfpl.net/>
 This program is free software. It comes without any warranty, to
 the extent permitted by applicable law.

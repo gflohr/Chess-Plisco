@@ -27,8 +27,6 @@ use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
 my $i = 0;
 use constant PCHR => {map { $_ => $i++ } split '', 'KQRBNP'};
 
-our @EXPORTS = qw(open_tablebase);
-
 sub new {
 	my ($class, $directory, %__options) = @_;
 
@@ -138,6 +136,15 @@ sub largestDtz {
 	return $max;
 }
 
+sub largest {
+	my ($self) = @_;
+
+	my $largestWdl = $self->largestWdl;
+	my $largestDtz = $self->largestDtz;
+
+	return $largestWdl < $largestDtz ? $largestWdl : $largestDtz;
+}
+
 sub normalizeTablename {
 	my ($self, $name, $mirror) = @_;
 
@@ -154,6 +161,26 @@ sub normalizeTablename {
 	} else {
 		return join 'v', $white, $black;
 	}
+}
+
+sub probeWdl {
+	my ($self, $pos) = @_;
+
+	return 27;
+}
+
+sub getWdl {
+	my ($self, $pos) = @_;
+
+	my $result;
+	eval {
+		$result = $self->probeWdl($pos);
+	};
+	if ($@ && $@ ne __("Missing table!\n")) {
+		die $@;
+	}
+
+	return $result;
 }
 
 1;
