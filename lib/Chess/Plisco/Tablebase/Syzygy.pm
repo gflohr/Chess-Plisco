@@ -168,6 +168,8 @@ Chess::Plisco::TableBase::Syzygy - Perl interface to Syzygy end-game table bases
 
 =head1 DESCRIPTION
 
+Warning! This is work in progress and not ready!
+
 The module B<Chess::Plisco::TableBase::Syzygy> allows access to end-game
 table bases in Syzygy format.
 
