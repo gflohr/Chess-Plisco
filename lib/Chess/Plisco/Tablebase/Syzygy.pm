@@ -20,7 +20,8 @@ use Scalar::Util qw(reftype);
 use Locale::TextDomain qw('Chess-Plisco');
 use File::Spec;
 
-use base qw(Exporter);
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 
 use constant TBPIECES => 7;
 use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
@@ -166,7 +167,11 @@ sub normalizeTablename {
 sub probeWdl {
 	my ($self, $pos) = @_;
 
-	return 27;
+	my ($value) = $self->__probeAb($pos, -2, 2);
+
+	# FIXME! Check en-passant!
+
+	return $value;
 }
 
 sub getWdl {
@@ -181,6 +186,27 @@ sub getWdl {
 	}
 
 	return $result;
+}
+
+sub __probeAb {
+	my ($self, $pos) = @_;
+
+	if ($pos->castlingRights) {
+		die __x("Syzygy tables do not contain positions with castling rights: {fen}",
+			fen => $pos->toFEN);
+	}
+
+	my $piece_count;
+	cp_bitboard_popcount $pos->occupied, $piece_count;
+
+	if ($piece_count > TBPIECES + 1) {
+		die __x("syzygy tables support up to {TBPIECES} pieces, not {piece_count}: {fen}",
+			TBPIECES => TBPIECES,
+			piece_count => $piece_count,
+			fen => $pos->toFEN);
+	}
+
+	return 2, 1;
 }
 
 1;
