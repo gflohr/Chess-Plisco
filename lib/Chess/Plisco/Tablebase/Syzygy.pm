@@ -207,12 +207,23 @@ sub __probeAb {
 	}
 
 	# Iterate over all non-ep captures.
+	my $en_passant_shift = cp_pos_en_passant_shift $pos;
 	foreach my $move ($pos->legalMoves) {
-		if (!$pos->moveCaptured($move)) {
+		my $captured;
+		cp_move_captured $mov, $captured;
+
+		if (!$captured) {
 			next;
 		}
 
-		# Check for en-passant.
+		if ($en_passant_shift) {
+			my $to = cp_move_to $move;
+			if ($en_passant_shift == $to) {
+				next;
+			}
+		}
+
+		
 	}
 
 	return 2, 1;
