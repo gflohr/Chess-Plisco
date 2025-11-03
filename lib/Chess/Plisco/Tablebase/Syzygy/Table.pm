@@ -1,6 +1,6 @@
 #! /bin/false
 
-# Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
+# Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>,
 # all rights reserved.
 
 # This program is free software. It comes without any warranty, to
@@ -42,7 +42,7 @@ internally used by L<Chess::Plisco::TableBase::Syzygy>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>.
+Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>.
 
 =head1 SEE ALSO
 

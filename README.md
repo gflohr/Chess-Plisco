@@ -83,4 +83,4 @@ interface.  Try using one of these:
 
 ## Copryight
 
-Copyright (C) 2021, Guido Flohr, guido.flohr@cantanea.com, all rights reserved.
+Copyright (C) 2021-2025, Guido Flohr, guido.flohr@cantanea.com, all rights reserved.
