@@ -14,24 +14,37 @@ use integer;
 
 use Test::More;
 
-use Chess::Plisco qw(:all);
-use Chess::Plisco::TableBase::Syzygy;
+use Chess::Plisco::Tablebase::Syzygy;
+use Chess::Plisco::Tablebase::Syzygy::Table::DTZ;
+use Chess::Plisco::Tablebase::Syzygy::Table::WDL;
 
-# Test various private methods of the Syzygy library.
+$DB::single = 1;
+is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('PRPBKQvRKQB'),
+   'KQRBPPvKQRB', ('normalize: order pieces'));
+is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('KQvK'), 'KQvK',
+	('normalize: KvQK -> KQvK'));
 
-my $fen = '8/8/8/8/8/8/2B2ppp/QKB1nnrk w - - 0 1';
-my $position = Chess::Plisco->new($fen);
+ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('KvK'),
+	'__isTablename(KvK)');
+ok(Chess::Plisco::Tablebase::Syzygy->__isTablename('KQvK'),
+	'__isTablename(KQvK)');
+ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('QKvK'),
+	'__isTablename(QKVK)');
+ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('QKvK', normalized => 0),
+	'__isTablename(QKVK, normalized => 0)');
+
+ok(Chess::Plisco::Tablebase::Syzygy::Table::DTZ->new('t/syzygy/KQvK.rtbz'),
+	'DTZ table constructor');
+ok(Chess::Plisco::Tablebase::Syzygy::Table::WDL->new('t/syzygy/KQvK.rtbl'),
+	'WDL table constructor');
 
 my $tb;
 
-ok(!Chess::Plisco::TableBase::Syzygy->__isTablename('KvK'), '__isTablename(KvK)');
-ok(Chess::Plisco::TableBase::Syzygy->__isTablename('KQvK'), '__isTablename(KQvK)');
-
-$tb = Chess::Plisco::TableBase::Syzygy->new('foo/bar');
+$tb = Chess::Plisco::Tablebase::Syzygy->new('foo/bar');
 is $tb->largestWdl, 0, 'non-existent path WDL';
 is $tb->largestDtz, 0, 'non-existent path DTZ';
 
-$tb = Chess::Plisco::TableBase::Syzygy->new('t/syzygy');
+$tb = Chess::Plisco::Tablebase::Syzygy->new('t/syzygy');
 is $tb->largestWdl, 3, 'loaded WDL';
 is $tb->largestDtz, 3, 'loaded DTZ';
 

@@ -9,11 +9,11 @@
 # to Public License, Version 2, as published by Sam Hocevar. See
 # http://www.wtfpl.net/ for more details.
 
-package Chess::Plisco::TableBase::Syzygy::Table::WDL;
+package Chess::Plisco::Tablebase::Syzygy::Table::WDL;
 
 use strict;
 
-use base qw(Chess::Plisco::TableBase::Syzygy::Table);
+use base qw(Chess::Plisco::Tablebase::Syzygy::Table);
 
 sub new {
 	my ($class, $path) = @_;

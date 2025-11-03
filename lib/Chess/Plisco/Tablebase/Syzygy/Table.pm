@@ -11,13 +11,18 @@
 
 # This file is heavily inspired by the source code of python-chess.
 
-package Chess::Plisco::TableBase::Syzygy::Table;
+package Chess::Plisco::Tablebase::Syzygy::Table;
 
 use strict;
 
 sub __new {
 	my ($class, $path) = @_;
 
+	my $self = bless {
+		__path => $path,
+		__initialized => 0,
+		__data => undef,
+	}, $class;
 }
 
 1;
