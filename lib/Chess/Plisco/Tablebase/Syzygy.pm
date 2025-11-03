@@ -189,7 +189,7 @@ sub getWdl {
 }
 
 sub __probeAb {
-	my ($self, $pos) = @_;
+	my ($self, $pos, $alpha, $beta) = @_;
 
 	if ($pos->castlingRights) {
 		die __x("Syzygy tables do not contain positions with castling rights: {fen}",
@@ -208,9 +208,10 @@ sub __probeAb {
 
 	# Iterate over all non-ep captures.
 	my $en_passant_shift = cp_pos_en_passant_shift $pos;
+	my $v;
 	foreach my $move ($pos->legalMoves) {
 		my $captured;
-		cp_move_captured $mov, $captured;
+		cp_move_captured $move, $captured;
 
 		if (!$captured) {
 			next;
@@ -223,10 +224,28 @@ sub __probeAb {
 			}
 		}
 
-		
+		$pos->doMove($move);
+		my $v_plus = $self->__probeAb($pos, -$beta, -$alpha);
+		$v = -$v_plus;
+		$pos->undoMove($move);
+
+		if ($v > $alpha) {
+			if ($v >= $beta) {
+				return $v, 2;
+			}
+
+			$alpha = $v;
+		}
+
 	}
 
-	return 2, 1;
+	# TODO: $v = $self->probeWdlTable($pos);
+
+	if ($alpha >= $v) {
+		return $alpha, 1 + $alpha > 0;
+	}
+
+	return $v, 1
 }
 
 1;
