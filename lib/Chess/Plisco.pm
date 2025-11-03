@@ -2616,7 +2616,7 @@ sub SAN {
 			@cmoves;
 	foreach my $cmove (keys %cmoves) {
 		my ($cfrom, $cto) = ($self->moveFrom($cmove), $self->moveTo($cmove));
-		next if $cto != $to;
+		next if $cfrom != $from;
 
 		++$candidates;
 		my ($ffile, $frank) = $self->shiftToCoordinates($cfrom);
