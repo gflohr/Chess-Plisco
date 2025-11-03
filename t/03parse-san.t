@@ -131,4 +131,9 @@ $fen = '1b2q3/k7/p7/NpP5/4B3/6P1/5B1P/6K1 w - b6';
 $pos = Chess::Plisco->new($fen);
 is $pos->moveCoordinateNotation($pos->parseMove('cxb6ep#')), 'c5b6', 'cxb6ep#';
 
+# Bug #6.
+$fen = '8/8/1kB5/3P2p1/2B1K1P1/8/8/8 w - - 4 50';
+$pos = Chess::Plisco->new($fen);
+is $pos->moveCoordinateNotation($pos->parseMove('B4b5')), 'c4b5', 'B4b5';
+
 done_testing;

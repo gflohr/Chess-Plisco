@@ -1668,7 +1668,8 @@ sub parseMove {
 	my ($self, $notation) = @_;
 
 	my $move;
-	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/i) {
+
+	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/) {
 		$move = $self->__parseUCIMove(map { lc $_ } ($1, $2, $3))
 			or return;
 	} else {
