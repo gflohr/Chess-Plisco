@@ -2615,8 +2615,9 @@ sub SAN {
 			map { $self->moveSetPromote($_, CP_NO_PIECE) }
 			@cmoves;
 	foreach my $cmove (keys %cmoves) {
-		my ($cfrom, $cto) = ($self->moveFrom($cmove), $self->moveTo($cmove));
-		next if $cfrom != $from;
+		my ($cfrom, $cto, $cpiece) = ($self->moveFrom($cmove), $self->moveTo($cmove), $self->movePiece($cmove));
+		next if $cto != $to;
+		next if $cpiece != $piece;
 
 		++$candidates;
 		my ($ffile, $frank) = $self->shiftToCoordinates($cfrom);
