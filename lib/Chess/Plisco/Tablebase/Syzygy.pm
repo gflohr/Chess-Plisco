@@ -890,8 +890,8 @@ sub __setNormPiece {
 	while ($i < $self->{num}) {
 		my $j = $i;
 		while ($j < $self->{num} and $pieces->[$j] == $pieces->[$i]) {
-			$norm->[$i] += 1;
-			$j += 1;
+			++$norm->[$i];
+			++$j;
 		}
 		$i += $norm->[$i];
 	}
@@ -922,7 +922,7 @@ sub __calcFactorsPiece {
 			$n -= $norm->[$i];
 			$i += $norm->[$i];
 		}
-		$k += 1;
+		++$k;
 	}
 
 	return $f;
@@ -954,10 +954,30 @@ sub __calcFactorsPawn {
 			$i += $norm->[$i];
 		}
 
-		$k += 1;
+		++$k;
 	}
 
 	return $fac;
+}
+
+sub __setNormPawn {
+	my ($self, $norm, $pieces) = @_;
+
+	$norm->[0] = $self->{pawns}->[0];
+
+	if ($self->{pawns}->[1]) {
+		$norm->[$self->{pawns}->[0]] = $self->{pawns}->[1];
+	}
+
+	my $i = $self->{pawns}->[0] + $self->{pawns}->[1];
+	while ($i < $self->{num}) {
+		my $j = $i;
+		while ($j < $self->{num} && $pieces->[$j] == $pieces->[$i]) {
+			++$norm->[$i];
+			++$j;
+		}
+		$i += $norm->[$i];
+	}
 }
 
 sub __openTable {
