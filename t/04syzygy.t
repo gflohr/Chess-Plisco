@@ -15,10 +15,7 @@ use integer;
 use Test::More;
 
 use Chess::Plisco::Tablebase::Syzygy;
-use Chess::Plisco::Tablebase::Syzygy::Table::DTZ;
-use Chess::Plisco::Tablebase::Syzygy::Table::WDL;
 
-$DB::single = 1;
 is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('PRPBKQvRKQB'),
    'KQRBPPvKQRB', ('normalize: order pieces'));
 is(Chess::Plisco::Tablebase::Syzygy->normalizeTablename('KQvK'), 'KQvK',
@@ -32,11 +29,6 @@ ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('QKvK'),
 	'__isTablename(QKVK)');
 ok(!Chess::Plisco::Tablebase::Syzygy->__isTablename('QKvK', normalized => 0),
 	'__isTablename(QKVK, normalized => 0)');
-
-ok(Chess::Plisco::Tablebase::Syzygy::Table::DTZ->new('t/syzygy/KQvK.rtbz'),
-	'DTZ table constructor');
-ok(Chess::Plisco::Tablebase::Syzygy::Table::WDL->new('t/syzygy/KQvK.rtbl'),
-	'WDL table constructor');
 
 my $tb;
 

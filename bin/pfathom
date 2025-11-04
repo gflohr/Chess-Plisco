@@ -15,7 +15,7 @@ use Locale::TextDomain qw(Chess-Plisco);
 use Getopt::Long;
 
 use Chess::Plisco qw(:all);
-use Chess::Plisco::TableBase::Syzygy;
+use Chess::Plisco::Tablebase::Syzygy;
 
 sub display_usage;
 sub usage_error;

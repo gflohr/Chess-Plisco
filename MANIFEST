@@ -38,9 +38,6 @@ lib/Chess/Plisco/Macro/movePinned.pm
 lib/Chess/Plisco/Macro/movesFromMask.pm
 lib/Chess/Plisco/Macro/promotionMovesFromMask.pm
 lib/Chess/Plisco/Tablebase/Syzygy.pm
-lib/Chess/Plisco/Tablebase/Syzygy/Table.pm
-lib/Chess/Plisco/Tablebase/Syzygy/Table/DTZ.pm
-lib/Chess/Plisco/Tablebase/Syzygy/Table/WDL.pm
 lib/Chess/Plisco/Tutorial.pod
 perlcritic.rc
 t/00base.t
