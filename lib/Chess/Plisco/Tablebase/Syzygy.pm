@@ -307,6 +307,67 @@ my $test45 = sub {
 	return !!((1 << $shift) & TEST45_MASK);
 };
 
+use constant MTWIST => [
+	15, 63, 55, 47, 40, 48, 56, 12,
+	62, 11, 39, 31, 24, 32,  8, 57,
+	54, 38,  7, 23, 16,  4, 33, 49,
+	46, 30, 22,  3,  0, 17, 25, 41,
+	45, 29, 21,  2,  1, 18, 26, 42,
+	53, 37,  6, 20, 19,  5, 34, 50,
+	61, 10, 36, 28, 27, 35,  9, 58,
+	14, 60, 52, 44, 43, 51, 59, 13,
+];
+
+my @PAWNIDX = ([], [], [], [], []);
+my @PFACTOR = ([], [], [], [], []);
+
+my $binom = sub {
+	my ($x, $y) = @_;
+
+	use integer;
+
+	my $numerator = reduce { $a * $b } $x - $y + 1 .. $x;
+	my $denominator = reduce { $a * $b } 1 .. $y;
+
+	return $numerator / $denominator;
+};
+
+for my $i (0 .. 4) {
+	my $j = 0;
+
+	my $s = 0;
+	while ($j < 6) {
+		$PAWNIDX[$i]->[$j] = $s;
+		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		++$j;
+	}
+	$PFACTOR[$i]->[0] = $s;
+
+	$s = 0;
+	while ($j < 12) {
+		$PAWNIDX[$i]->[$j] = $s;
+		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		++$j;
+	}
+	$PFACTOR[$i]->[1] = $s;
+
+	$s = 0;
+	while ($j < 18) {
+		$PAWNIDX[$i]->[$j] = $s;
+		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		++$j;
+	}
+	$PFACTOR[$i]->[2] = $s;
+
+	$s = 0;
+	while ($j < 24) {
+		$PAWNIDX[$i]->[$j] = $s;
+		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		++$j;
+	}
+	$PFACTOR[$i][3] = $s;
+}
+
 sub new {
 	my ($class, $directory, %__options) = @_;
 
