@@ -24,17 +24,6 @@ use constant UINT32 => 'L<';
 use constant UINT32_BE => 'L>';
 use constant UINT16 => 'S<';
 
-use constant TRIANGLE => [
-	6, 0, 1, 2, 2, 1, 0, 6,
-	0, 7, 3, 4, 4, 3, 7, 0,
-	1, 3, 8, 5, 5, 8, 3, 1,
-	2, 4, 5, 9, 9, 5, 4, 2,
-	2, 4, 5, 9, 9, 5, 4, 2,
-	1, 3, 8, 5, 5, 8, 3, 1,
-	0, 7, 3, 4, 4, 3, 7, 0,
-	6, 0, 1, 2, 2, 1, 0, 6,
-];
-
 use constant INVTRIANGLE => [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
 
 # FIXME! These are candidates for macros!
@@ -51,28 +40,6 @@ my $flipdiag = sub {
 
 	return (($shift >> 3) | ($shift << 3)) & 63;
 };
-
-use constant LOWER => [
-	28,  0,  1,  2,  3,  4,  5,  6,
-	 0, 29,  7,  8,  9, 10, 11, 12,
-	 1,  7, 30, 13, 14, 15, 16, 17,
-	 2,  8, 13, 31, 18, 19, 20, 21,
-	 3,  9, 14, 18, 32, 22, 23, 24,
-	 4, 10, 15, 19, 22, 33, 25, 26,
-	 5, 11, 16, 20, 23, 25, 34, 27,
-	 6, 12, 17, 21, 24, 26, 27, 35,
-];
-
-use constant DIAG => [
-	 0,  0,  0,  0,  0,  0,  0,  8,
-	 0,  1,  0,  0,  0,  0,  9,  0,
-	 0,  0,  2,  0,  0, 10,  0,  0,
-	 0,  0,  0,  3, 11,  0,  0,  0,
-	 0,  0,  0, 12,  4,  0,  0,  0,
-	 0,  0, 13,  0,  0,  5,  0,  0,
-	 0, 14,  0,  0,  0,  0,  6,  0,
-	15,  0,  0,  0,  0,  0,  0,  7,
-];
 
 use constant PTWIST => [
 	 0,  0,  0,  0,  0,  0,  0,  0,
@@ -92,6 +59,7 @@ use constant INVFLAP => [
 	11, 19, 27, 35, 43, 51,
 ];
 
+# FIXME! Is that needed?
 use constant KK_IDX => [[
 	-1,  -1,  -1,   0,   1,   2,   3,   4,
 	-1,  -1,  -1,   5,   6,   7,   8,   9,
@@ -628,6 +596,40 @@ use constant FLAP => [
 
 use constant FILE_TO_FILE => [0, 1, 2, 3, 3, 2, 1, 0];
 
+use constant TRIANGLE => [
+	6, 0, 1, 2, 2, 1, 0, 6,
+	0, 7, 3, 4, 4, 3, 7, 0,
+	1, 3, 8, 5, 5, 8, 3, 1,
+	2, 4, 5, 9, 9, 5, 4, 2,
+	2, 4, 5, 9, 9, 5, 4, 2,
+	1, 3, 8, 5, 5, 8, 3, 1,
+	0, 7, 3, 4, 4, 3, 7, 0,
+	6, 0, 1, 2, 2, 1, 0, 6,
+];
+
+
+use constant LOWER => [
+	28,  0,  1,  2,  3,  4,  5,  6,
+	 0, 29,  7,  8,  9, 10, 11, 12,
+	 1,  7, 30, 13, 14, 15, 16, 17,
+	 2,  8, 13, 31, 18, 19, 20, 21,
+	 3,  9, 14, 18, 32, 22, 23, 24,
+	 4, 10, 15, 19, 22, 33, 25, 26,
+	 5, 11, 16, 20, 23, 25, 34, 27,
+	 6, 12, 17, 21, 24, 26, 27, 35,
+];
+
+use constant DIAG => [
+	 0,  0,  0,  0,  0,  0,  0,  8,
+	 0,  1,  0,  0,  0,  0,  9,  0,
+	 0,  0,  2,  0,  0, 10,  0,  0,
+	 0,  0,  0,  3, 11,  0,  0,  0,
+	 0,  0,  0, 12,  4,  0,  0,  0,
+	 0,  0, 13,  0,  0,  5,  0,  0,
+	 0, 14,  0,  0,  0,  0,  6,  0,
+	15,  0,  0,  0,  0,  0,  0,  7,
+];
+
 sub new {
 	my ($class, $path) = @_;
 
@@ -955,6 +957,99 @@ sub __pawnFile {
 	}
 
 	return FILE_TO_FILE->[$shifts->[0] & 0x07];
+}
+
+sub __encodePiece {
+	my ($self, $norm, $shifts, $factor) = @_;
+
+	my $n = $self->{num};
+
+	if ($shifts->[0] & 0x04) {
+		foreach my $i (0 .. $n - 1) {
+			$shifts->[$i] ^= 0x07;
+		}
+	}
+
+	if ($shifts->[0] & 0x20) {
+		foreach my $i (0 .. $n - 1) {
+			$shifts->[$i] ^= 0x38;
+		}
+	}
+
+	my $i = 0;
+	foreach $i (0 .. $n) {
+		if ($offdiag->($shifts->[$i])) {
+			last;
+		}
+	}
+
+	my $limit = $self->{enc_type} == 0 ? 3 : 2;
+	if ($i < $limit && $offdiag->($shifts->[$i]) > 0) {
+		foreach $i (0 .. $n) {
+			$shifts->[$i] = $flipdiag->($shifts->[$i]);
+		}
+	}
+
+	my $idx;
+	if ($self->{enc_type} == 0) { # 111
+		$i = $shifts->[1] > $shifts->[0];
+		my $j = ($shifts->[2] > $shifts->[0]) + ($shifts->[2] > $shifts->[1]);
+
+		if ($offdiag->($shifts->[0])) {
+			$idx = TRIANGLE->[$shifts->[0]] * 63 * 62 + ($shifts->[1] - $i) * 62 + ($shifts->[2] - $j);
+		} elsif ($offdiag->($shifts->[1])) {
+			$idx = 6 * 63 * 62 + DIAG->[$shifts->[0]] * 28 * 62 + LOWER->[$shifts->[1]] * 62 + $shifts->[2] - $j;
+		} elsif ($offdiag->($shifts->[2])) {
+			$idx = 6 * 63 * 62 + 4 * 28 * 62 + (DIAG->[$shifts->[0]]) * 7 * 28 + (DIAG->[$shifts->[1]] - $i) * 28 + LOWER->[$shifts->[2]];
+		} else {
+			$idx = 6 * 63 * 62 + 4 * 28 * 62 + 4 * 7 * 28 + (DIAG->[$shifts->[0]] * 7 * 6) + (DIAG->[$shifts->[1]] - $i) * 6 + (DIAG->[$shifts->[2]] - $j);
+		}
+		$i = 3;
+	} else { # K2
+		$i = $shifts->[1] > $shifts->[0];
+
+		if ($offdiag->($shifts->[0])) {
+			$idx = TRIANGLE->[$shifts->[0]] * 63 + ($shifts->[1] - $i);
+		} elsif ($offdiag->($shifts->[1])) {
+			$idx = 6 * 63 + DIAG->[$shifts->[0]] * 28 + LOWER->[$shifts->[1]];
+		} else {
+			$idx = 6 * 63 + 4 * 28 + (DIAG->[$shifts->[0]]) * 7 + (DIAG->[$shifts->[1]] - $i);
+		}
+
+		$i = 2;
+	}
+
+	$idx *= $factor->[0];
+
+	while ($i < $n) {
+		my $t = $norm->[$i];
+
+		foreach my $j ($i .. $i + $t - 1) {
+			foreach my $k ($j + 1 .. $i + $t - 1) {
+				# Swap.
+				if ($shifts->[$j] > $shifts->[$k]) {
+					($shifts->[$j], $shifts->[$k]) = ($shifts->[$k], $shifts->[$j]);
+				}
+			}
+		}
+
+		my $s = 0;
+
+		foreach my $m ($i .. $i + $t - 1) {
+			my $p = $shifts->[$m];
+			my $j = 0;
+			foreach my $l (0 .. $i - 1) {
+				$j += $p > $shifts->[$l];
+			}
+
+			$s += $binom->($p - $j, $m - $i + 1);
+		}
+
+		$idx += $s * $factor->[$i];
+		$i += $t;
+	}
+
+	return $idx;
 }
 
 package Chess::Plisco::Tablebase::Syzygy;
