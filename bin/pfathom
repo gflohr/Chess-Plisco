@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-# Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
+# Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>,
 # all rights reserved.
 
 # This program is free software. It comes without any warranty, to
@@ -15,7 +15,7 @@ use Locale::TextDomain qw(Chess-Plisco);
 use Getopt::Long;
 
 use Chess::Plisco qw(:all);
-use Chess::Plisco::TableBase::Syzygy;
+use Chess::Plisco::Tablebase::Syzygy;
 
 sub display_usage;
 sub usage_error;
@@ -41,7 +41,7 @@ my $fen = join ' ', @ARGV;
 usage_error __"No position as FEN given!"
     if !length $fen;
 
-my $tb = Chess::Plisco::TableBase::Syzygy->new($options{path});
+my $tb = Chess::Plisco::Tablebase::Syzygy->new($options{path});
 my $largest = $tb->largest;
 if (!defined $largest) {
 	usage_error __"Error initializing tablebase.";

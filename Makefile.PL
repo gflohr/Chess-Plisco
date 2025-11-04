@@ -41,7 +41,6 @@ my %WriteMakefileArgs = (
   "NAME" => "Chess::Plisco",
   "PREREQ_PM" => {
     "Carp" => 0,
-    "Chess::Plisco::TableBase::Syzygy" => 0,
     "Exporter" => 0,
     "File::Spec" => 0,
     "File::Temp" => 0,
@@ -63,13 +62,15 @@ my %WriteMakefileArgs = (
   },
   "TEST_REQUIRES" => {
     "Chess::PGN::Parse" => 0,
+    "Chess::Plisco::Tablebase::Syzygy::Table::DTZ" => 0,
+    "Chess::Plisco::Tablebase::Syzygy::Table::WDL" => 0,
     "Cwd" => 0,
     "Data::Dumper" => 0,
     "File::Basename" => 0,
     "Test::More" => 0,
     "lib" => 0
   },
-  "VERSION" => "0.5",
+  "VERSION" => "0.6",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -78,7 +79,8 @@ my %WriteMakefileArgs = (
 my %FallbackPrereqs = (
   "Carp" => 0,
   "Chess::PGN::Parse" => 0,
-  "Chess::Plisco::TableBase::Syzygy" => 0,
+  "Chess::Plisco::Tablebase::Syzygy::Table::DTZ" => 0,
+  "Chess::Plisco::Tablebase::Syzygy::Table::WDL" => 0,
   "Cwd" => 0,
   "Data::Dumper" => 0,
   "Exporter" => 0,
