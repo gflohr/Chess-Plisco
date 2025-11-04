@@ -803,7 +803,7 @@ sub _setupPairs {
 	return $d;
 }
 
-sub __setNormPiece {
+sub _setNormPiece {
 	my ($self, $norm, $pieces) = @_;
 
 	if ($self->{enc_type} == 0) {
@@ -823,7 +823,7 @@ sub __setNormPiece {
 	}
 }
 
-sub __calcFactorsPiece {
+sub _calcFactorsPiece {
 	my ($self, $factor, $order, $norm) = @_;
 
 	my @PIVFAC = (31332, 28056, 462);
@@ -854,7 +854,7 @@ sub __calcFactorsPiece {
 	return $f;
 }
 
-sub __calcFactorsPawn {
+sub _calcFactorsPawn {
 	my ($self, $factor, $order, $order2, $norm, $f) = @_;
 
 	my $i = $norm->[0];
@@ -886,7 +886,7 @@ sub __calcFactorsPawn {
 	return $fac;
 }
 
-sub __setNormPawn {
+sub _setNormPawn {
 	my ($self, $norm, $pieces) = @_;
 
 	$norm->[0] = $self->{pawns}->[0];
@@ -1366,6 +1366,50 @@ sub initTableWdl {
 	}
 
 	$self->{initialized} = 1;
+}
+
+sub setupPiecesPawn {
+	my ($self, $p_data, $p_tb_size, $f) = @_;
+
+	my $j = 1 + $self->{pawns}->[1] > 0;
+	my $order = $self->{data}->[$p_data] & 0x0f;
+	my $order2 = $self->{pawns}->[1] ? $self->{data}->[$p_data + 1] & 0x0f : 0x0f;
+
+	$self->{files}->[$f]->{pieces}->[0] = [
+		map { $self->{data}->[$p_data + $_ + $j] & 0x0f } (0 .. $self->{num} - 1)
+	];
+
+	$self->{files}->[$f]->{norm}->[0] = [ (0) x $self->{num} ];	$self->{set_norm_pawn}->($self->{files}->[$f]->{norm}->[0], $self->{files}->[$f]->{pieces}->[0]);
+	$self->{files}->[$f]->{factor}->[0] = [0 .. Table::TBPIECES() - 1];
+	$self->{tb_size}->[$p_tb_size] = $self->_calcFactorsPawn($self->{files}->[$f]->{factor}->[0], $order, $order2, $self->{files}->[$f]->{norm}->[0], $f);
+
+	$order = $self->{data}->[$p_data] >> 4;
+	$order2 = $self->{pawns}->[1] ? $self->{data}->[$p_data + 1] >> 4 : 0x0f;
+	$self->{files}->[$f]->{pieces}->[1] = [
+		map { $self->{data}->[$p_data + $_ + $j] >> 4 } (0 .. $self->{num} - 1)
+	];
+	$self->{files}->[$f]->{norm}->[1] = [0 .. $self->{num} - 1];
+	$self._setNormPawn($self->{files}->[$f]->{norm}->[1], $self->{files}->[$f]->{pieces}->[1]);
+	$self->{files}->[$f]->{factor}->[1] = [0 .. Table::TBPIECES() - 1];
+	$self->{tb_size}->[$p_tb_size + 1] = $self->_calcFactorsPawn($self->{files}[$f]->{factor}->[1], $order, $order2, $self->{files}->[$f]->{norm}->[1], $f);
+}
+
+sub setupPiecesPiece {
+	my ($self, $p_data) = @_;
+
+	foreach my $i (0 .. $self->{num} - 1) {
+		$self->{pieces}->[0] = [$self->{data}->[$p_data + $i + 1] & 0x0f];
+	}
+	my $order = $self->{data}->[$p_data] & 0x0f;
+	$self->_setNormPiece($self->{norm}->[0], $self->{pieces}->[0]);
+	$self->{tb_size}->[0] = $self->_calcFactorsPiece($self->{factor}->[0], $order, $self->{norm}->[0]);
+
+	foreach my $i (0 .. $self->{num} - 1) {
+		$self->{pieces}->[1] = [$self->{data}->[$p_data + $i + 1] >> 4];
+	}
+	$order = $self->{data}->[$p_data] >> 4;
+	$self->_setNormPiece($self->{norm}->[1], $self->{pieces}->[1]);
+	$self->{tb_size}->[1] = $self->_calcFactorsPiece($self->{factor}->[1], $order, $self->{norm}->[1]);
 }
 
 package Chess::Plisco::Tablebase::Syzygy;
