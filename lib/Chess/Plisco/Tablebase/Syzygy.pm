@@ -74,17 +74,6 @@ use constant DIAG => [
 	15,  0,  0,  0,  0,  0,  0,  7,
 ];
 
-use constant FLAP => [
-	0,  0,  0,  0,  0,  0,  0, 0,
-	0,  6, 12, 18, 18, 12,  6, 0,
-	1,  7, 13, 19, 19, 13,  7, 1,
-	2,  8, 14, 20, 20, 14,  8, 2,
-	3,  9, 15, 21, 21, 15,  9, 3,
-	4, 10, 16, 22, 22, 16, 10, 4,
-	5, 11, 17, 23, 23, 17, 11, 5,
-	0,  0,  0,  0,  0,  0,  0, 0,
-];
-
 use constant PTWIST => [
 	 0,  0,  0,  0,  0,  0,  0,  0,
 	47, 35, 23, 11, 10, 22, 34, 46,
@@ -102,8 +91,6 @@ use constant INVFLAP => [
 	10, 18, 26, 34, 42, 50,
 	11, 19, 27, 35, 43, 51,
 ];
-
-use constant FILE_TO_FILE => [0, 1, 2, 3, 3, 2, 1, 0];
 
 use constant KK_IDX => [[
 	-1,  -1,  -1,   0,   1,   2,   3,   4,
@@ -628,6 +615,19 @@ package Table;
 use Fcntl qw(O_RDONLY O_BINARY);
 use Sys::Mmap qw(mmap PROT_READ MAP_SHARED);
 
+use constant FLAP => [
+	0,  0,  0,  0,  0,  0,  0, 0,
+	0,  6, 12, 18, 18, 12,  6, 0,
+	1,  7, 13, 19, 19, 13,  7, 1,
+	2,  8, 14, 20, 20, 14,  8, 2,
+	3,  9, 15, 21, 21, 15,  9, 3,
+	4, 10, 16, 22, 22, 16, 10, 4,
+	5, 11, 17, 23, 23, 17, 11, 5,
+	0,  0,  0,  0,  0,  0,  0, 0,
+];
+
+use constant FILE_TO_FILE => [0, 1, 2, 3, 3, 2, 1, 0];
+
 sub new {
 	my ($class, $path) = @_;
 
@@ -943,6 +943,18 @@ sub __calcSymlen {
 	}
 
 	$tmp->[$s] = 1;
+}
+
+sub __pawnFile {
+	my ($self, $shifts) = @_;
+
+	foreach my $i (1 .. $self->{pawns}->[0] - 1) {
+		if (FLAP->[$shifts->[0]] > FLAP->[$shifts->[$i]]) {
+			($shifts->[0], $shifts->[$i]) = ($shifts->[$i], $shifts->[0]);
+		}
+	}
+
+	return FILE_TO_FILE->[$shifts->[0] & 0x07];
 }
 
 package Chess::Plisco::Tablebase::Syzygy;
