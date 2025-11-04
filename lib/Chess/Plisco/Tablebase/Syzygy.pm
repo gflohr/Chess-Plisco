@@ -14,10 +14,11 @@
 use strict;
 use integer;
 
-use File::Spec;
 use List::Util qw(reduce);
 use Locale::TextDomain qw('Chess-Plisco');
 use Scalar::Util qw(reftype);
+
+my $TBPIECES = 7;
 
 use constant INVTRIANGLE => [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
 
@@ -332,46 +333,34 @@ my %PCHR_IDX = map { PCHR->[$_] => $_ } 0 .. $#{ PCHR() };
 
 use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
 
-my $normalize_tablename = sub {
+my $normalise_tablename = sub {
+	$DB::single = 1;
 	my ($name, $mirror) = @_;
 
-	my ($w, $b) = split /v/, $name, 2;
+	my ($white, $black) = split /v/, $name, 2;
 
 	# Sort pieces according to PCHR order.
-	$w = join '', sort { $PCHR_IDX{$a} <=> $PCHR_IDX{$b} } split //, $w;
-	$b = join '', sort { $PCHR_IDX{$a} <=> $PCHR_IDX{$b} } split //, $b;
+	$white = join '', sort { $PCHR_IDX{$a} <=> $PCHR_IDX{$b} } split //, $white;
+	$black = join '', sort { $PCHR_IDX{$a} <=> $PCHR_IDX{$b} } split //, $black;
 
-	# Build the comparison arrays.
-	my @b_indices = map { $PCHR_IDX{$_} } split //, $b;
-	my @w_indices = map { $PCHR_IDX{$_} } split //, $w;
-
-	# Compare tuples: (length, array).
-	my $swap = 0;
-	for my $i (0 .. @w_indices) {
-		my $w_val = $i == 0 ? length($w) : $w_indices[$i-1];
-		my $b_val = $i == 0 ? length($b) : $b_indices[$i-1];
-		if ($w_val != $b_val) {
-			$swap = 1 if $mirror ^ ($b_val < $w_val);
-			last;
-		}
-	}
-
-	return $swap ? $b . "v" . $w : $w . "v" . $b;
+	return $mirror ? $black . "v" . $white : $white . "v" . $black;
 };
 
 my $is_tablename = sub {
-	my ($name, %options) = @_;
+	my ($name, %__options) = @_;
 
-	%options = (
-		normalized => 1,
-		%options,
+	my %options = (
+		normalised => 1,
+		piece_count => $TBPIECES,
+		%__options,
 	);
 
-	return (
-		$name =~ TABLENAME_REGEX
-		&& (!$options{normalized} || $normalize_tablename->($name) eq $name)
-		&& $name ne 'KvK' && 'K' eq substr $name, 0, 1 && $name =~ /vK/
-	);
+	return if defined $options{piece_count} && length $name > $options{piece_count} + 1;
+	return if $name !~ TABLENAME_REGEX;
+	return if $name =~ /K.*K.*K/; # More than three kings.
+	return if $options{normalised} && $normalise_tablename->($name) ne $name;
+
+	return 1;
 };
 
 my $_dependencies = sub {
@@ -390,24 +379,24 @@ my $_dependencies = sub {
 		if ($p ne 'P' && $w =~ /P/) {
 			my $new_name = $w;
 			$new_name =~ s/P/$p/;
-			push @result, $normalize_tablename->($new_name . 'v' . $b);
+			push @result, $normalise_tablename->($new_name . 'v' . $b);
 		}
 		if ($p ne 'P' && $b =~ /P/) {
 			my $new_name = $b;
 			$new_name =~ s/P/$p/;
-			push @result, $normalize_tablename->($w . 'v' . $new_name);
+			push @result, $normalise_tablename->($w . 'v' . $new_name);
 		}
 
 		# Captures
 		if ($w =~ /\Q$p\E/ && length($w) > 1) {
 			my $new_name = $w;
 			$new_name =~ s/\Q$p\E//;
-			push @result, $normalize_tablename->($new_name . 'v' . $b);
+			push @result, $normalise_tablename->($new_name . 'v' . $b);
 		}
 		if ($b =~ /\Q$p\E/ && length($b) > 1) {
 			my $new_name = $b;
 			$new_name =~ s/\Q$p\E//;
-			push @result, $normalize_tablename->($w . 'v' . $new_name);
+			push @result, $normalise_tablename->($w . 'v' . $new_name);
 		}
 	}
 
@@ -422,7 +411,7 @@ my $all_dependencies = sub {
 	my %closed;
 	$closed{"KvK"} = 1 if $one_king;
 
-	my @open_list = map { $normalize_tablename->($_) } @$targets;
+	my @open_list = map { $normalise_tablename->($_) } @$targets;
 
 	my @result;
 
@@ -637,11 +626,11 @@ sub new {
 
 	$self->{path} = $path;
 
-	# Normalize tablename
+	# normalise tablename
 	my ($basename) = $path =~ m{([^/]+)$};
 	$basename =~ s/\.[^.]+$//;
-	$self->{key} = $normalize_tablename->($basename);
-	$self->{mirrored_key} = $normalize_tablename->($basename, 1);
+	$self->{key} = $normalise_tablename->($basename);
+	$self->{mirrored_key} = $normalise_tablename->($basename, 1);
 	$self->{symmetric} = $self->{key} eq $self->{mirrored_key};
 
 	$self->{num} = length($basename) - 1;
@@ -1272,7 +1261,7 @@ sub __initTableWdl {
 	# Used if there are only pieces.
 	$self->{precomp} = {};
 	$self->{pieces} = {};
-	$self->{factor} = [[(0) x Table::TBPIECES()], [(0) x Table::TBPIECES()]];
+	$self->{factor} = [[(0) x $TBPIECES], [(0) x $TBPIECES]];
 	$self->{norm} = [[(0) x $self->{num}], [(0) x $self->{num}]];
 
 	# Used if there are pawns.
@@ -1382,7 +1371,7 @@ sub __setupPiecesPawn {
 	];
 
 	$self->{files}->[$f]->{norm}->[0] = [ (0) x $self->{num} ];	$self->{set_norm_pawn}->($self->{files}->[$f]->{norm}->[0], $self->{files}->[$f]->{pieces}->[0]);
-	$self->{files}->[$f]->{factor}->[0] = [0 .. Table::TBPIECES() - 1];
+	$self->{files}->[$f]->{factor}->[0] = [0 .. $TBPIECES - 1];
 	$self->{tb_size}->[$p_tb_size] = $self->_calcFactorsPawn($self->{files}->[$f]->{factor}->[0], $order, $order2, $self->{files}->[$f]->{norm}->[0], $f);
 
 	$order = $self->{data}->[$p_data] >> 4;
@@ -1392,7 +1381,7 @@ sub __setupPiecesPawn {
 	];
 	$self->{files}->[$f]->{norm}->[1] = [0 .. $self->{num} - 1];
 	$self._setNormPawn($self->{files}->[$f]->{norm}->[1], $self->{files}->[$f]->{pieces}->[1]);
-	$self->{files}->[$f]->{factor}->[1] = [0 .. Table::TBPIECES() - 1];
+	$self->{files}->[$f]->{factor}->[1] = [0 .. $TBPIECES - 1];
 	$self->{tb_size}->[$p_tb_size + 1] = $self->_calcFactorsPawn($self->{files}[$f]->{factor}->[1], $order, $order2, $self->{files}->[$f]->{norm}->[1], $f);
 }
 
@@ -1440,7 +1429,7 @@ sub probeWdlTable {
 
 	my $res;
 	if (!$self->{has_pawns}) {
-		my $p = [0 .. Table::TBPIECES() - 1];
+		my $p = [0 .. $TBPIECES - 1];
 		my $i = 0;
 		while ($i < $self->{num}) {
 			# FIXME! This looks suspicious! Print out $piece_type for debugging.
@@ -1462,7 +1451,7 @@ sub probeWdlTable {
 		my $idx = $self->encodePiece($self->{norm}->[$bside], $p, $self->{factor}->[$bside]);
 		$res = $self->decompressPairs($self->{precomp}->[$bside], $idx);
 	} else {
-		my $p = [0 .. Table::TBPIECES() - 1];
+		my $p = [0 .. $TBPIECES - 1];
 		my $i = 0;
 		my $k = $self->{files}->[0]->{pieces}->[0]->[0] ^ $cmirror;
 		my $colour = $k >> 3;
@@ -1507,10 +1496,10 @@ sub probeWdlTable {
 
 package Chess::Plisco::Tablebase::Syzygy;
 
+use File::Basename qw(basename);
+
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-
-use constant TBPIECES => 7;
 
 sub new {
 	my ($class, $directory, %__options) = @_;
@@ -1523,16 +1512,18 @@ sub new {
 	);
 
 	my $self = bless {
-		__wdl => {},
-		__dtz => {},
+		wdl => {},
+		dtz => {},
 	}, $class;
 
-	$self->addDirectory($directory, %options) if defined $directory;
+	warn "LRU not yet implemented!";
+
+	$self->__addDirectory($directory, %options) if defined $directory;
 
 	return $self;
 }
 
-sub addDirectory {
+sub __addDirectory {
 	my ($self, $directory, %__options) = @_;
 
 	my %options = (
@@ -1552,41 +1543,35 @@ sub addDirectory {
 	foreach my $filename (@files) {
 		my $path = File::Spec->catfile($directory, $filename);
 
-		next if $filename !~ /(.*)\.([^.]+)$/;
-		my ($tablename, $ext) = ($1, $2);
-
-		if ($is_tablename->($tablename) && -f $path) {
-			if ($options{loadWdl} && 'rtbw' eq $ext) {
-				$num_files += $self->__openTable($self->{__wdl}, 'WDL', $path);
-			}
-			if ($options{loadDtz} && 'rtbz' eq $ext) {
-				$num_files += $self->__openTable($self->{__dtz}, 'DTZ', $path);
-			}
-		}
+		$num_files += $self->__addFile($path, %options)
 	}
 
 	# FIXME! Describe better what has been found.
 	return $num_files;
 }
 
-sub __openTable {
-	my ($self, $hashtable, $class, $path) = @_;
+sub __addFile {
+	my ($self, $path, %__options) = @_;
 
-	my $name = $path;
-	$name =~ s/\.[^.]+$//;
-	$name =~ s{.*[/\\]}{};
+	my %options = (
+		loadWdl => 1,
+		loadDtz => 1,
+		%__options
+	);
 
-	my $table = 
-	$hashtable->{$name} = {};
+	my $basename = basename $path;
+	my ($tablename, $ext) = split /\./, $basename, 2;
 
-	return $self;
+	if ($is_tablename->($tablename)) {
+		# TODO!
+	}
 }
 
 sub largestWdl {
 	my ($self) = @_;
 
 	my $max = 0;
-	foreach my $table (keys %{$self->{__wdl}}) {
+	foreach my $table (keys %{$self->{wdl}}) {
 		my $num_pieces = (length $table) - 1;
 		$max = $num_pieces if $num_pieces > $max;
 	}
@@ -1598,7 +1583,7 @@ sub largestDtz {
 	my ($self) = @_;
 
 	my $max = 0;
-	foreach my $table (keys %{$self->{__dtz}}) {
+	foreach my $table (keys %{$self->{dtz}}) {
 		my $num_pieces = (length $table) - 1;
 		$max = $num_pieces if $num_pieces > $max;
 	}
@@ -1650,9 +1635,9 @@ sub __probeAb {
 	my $piece_count;
 	cp_bitboard_popcount $pos->occupied, $piece_count;
 
-	if ($piece_count > TBPIECES + 1) {
+	if ($piece_count > $TBPIECES + 1) {
 		die __x("syzygy tables support up to {TBPIECES} pieces, not {piece_count}: {fen}",
-			TBPIECES => TBPIECES,
+			TBPIECES => $TBPIECES,
 			piece_count => $piece_count,
 			fen => $pos->toFEN);
 	}
