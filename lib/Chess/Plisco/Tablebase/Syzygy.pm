@@ -897,6 +897,37 @@ sub __setNormPiece {
 	}
 }
 
+sub __calcFactorsPiece {
+	my ($self, $factor, $order, $norm) = @_;
+
+	my @PIVFAC = (31332, 28056, 462);
+
+	my $n = 64 - $norm->[0];
+
+	my $f = 1;
+	my $i = $norm->[0];
+	my $k = 0;
+
+	while ($i < $self->{num} || $k == $order) {
+		if ($k == $order) {
+			$factor->[0] = $f;
+			if ($self->{enc_type} < 4) {
+				$f *= $PIVFAC[$self->{enc_type}];
+			} else {
+				$f *= $MFACTOR[$self->{enc_type} - 2];
+			}
+		} else {
+			$factor->[$i] = $f;
+			$f *= $subfactor->($norm->[$i], $n);
+			$n -= $norm->[$i];
+			$i += $norm->[$i];
+		}
+		$k += 1;
+	}
+
+	return $f;
+}
+
 sub __openTable {
 	my ($self, $hashtable, $class, $path) = @_;
 
