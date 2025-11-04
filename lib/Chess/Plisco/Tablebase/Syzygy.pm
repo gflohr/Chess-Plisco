@@ -41,7 +41,7 @@ my $flipdiag = sub {
 	return (($shift >> 3) | ($shift << 3)) & 63;
 };
 
-use constant PTWIST => [
+my @PTWIST = (
 	 0,  0,  0,  0,  0,  0,  0,  0,
 	47, 35, 23, 11, 10, 22, 34, 46,
 	45, 33, 21,  9,  8, 20, 32, 44,
@@ -50,7 +50,7 @@ use constant PTWIST => [
 	39, 27, 15,  3,  2, 14, 26, 38,
 	37, 25, 13,  1,  0, 12, 24, 36,
 	 0,  0,  0,  0,  0,  0,  0,  0,
-];
+);
 
 use constant INVFLAP => [
 	 8, 16, 24, 32, 40, 48,
@@ -283,7 +283,7 @@ for my $i (0 .. 4) {
 	my $s = 0;
 	while ($j < 6) {
 		$PAWNIDX[$i]->[$j] = $s;
-		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		$s += $i == 0 ? 1 : $binom->($PTWIST[INVFLAP->[$j]], $i);
 		++$j;
 	}
 	$PFACTOR[$i]->[0] = $s;
@@ -291,7 +291,7 @@ for my $i (0 .. 4) {
 	$s = 0;
 	while ($j < 12) {
 		$PAWNIDX[$i]->[$j] = $s;
-		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		$s += $i == 0 ? 1 : $binom->($PTWIST[INVFLAP->[$j]], $i);
 		++$j;
 	}
 	$PFACTOR[$i]->[1] = $s;
@@ -299,7 +299,7 @@ for my $i (0 .. 4) {
 	$s = 0;
 	while ($j < 18) {
 		$PAWNIDX[$i]->[$j] = $s;
-		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		$s += $i == 0 ? 1 : $binom->($PTWIST[INVFLAP->[$j]], $i);
 		++$j;
 	}
 	$PFACTOR[$i]->[2] = $s;
@@ -307,7 +307,7 @@ for my $i (0 .. 4) {
 	$s = 0;
 	while ($j < 24) {
 		$PAWNIDX[$i]->[$j] = $s;
-		$s += $i == 0 ? 1 : $binom->(PTWIST->[INVFLAP->[$j]], $i);
+		$s += $i == 0 ? 1 : $binom->($PTWIST[INVFLAP->[$j]], $i);
 		++$j;
 	}
 	$PFACTOR[$i][3] = $s;
@@ -802,8 +802,8 @@ sub __setupPairs {
 
 	for my $i (reverse 0 .. $h - 2) {
 		$d->{base}->[$i] = ($d->{base}->[$i + 1]
-			+ $self.__readUint16($d->{offset} + $i * 2)
-			- $self->__readUint16($d->{offset} + $i * 2 + 2)) // 2;
+			+ $self->__readUint16($d->{offset} + $i * 2)
+			- $self->__readUint16($d->{offset} + $i * 2 + 2)) / 2;
 	}
 
 	for my $i (0 .. $h) {
@@ -1042,6 +1042,87 @@ sub __encodePiece {
 				$j += $p > $shifts->[$l];
 			}
 
+			$s += $binom->($p - $j, $m - $i + 1);
+		}
+
+		$idx += $s * $factor->[$i];
+		$i += $t;
+	}
+
+	return $idx;
+}
+
+sub __encodePawn {
+	my ($self, $norm, $shifts, $factor) = @_;
+
+	my $n = $self->{num};
+
+	if ($shifts->[0] & 0x04) {
+		foreach my $i (0 .. $n) {
+			$shifts->[$i] ^= 0x07;
+		}
+	}
+
+	foreach my $i (1, $self->{pawns}->[0] - 1) {
+		foreach my $j ($i + 1, $self->{pawns}->[0] - 1) {
+			if ($PTWIST[$shifts->[$i]] < $PTWIST[$shifts->[$j]]) {
+				($shifts->[$i], $shifts->[$j]) = ($shifts->[$j], $shifts->[$i]);
+			}
+		}
+	}
+
+	my $t = $self->{pawns}->[0] - 1;
+	my $idx = %PAWNIDX[$t]->[FLAP->[$shifts->[0]]];
+	foreach my $i (reverse 1 .. $t) {
+		$idx += $binom->($PTWIST[$shifts->[$i]], $t - $i + 1);
+	}
+	$idx *= $factor->[0];
+
+	# Remaining pawns.
+	my $i = $self->{pawns}->[0];
+	$t = $i + $self->{pawns}->[1];
+	if ($t > $i) {
+		foreach my $j ($i .. $t - 1){ 
+			foreach my $k ($j + 1 .. $t - 1) {
+				if ($shifts->[$j] > $shifts->[$k]) {
+					($shifts->[$j], $shifts->[$k]) = ($shifts->[$k], $shifts->[$j]);
+				}
+			}
+		}
+
+		my $s = 0;
+		foreach my $m ($i .. $t) {
+			my $p = $shifts->[$m];
+			my $j = 0;
+
+			foreach my $k (0 .. $i - 1) {
+				$j += $p > $shifts->[$k];
+			}
+
+			$s += $binom->($p - $j - 8, $m - $i + 1);
+		}
+
+		$idx += $s * $factor->[$i];
+		$i = $t;
+	}
+
+	while ($i < $n) {
+		$t = $norm->[$i];
+		foreach my $j ($i, $i + $t - 1) {
+			foreach my $k ($j + 1, $i + $t - 1){
+				if ($shifts->[$j] > $shifts->[$k]) {
+					($shifts->[$j], $shifts->[$k]) = ($shifts->[$k], $shifts->[$j]);
+				}
+			}
+		}
+
+		my $s = 0;
+		foreach my $m ($i, $i + $t - 1) {
+			my $p = $shifts->[$m];
+			my $j = 0;
+			foreach my $k (0 .. $i - 1) {
+				$j += $p > $shifts->[$k];
+			}
 			$s += $binom->($p - $j, $m - $i + 1);
 		}
 
