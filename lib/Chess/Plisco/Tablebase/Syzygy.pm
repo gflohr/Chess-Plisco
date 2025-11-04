@@ -877,6 +877,26 @@ sub addDirectory {
 	return $num_files;
 }
 
+sub __setNormPiece {
+	my ($self, $norm, $pieces) = @_;
+
+	if ($self->{enc_type} == 0) {
+		$norm->[0] = 3;
+	} else {
+		$norm->[0] = 2;
+	}
+
+	my $i = $norm->[0];
+	while ($i < $self->{num}) {
+		my $j = $i;
+		while ($j < $self->{num} and $pieces->[$j] == $pieces->[$i]) {
+			$norm->[$i] += 1;
+			$j += 1;
+		}
+		$i += $norm->[$i];
+	}
+}
+
 sub __openTable {
 	my ($self, $hashtable, $class, $path) = @_;
 
