@@ -928,6 +928,38 @@ sub __calcFactorsPiece {
 	return $f;
 }
 
+sub __calcFactorsPawn {
+	my ($self, $factor, $order, $order2, $norm, $f) = @_;
+
+	my $i = $norm->[0];
+	if ($order2 < 0x0f) {
+		$i += $norm->[$i];
+	}
+	my $n = 64 - $i;
+
+	my $fac = 1;
+	my $k = 0;
+
+	while ($i < $self->{num} || $k == $order || $k == $order2) {
+		if ($k == $order) {
+			$factor->[0] = $fac;
+			$fac *= $PFACTOR[$norm->[0] - 1]->[$f];
+		} elsif ($k == $order2) {
+			$factor->[$norm->[0]] = $fac;
+			$fac *= $subfactor->($norm->[$norm->[0]], 48 - $norm->[0]);
+		} else {
+			$factor->[$i] = $fac;
+			$fac *= $subfactor->($norm->[$i], $n);
+			$n -= $norm->[$i];
+			$i += $norm->[$i];
+		}
+
+		$k += 1;
+	}
+
+	return $fac;
+}
+
 sub __openTable {
 	my ($self, $hashtable, $class, $path) = @_;
 
