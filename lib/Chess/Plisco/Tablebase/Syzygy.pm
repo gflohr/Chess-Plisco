@@ -813,70 +813,6 @@ sub __setupPairs {
 	return $d;
 }
 
-package Chess::Plisco::Tablebase::Syzygy;
-
-use Chess::Plisco qw(:all);
-use Chess::Plisco::Macro;
-
-use constant TBPIECES => 7;
-
-sub new {
-	my ($class, $directory, %__options) = @_;
-
-	my %options = (
-		loadWdl => 1,
-		loadDtz => 1,
-		maxFds => 128,
-		%__options
-	);
-
-	my $self = bless {
-		__wdl => {},
-		__dtz => {},
-	}, $class;
-
-	$self->addDirectory($directory, %options) if defined $directory;
-
-	return $self;
-}
-
-sub addDirectory {
-	my ($self, $directory, %__options) = @_;
-
-	my %options = (
-		loadWdl => 1,
-		loadDtz => 1,
-		%__options
-	);
-
-	$directory = File::Spec->rel2abs($directory);
-
-	opendir my $dh, $directory or return 0;
-	my @files = readdir $dh;
-
-	my $num_files = 0;
-	my $largest = 0;
-	my $smallest = 0;
-	foreach my $filename (@files) {
-		my $path = File::Spec->catfile($directory, $filename);
-
-		next if $filename !~ /(.*)\.([^.]+)$/;
-		my ($tablename, $ext) = ($1, $2);
-
-		if ($is_tablename->($tablename) && -f $path) {
-			if ($options{loadWdl} && 'rtbw' eq $ext) {
-				$num_files += $self->__openTable($self->{__wdl}, 'WDL', $path);
-			}
-			if ($options{loadDtz} && 'rtbz' eq $ext) {
-				$num_files += $self->__openTable($self->{__dtz}, 'DTZ', $path);
-			}
-		}
-	}
-
-	# FIXME! Describe better what has been found.
-	return $num_files;
-}
-
 sub __setNormPiece {
 	my ($self, $norm, $pieces) = @_;
 
@@ -978,6 +914,99 @@ sub __setNormPawn {
 		}
 		$i += $norm->[$i];
 	}
+}
+
+sub __calcSymlen {
+	my ($self, $d, $s, $tmp) = @_;
+
+	if (!$self->{data}) {
+		die __x("Cannot setup pairs for '{path}' without data.\n",
+			path => $self->{path})
+	}
+
+	my $w = $d->{sympat} + 3 * $s;
+
+	my $s2 = ($self->{data}->[$w + 2] << 4) | ($self->{data}->[$w + 1] >> 4);
+
+	if ($s2 == 0x0fff) {
+		$d->{symlen}->[$s] = 0;
+	} else {
+		my $s1 = (($self->{data}->[$w + 1] & 0xf) << 8) | $self->{data}->[$w];
+		if (!$tmp->[$s1]) {
+			$self->__calcSymlen($d, $s1, $tmp);
+		}
+		if (!$tmp->[$s2]) {
+			$self->__calcSymlen($d, $s2, $tmp);
+		}
+
+		$d->{symlen}->[$s] = $d->{symlen}->[$s1] + $d->{symlen}->[$s2] + 1;
+	}
+
+	$tmp->[$s] = 1;
+}
+
+package Chess::Plisco::Tablebase::Syzygy;
+
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
+
+use constant TBPIECES => 7;
+
+sub new {
+	my ($class, $directory, %__options) = @_;
+
+	my %options = (
+		loadWdl => 1,
+		loadDtz => 1,
+		maxFds => 128,
+		%__options
+	);
+
+	my $self = bless {
+		__wdl => {},
+		__dtz => {},
+	}, $class;
+
+	$self->addDirectory($directory, %options) if defined $directory;
+
+	return $self;
+}
+
+sub addDirectory {
+	my ($self, $directory, %__options) = @_;
+
+	my %options = (
+		loadWdl => 1,
+		loadDtz => 1,
+		%__options
+	);
+
+	$directory = File::Spec->rel2abs($directory);
+
+	opendir my $dh, $directory or return 0;
+	my @files = readdir $dh;
+
+	my $num_files = 0;
+	my $largest = 0;
+	my $smallest = 0;
+	foreach my $filename (@files) {
+		my $path = File::Spec->catfile($directory, $filename);
+
+		next if $filename !~ /(.*)\.([^.]+)$/;
+		my ($tablename, $ext) = ($1, $2);
+
+		if ($is_tablename->($tablename) && -f $path) {
+			if ($options{loadWdl} && 'rtbw' eq $ext) {
+				$num_files += $self->__openTable($self->{__wdl}, 'WDL', $path);
+			}
+			if ($options{loadDtz} && 'rtbz' eq $ext) {
+				$num_files += $self->__openTable($self->{__dtz}, 'DTZ', $path);
+			}
+		}
+	}
+
+	# FIXME! Describe better what has been found.
+	return $num_files;
 }
 
 sub __openTable {
