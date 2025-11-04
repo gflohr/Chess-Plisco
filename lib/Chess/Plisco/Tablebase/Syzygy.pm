@@ -710,11 +710,9 @@ sub _initMmap {
 }
 
 sub __checkMagic {
-	my ($self, $magic, $pawnless_magic) = @_;
+	my ($self, $magic) = @_;
 
-	my @valid_magics = ($magic);
-
-	push @valid_magics, $pawnless_magic if $self->{has_pawns};
+	my @valid_magics = ($magic); # Use list so that we can theoretically expand.
 
 	my $header = substr(${$self->{data}}, 0, 4);
 
@@ -733,7 +731,7 @@ sub __checkMagic {
 	}
 }
 
-sub __setupPairs {
+sub _setupPairs {
 	my ($self, $data_ptr, $tb_size, $size_idx, $wdl) = @_;
 
 	my $d = new PairsData;
@@ -1238,6 +1236,137 @@ sub DESTROY {
 }
 
 package WdlTable;
+
+use base qw(Table);
+
+use constant TBW_MAGIC => "\x71\xe8\x23\x5d";
+use constant TBZ_MAGIC => "\xd7\x66\x0c\xa5";
+
+sub new {
+	my ($class, @args) = @_;
+
+	my $self = $class->SUPER::new(@args);
+
+	$self->{_next} = 0;
+	$self->{_flags} = 0;
+
+	return $self;
+}
+
+sub initTableWdl {
+	my ($self) = @_;
+
+	$self->_initMmap;
+
+	if ($self->{initialized}) {
+		return;
+	}
+
+	$self->_checkMagic(TBW_MAGIC);
+
+	$self->{tb_size} = [(0) x 8];
+	$self->{size} = [(0) x (8 * 3)];
+
+	# Used if there are only pieces.
+	$self->{precomp} = {};
+	$self->{pieces} = {};
+	$self->{factor} = [[(0) x Table::TBPIECES()], [(0) x Table::TBPIECES()]];
+	$self->{norm} = [[(0) x $self->{num}], [(0) x $self->{num}]];
+
+	# Used if there are pawns.
+	$self->{files} = [(new PawnFileData) x 4];
+
+	my $split = $self->{data}->[4] & 0x01;
+	my $files = $self->{data}->[4] & 0x02 ? 4 : 1;
+
+	my $data_ptr = 5;
+
+	if (!$self->{has_pawns}) {
+		$self->setupPiecesPiece($data_ptr);
+
+		$data_ptr += $self->{num} + 1;
+		$data_ptr += $data_ptr & 0x01;
+
+		$self->{precomp}->[0] = $self->_setupPairs($data_ptr, $self->{tb_size}->[0], 0, 1);
+		$data_ptr = $self->{_next};
+		if ($split) {
+			$self->{precomp}->[1] = $self->_setupPairs($data_ptr, $self->{tb_size}->[1], 3, 1);
+			$data_ptr = $self->{_next};
+		}
+
+		$self->{precomp}->[0]->{indextable} = $data_ptr;
+		$data_ptr += $self->{size}->[0];
+		if ($split) {
+			$self->{precomp}->[1]->{indextable} = $data_ptr;
+			$data_ptr += $self->{size}->[3];
+		}
+
+		$self->{precomp}->[0]->{sizetable} = $data_ptr;
+		$data_ptr += $self->{size}->[1];
+		if ($split) {
+			$self->{precomp}->[1]->{sizetable} = $data_ptr;
+			$data_ptr += $self->{size}->[4];
+		}
+
+		$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
+		$self->{precomp}->[0]->{data} = $data_ptr;
+		$data_ptr += $self->{size}->[2];
+		if ($split) {
+			$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
+			$self->{precomp}->[1]->{data} = $data_ptr;
+		}
+
+		$self->{key} = $recalc_key->($self->{pieces}->[0]);
+		$self->{mirrored_key} = $recalc_key->($self->{pieces}->[0], 1);
+	} else {
+		my $s = 1 + ($self->{pawns}->[1] > 0);
+		foreach my $f (0 .. 3) {
+			$self->_setupPiecesPawn($data_ptr, 2 * $f, $f);
+			$data_ptr += $self->{num} + $s;
+		}
+		$data_ptr += $data_ptr & 0x01;
+
+		foreach my $f (0 .. $files - 1) {
+			$self->{files}->[$f]->{precomp}->[0] = $self->_setupPairs($data_ptr, $self->{tb_size}->[2 * $f], 6 * $f, 1);
+			$data_ptr = $self->{_next};
+			if ($split) {
+				$self->{files}->[$f]->{precomp}->[1] = $self->_setup_pairs($data_ptr, $self->{tb_size}->[2 * $f + 1], 6 * $f + 3, 1);
+				$data_ptr = $self->{_next};
+			}
+		}
+
+		foreach my $f (0 .. $files - 1) {
+			$self->{files}->[$f]->{precomp}->[0]->{indextable} = $data_ptr;
+			$data_ptr += $self->{size}->[6 * $f];
+			if ($split) {
+				$self->{files}->[$f]->{precomp}->[1]->{indextable} = $data_ptr;
+				$data_ptr += $self->{size}->[6 * $f + 3];
+			}
+		}
+
+		foreach my $f (0 .. $files - 1) {
+			$self->{files}->[$f]->{precomp}->[0]->{sizetable} = $data_ptr;
+			$data_ptr += $self->{size}[6 * $f + 1];
+			if ($split) {
+				$self->{files}->[$f]->{precomp}->[1]->{sizetable} = $data_ptr;
+				$data_ptr += $self->{size}->[6 * $f + 4];
+			}
+		}
+
+		foreach my $f (0 .. $files - 1) {
+			$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
+			$self->{files}->[$f]->{precomp}->[0]->{data} = $data_ptr;
+			$data_ptr += $self->{size}->[6 * $f + 2];
+			if ($split) {
+				$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
+				$self->{files}->[$f]->{precomp}->[1]->{data} = $data_ptr;
+				$data_ptr += $self->{size}->[6 * $f + 5];
+			}
+		}
+	}
+
+	$self->{initialized} = 1;
+}
 
 package Chess::Plisco::Tablebase::Syzygy;
 
