@@ -19,11 +19,6 @@ use List::Util qw(reduce);
 use Locale::TextDomain qw('Chess-Plisco');
 use Scalar::Util qw(reftype);
 
-use constant UINT64_BE => 'Q>';
-use constant UINT32 => 'L<';
-use constant UINT32_BE => 'L>';
-use constant UINT16 => 'S<';
-
 use constant INVTRIANGLE => [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
 
 # FIXME! These are candidates for macros!
@@ -630,6 +625,11 @@ use constant DIAG => [
 	15,  0,  0,  0,  0,  0,  0,  7,
 ];
 
+use constant UINT64_BE => 'Q>'; # Unsigned 64-bit big-endian
+use constant UINT32 => 'V'; # Unsigned 32-bit little-endian
+use constant UINT32_BE => 'N'; # Unsigned 32-bit big-endian
+use constant UINT16 => 'v'; # Unsigned 16-bit little-endian
+
 sub new {
 	my ($class, $path) = @_;
 
@@ -1118,7 +1118,7 @@ sub __encodePawn {
 	return $idx;
 }
 
-sub decompress_pairs {
+sub __decompressPairs {
 	my ($self, $d, $idx) = @_;
 
 	if (!$d->{idxbits}) {
@@ -1197,6 +1197,47 @@ sub decompress_pairs {
 		return $self->{data}->[$w];
 	}
 }
+
+sub __readUint64BE {
+	my ($self, $data_ptr) = @_;
+
+	return unpack(UINT64_BE, substr($self->{data}, $data_ptr, 8));
+}
+
+sub __readUint32 {
+	my ($self, $data_ptr) = @_;
+
+	return unpack(UINT32, substr($self->{data}, $data_ptr, 4));
+}
+
+sub __readUint32BE {
+	my ($self, $data_ptr) = @_;
+
+	return unpack(UINT32_BE, substr($self->{data}, $data_ptr, 4));
+}
+
+sub __readUint16 {
+	my ($self, $data_ptr) = @_;
+
+	return unpack(UINT16, substr($self->{data}, $data_ptr, 2));
+}
+
+sub close {
+	my ($self) = @_;
+
+	if (defined $self->{data}) {
+		delete $self->{data};
+	}
+
+	return;
+}
+
+sub DESTROY {
+	my ($self) = @_;
+	$self->close;
+}
+
+package WdlTable;
 
 package Chess::Plisco::Tablebase::Syzygy;
 
