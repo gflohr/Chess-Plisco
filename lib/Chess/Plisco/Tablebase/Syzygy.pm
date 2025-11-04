@@ -712,11 +712,6 @@ sub _initMmap {
 sub __checkMagic {
 	my ($self, $magic, $pawnless_magic) = @_;
 
-	if (!$self->{data}) {
-		die __x("Cannot check magic in '{path}' without data.\n",
-			path => $self->{path})
-	}
-
 	my @valid_magics = ($magic);
 
 	push @valid_magics, $pawnless_magic if $self->{has_pawns};
@@ -740,11 +735,6 @@ sub __checkMagic {
 
 sub __setupPairs {
 	my ($self, $data_ptr, $tb_size, $size_idx, $wdl) = @_;
-
-	if (!$self->{data}) {
-		die __x("Cannot setup pairs for '{path}' without data.\n",
-			path => $self->{path})
-	}
 
 	my $d = new PairsData;
 
@@ -920,11 +910,6 @@ sub __setNormPawn {
 
 sub __calcSymlen {
 	my ($self, $d, $s, $tmp) = @_;
-
-	if (!$self->{data}) {
-		die __x("Cannot setup pairs for '{path}' without data.\n",
-			path => $self->{path})
-	}
 
 	my $w = $d->{sympat} + 3 * $s;
 
@@ -1131,6 +1116,86 @@ sub __encodePawn {
 	}
 
 	return $idx;
+}
+
+sub decompress_pairs {
+	my ($self, $d, $idx) = @_;
+
+	if (!$d->{idxbits}) {
+		return $d->{min_len};
+	}
+
+	my $mainidx = $idx >> $d->{idxbits};
+	my $litidx = ($idx & ($1 << $d->{idxbits}) - 1) - (1 << ($d->{idxbits} - 1));
+	my $block = $self.__readUint32($d->{indextable} + 6 * $mainidx);
+
+	my $idx_offset = self->__readUint16($d->{indextable} + 6 * $mainidx + 4);
+	$litidx += $idx_offset;
+
+	if ($litidx < 0) {
+		while ($litidx < 0) {
+			--$block;
+			$litidx += $self->__readUint16($d->{sizetable} + 2 * $block) + 1;
+		}
+	} else {
+		while ($litidx > $self->__readUint16($d->{sizetable} + 2 * $block)) {
+			$litidx -= $self->__readUint16($d->{sizetable} + 2 * $block) + 1;
+			++$block;
+		}
+	}
+
+	my $ptr = $d->{data} + ($block << $d->{blocksize});
+
+	my $m = $d->{min_len};
+	my $base_idx = -$m;
+	my $symlen_idx = 0;
+
+	my $code = self->__readUint64BE($ptr);
+
+	$ptr += 2 * 4;
+	my $bitcnt = 0; # Number of empty bits in code
+	my $sym;
+	while (1) {
+		my $l = $m;
+		while ($code < $d->{base}->[$base_idx + $l]) {
+			++$l;
+		}
+		$sym = $self.__readUint16($d->{offset} + $l * 2);
+		$sym += ($code - $d->{base}->[$base_idx + $l]) >> (64 - $l);
+		if ($litidx < $d->{symlen}->[$symlen_idx + $sym] + 1) {
+			last;
+		}
+		$litidx -= $d->{symlen}->[$symlen_idx + $sym] + 1;
+		$code <<= $l;
+		$bitcnt += $l;
+		if ($bitcnt >= 32) {
+			$bitcnt -= 32;
+			$code |= $self->__readUint32_be($ptr) << $bitcnt;
+			$ptr += 4;
+		}
+
+		# Cut off at 64bit.
+		$code &= 0xffffffffffffffff;
+	}
+
+	my $sympat = $d->{sympat};
+	while ($d->{symlen}->[$symlen_idx + $sym]) {
+		my $w = $sympat + 3 * $sym;
+		my $s1 = (($self->{data}->[$w + 1] & 0xf) << 8) | $self->{data}->[$w];
+		if ($litidx < $d->{symlen}->[$symlen_idx + $s1] + 1) {
+			$sym = $s1;
+		} else {
+			$litidx -= $d->{symlen}->[$symlen_idx + $s1] + 1;
+			$sym = ($self->{data}->[$w + 2] << 4) | ($self->{data}->[$w + 1] >> 4);
+		}
+	}
+
+	my $w = $sympat + 3 * $sym;
+	if ($self->isa('DtzTable')) {
+		return (($self->data->[$w + 1] & 0x0f) << 8) | $self->{data}->[$w];
+	} else {
+		return $self->{data}->[$w];
+	}
 }
 
 package Chess::Plisco::Tablebase::Syzygy;
