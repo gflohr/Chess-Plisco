@@ -328,13 +328,12 @@ use constant PA_FLAGS => [8, 0, 0, 0, 4];
 
 use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
 
-use constant PCHR => ['K', 'Q', 'R', 'B', 'N', 'P'];
-my %PCHR_IDX = map { PCHR->[$_] => $_ } 0 .. $#{ PCHR() };
+my @PCHR => ('K', 'Q', 'R', 'B', 'N', 'P');
+my %PCHR_IDX = map { $PCHR[$_] => $_ } 0 .. $#PCHR;
 
 use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
 
 my $normalise_tablename = sub {
-	$DB::single = 1;
 	my ($name, $mirror) = @_;
 
 	my ($white, $black) = split /v/, $name, 2;
@@ -372,7 +371,7 @@ my $_dependencies = sub {
 
 	my @result;
 
-	for my $p (@{PCHR()}) {
+	for my $p (@PCHR) {
 		next if $p eq 'K' && $one_king;
 
 		# Promotions
@@ -653,7 +652,7 @@ sub new {
 		}
 	} else {
 		my $j = 0;
-		foreach my $piece_type (@{PCHR()}) {
+		foreach my $piece_type (@PCHR) {
 			$j++ if ($black_part =~ /$piece_type/ && ($black_part =~ tr/$piece_type/$piece_type/) == 1);
 			$j++ if ($white_part =~ /$piece_type/ && ($white_part =~ tr/$piece_type/$piece_type/) == 1);
 		}
@@ -1501,6 +1500,9 @@ use File::Basename qw(basename);
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
 
+use constant TBW_SUFFIX => 'rtbw';
+use constant TBZ_SUFFIX => 'rtbz';
+
 sub new {
 	my ($class, $directory, %__options) = @_;
 
@@ -1563,8 +1565,34 @@ sub __addFile {
 	my ($tablename, $ext) = split /\./, $basename, 2;
 
 	if ($is_tablename->($tablename)) {
-		# TODO!
+		if ($options{loadWdl}) {
+			if ($ext eq TBW_SUFFIX) {
+				return $self->__openTable($self->{wdl}, 'WdlTable', $path);
+			}
+		}
+
+		if($options{loadDtz}) {
+			if ($ext eq TBZ_SUFFIX) {
+				return $self->__openTable($self->{dtz}, 'DtzTable', $path);
+			}
+		}
 	}
+}
+
+sub __openTable {
+	my ($self, $hashtable, $class_name, $path) = @_;
+
+	return if 'DtzTable' eq $class_name;
+
+	my $table = $class_name->new($path);
+	if (exists $hashtable->{$table->{key}}) {
+		$hashtable->{$table->{key}}->close;
+	}
+
+	$hashtable->{$table->{key}} = $table;
+	$hashtable->{$table->{mirrored_key}} = $table;
+
+	return 1;
 }
 
 sub largestWdl {
