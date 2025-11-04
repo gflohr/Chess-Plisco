@@ -11,26 +11,20 @@
 
 # This file is heavily inspired by python-chess.
 
-package Chess::Plisco::Tablebase::Syzygy;
-
 use strict;
 use integer;
 
-use Scalar::Util qw(reftype);
-use Locale::TextDomain qw('Chess-Plisco');
 use File::Spec;
-
-use Chess::Plisco qw(:all);
-use Chess::Plisco::Macro;
+use List::Util qw(reduce);
+use Locale::TextDomain qw('Chess-Plisco');
+use Scalar::Util qw(reftype);
 
 use constant UINT64_BE => 'Q>';
 use constant UINT32 => 'L<';
 use constant UINT32_BE => 'L>';
 use constant UINT16 => 'S<';
 
-use constant TBPIECES => 7;
-
-use constant TRIANGLE => TRIANGLE = [
+use constant TRIANGLE => [
 	6, 0, 1, 2, 2, 1, 0, 6,
 	0, 7, 3, 4, 4, 3, 7, 0,
 	1, 3, 8, 5, 5, 8, 3, 1,
@@ -41,11 +35,7 @@ use constant TRIANGLE => TRIANGLE = [
 	6, 0, 1, 2, 2, 1, 0, 6,
 ];
 
-use constant INVTRIANGLE = [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
-
-use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
-my $i = 0;
-use constant PCHR => {map { $_ => $i++ } split '', 'KQRBNP'}; # FIXME! Needed?
+use constant INVTRIANGLE => [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
 
 # FIXME! These are candidates for macros!
 my $offdiag = sub {
@@ -73,7 +63,7 @@ use constant LOWER => [
 	 6, 12, 17, 21, 24, 26, 27, 35,
 ];
 
-use constant DIAG = [
+use constant DIAG => [
 	 0,  0,  0,  0,  0,  0,  0,  8,
 	 0,  1,  0,  0,  0,  0,  9,  0,
 	 0,  0,  2,  0,  0, 10,  0,  0,
@@ -368,6 +358,468 @@ for my $i (0 .. 4) {
 	$PFACTOR[$i][3] = $s;
 }
 
+my @MULTIDX = ([], [], [], [], []);
+my @MFACTOR;
+
+for my $i (0 .. 4) {
+	my $s = 0;
+	for my $j (0 .. 9) {
+		$MULTIDX[$i]->[$j] = $s;
+		$s += $i == 0 ? 1 : $binom->(MTWIST->[INVTRIANGLE->[$j]], $i);
+		++$j;
+	}
+	$MFACTOR[$i] = $s;
+}
+
+use constant WDL_TO_MAP => [1, 3, 0, 2, 0];
+
+use constant PA_FLAGS => [8, 0, 0, 0, 4];
+
+use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
+
+use constant PCHR => ['K', 'Q', 'R', 'B', 'N', 'P'];
+my %PCHR_IDX = map { PCHR->[$_] => $_ } 0 .. $#{ PCHR() };
+
+use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
+
+my $normalize_tablename = sub {
+	my ($name, $mirror) = @_;
+
+	my ($w, $b) = split /v/, $name, 2;
+
+	# Sort pieces according to PCHR order.
+	$w = join '', sort { $PCHR_IDX{$a} <=> $PCHR_IDX{$b} } split //, $w;
+	$b = join '', sort { $PCHR_IDX{$a} <=> $PCHR_IDX{$b} } split //, $b;
+
+	# Build the comparison arrays.
+	my @b_indices = map { $PCHR_IDX{$_} } split //, $b;
+	my @w_indices = map { $PCHR_IDX{$_} } split //, $w;
+
+	# Compare tuples: (length, array).
+	my $swap = 0;
+	for my $i (0 .. @w_indices) {
+		my $w_val = $i == 0 ? length($w) : $w_indices[$i-1];
+		my $b_val = $i == 0 ? length($b) : $b_indices[$i-1];
+		if ($w_val != $b_val) {
+			$swap = 1 if $mirror ^ ($b_val < $w_val);
+			last;
+		}
+	}
+
+	return $swap ? $b . "v" . $w : $w . "v" . $b;
+};
+
+my $is_tablename = sub {
+	my ($name, %options) = @_;
+
+	%options = (
+		normalized => 1,
+		%options,
+	);
+
+	return (
+		$name =~ TABLENAME_REGEX
+		&& (!$options{normalized} || $normalize_tablename->($name) eq $name)
+		&& $name ne 'KvK' && 'K' eq substr $name, 0, 1 && $name =~ /vK/
+	);
+};
+
+my $_dependencies = sub {
+	my ($target, $one_king) = @_;
+
+	$one_king //= 1;
+
+	my ($w, $b) = split /v/, $target, 2;
+
+	my @result;
+
+	for my $p (@{PCHR()}) {
+		next if $p eq 'K' && $one_king;
+
+		# Promotions
+		if ($p ne 'P' && $w =~ /P/) {
+			my $new_name = $w;
+			$new_name =~ s/P/$p/;
+			push @result, $normalize_tablename->($new_name . 'v' . $b);
+		}
+		if ($p ne 'P' && $b =~ /P/) {
+			my $new_name = $b;
+			$new_name =~ s/P/$p/;
+			push @result, $normalize_tablename->($w . 'v' . $new_name);
+		}
+
+		# Captures
+		if ($w =~ /\Q$p\E/ && length($w) > 1) {
+			my $new_name = $w;
+			$new_name =~ s/\Q$p\E//;
+			push @result, $normalize_tablename->($new_name . 'v' . $b);
+		}
+		if ($b =~ /\Q$p\E/ && length($b) > 1) {
+			my $new_name = $b;
+			$new_name =~ s/\Q$p\E//;
+			push @result, $normalize_tablename->($w . 'v' . $new_name);
+		}
+	}
+
+	return @result;
+};
+
+my $all_dependencies = sub {
+	my ($targets, $one_king) = @_;
+
+	$one_king //= 1;
+
+	my %closed;
+	$closed{"KvK"} = 1 if $one_king;
+
+	my @open_list = map { $normalize_tablename->($_) } @$targets;
+
+	my @result;
+
+	while (@open_list) {
+		my $name = pop @open_list;
+		next if $closed{$name};
+
+		push @result, $name;
+		$closed{$name} = 1;
+
+		push @open_list, _dependencies($name, one_king => $one_king);
+	}
+
+	return \@result;
+};
+
+my $tablenames = sub {
+	my ($one_king, $piece_count) = @_;
+
+	$one_king //= 1;
+	$piece_count //= 6;
+
+	my $first = $one_king ? 'K' : 'P';
+
+	my @targets;
+
+	my $white_pieces = $piece_count - 2;
+	my $black_pieces = 0;
+
+	while ($white_pieces >= $black_pieces) {
+		push @targets, $first . ('P' x $white_pieces) . 'v' . $first . ('P' x $black_pieces);
+		$white_pieces--;
+		$black_pieces++;
+	}
+
+	return $all_dependencies->(\@targets, $one_king);
+};
+
+my $calc_key = sub {
+	my ($pos, $mirror) = @_;
+
+	$mirror //= 0;
+
+	my ($wh, $bl) = ($pos->[CP_POS_WHITE_PIECES], $pos->[CP_POS_BLACK_PIECES]);
+
+	my @pieces = qw(P N B R Q);
+
+	my ($wkey, $bkey) = ('K', 'K');
+	foreach my $i (reverse CP_POS_PAWNS .. CP_POS_QUEENS) {
+		my $popcount;
+
+		cp_bitboard_popcount $pos->[$i] & $wh, $popcount;
+		$wkey .= $pieces[$i - CP_POS_PAWNS] x $popcount;
+
+		cp_bitboard_popcount $pos->[$i] & $bl, $popcount;
+		$bkey .= $pieces[$i - CP_POS_PAWNS] x $popcount;
+	}
+
+	return $mirror ? (join 'v', $wkey, $bkey) : (join 'v', $bkey, $wkey);
+};
+
+# Some endgames are stored with a different key than their filename
+# indicates: http://talkchess.com/forum/viewtopic.php?p=695509#695509
+my $recalc_key = sub {
+	my ($pieces, $mirror) = @_;
+
+	$mirror //= 0;
+
+	my ($w, $b) = $mirror ? (8, 0) : (0, 8);
+	my @order  = (6, 5, 4, 3, 2, 1);
+	my @letters = qw(K Q R B N P);
+
+	my $key = join(
+		'',
+		# white side
+		map { my $n = grep { $_ == ($_ ^ $w) } @$pieces; $letters[$_] x $n } 0 .. $#order,
+		'v',
+		# black side
+		map { my $n = grep { $_ == ($_ ^ $b) } @$pieces; $letters[$_] x $n } 0 .. $#order
+	);
+
+	return $key;
+};
+
+my $subfactor = sub {
+	my ($k, $n) = @_;
+
+	my $f = $n;
+	my $l = 1;
+
+	for my $i (1 .. $k - 1) {
+		$f *= $n - $i;
+		$l *= $i + 1;
+	}
+
+	return int($f / $l);
+};
+
+my $dtz_before_zeroing = sub {
+	my ($wdl) = @_;
+
+	my $sign = ($wdl > 0 ? 1 : 0) - ($wdl < 0 ? 1 : 0);
+	my $factor = (abs($wdl) == 2 ? 1 : 101);
+
+	return $sign * $factor;
+};
+
+package PairsData;
+
+sub new {
+	my ($class, %args) = @_;
+
+	bless {
+		indextable => $args{indextable} // 0,
+		sizetable => $args{sizetable} // 0,
+		data => $args{data} // 0,
+		offset => $args{offset} // 0,
+		symlen => $args{symlen} // [],
+		sympat => $args{sympat} // 0,
+		blocksize => $args{blocksize} // 0,
+		idxbits => $args{idxbits} // 0,
+		min_len => $args{min_len} // 0,
+		base => $args{base} // [],
+	}, $class;
+}
+
+package PawnFileData;
+
+sub new {
+	my ($class) = @_;
+	bless {
+		precomp => {},
+		factor  => {},
+		pieces  => {},
+		norm    => {},
+	}, $class;
+}
+
+package PawnFileDataDtz;
+sub new {
+	my ($class, %args) = @_;
+
+	bless {
+		precomp => $args{precomp} // PairsData->new(),
+		factor  => $args{factor}  // [],
+		pieces  => $args{pieces}  // [],
+		norm    => $args{norm}    // [],
+	}, $class;
+}
+
+package Table;
+
+use Fcntl qw(O_RDONLY O_BINARY);
+use Sys::Mmap qw(mmap PROT_READ MAP_SHARED);
+
+sub new {
+	my ($class, $path) = @_;
+
+	my $self = {};
+
+	$self->{path} = $path;
+
+	# Normalize tablename
+	my ($basename) = $path =~ m{([^/]+)$};
+	$basename =~ s/\.[^.]+$//;
+	$self->{key} = $normalize_tablename->($basename);
+	$self->{mirrored_key} = $normalize_tablename->($basename, 1);
+	$self->{symmetric} = $self->{key} eq $self->{mirrored_key};
+
+	$self->{num} = length($basename) - 1;
+
+	$self->{has_pawns} = ($basename =~ /P/);
+
+	my ($black_part, $white_part) = split /v/, $basename;
+
+	if ($self->{has_pawns}) {
+		$self->{pawns} = [
+			() = $white_part =~ /P/g,
+			() = $black_part =~ /P/g,
+		];
+
+		if ($self->{pawns}->[1] > 0
+			&& ($self->{pawns}->[0] == 0 || $self->{pawns}->[1] < $self->{pawns}->[0]))
+		{
+			($self->{pawns}->[0], $self->{pawns}->[1]) =
+				($self->{pawns}->[1], $self->{pawns}->[0]);
+		}
+	} else {
+		my $j = 0;
+		foreach my $piece_type (@{PCHR()}) {
+			$j++ if ($black_part =~ /$piece_type/ && ($black_part =~ tr/$piece_type/$piece_type/) == 1);
+			$j++ if ($white_part =~ /$piece_type/ && ($white_part =~ tr/$piece_type/$piece_type/) == 1);
+		}
+
+		if ($j >= 3) {
+			$self->{enc_type} = 0;
+		} else {
+			$self->{enc_type} = 2;
+		}
+	}
+
+	bless $self, $class;
+}
+
+sub _initMmap {
+	my ($self) = @_;
+
+	return if defined $self->{data};
+
+	# Open the file.
+	sysopen(my $fh, $self->{path}, O_RDONLY | ($^O eq 'MSWin32' ? O_BINARY : 0))
+		or die __x("Cannot open '{path}': {error}\n",
+			path => $self->{path}, error => $@);
+
+	# Get the file size.
+	my $size = -s $fh;
+
+	# Memory-map the file.
+	my $data;
+	mmap($data, $size, PROT_READ, MAP_SHARED, $fh)
+		or die __x("Cannot mmap '{path}': {error}\n",
+			path => $self->{path}, error => $@);
+
+	close($fh);
+
+	# Validate the file size.
+	die __x("Invalid file size: Ensure '{path}' is a valid syzygy tablebase.\n",
+			path => $self->{path})
+		if $size % 64 != 16;
+
+	# Store the memory-mapped string in the object.
+	$self->{data} = \$data;
+}
+
+sub __checkMagic {
+	my ($self, $magic, $pawnless_magic) = @_;
+
+	if (!$self->{data}) {
+		die __x("Cannot check magic in '{path}' without data.\n",
+			path => $self->{path})
+	}
+
+	my @valid_magics = ($magic);
+
+	push @valid_magics, $pawnless_magic if $self->{has_pawns};
+
+	my $header = substr(${$self->{data}}, 0, 4);
+
+	my $ok = 0;
+	for my $m (@valid_magics) {
+		next unless defined $m;
+		if ($header eq $m) {
+			$ok = 1;
+			last;
+		}
+	}
+
+	if (!$ok) {
+		die __x("Invalid magic header! Ensure that '{path}' is a valid syzygy tablebase file.\n",
+			path => $self->{path});
+	}
+}
+
+sub __setupPairs {
+	my ($self, $data_ptr, $tb_size, $size_idx, $wdl) = @_;
+
+	if (!$self->{data}) {
+		die __x("Cannot setup pairs for '{path}' without data.\n",
+			path => $self->{path})
+	}
+
+	my $d = new PairsData;
+
+	$self->{_flags} = $self->{data}[$data_ptr];
+
+	if ($self->{data}->[$data_ptr] & 0x80) {
+		$d->{idxbits} = 0;
+
+		if ($wdl) {
+			$d->{min_len} = $self->{data}->[$data_ptr + 1];
+		} else {
+			# http://www.talkchess.com/forum/viewtopic.php?p=698093#698093
+			$d->{min_len} = 0;
+		}
+
+		$self->{_next} = $data_ptr + 2;
+		$self->{size}->[$size_idx + 0] = 0;
+		$self->{size}->[$size_idx + 1] = 0;
+		$self->{size}->[$size_idx + 2] = 0;
+
+		return $d;
+	}
+
+	$d->{blocksize} = $self->{data}->[$data_ptr + 1];
+	$d->{idxbits} = $self->{data}->[$data_ptr + 2];
+
+	my $real_num_blocks = $self->__readUint32($data_ptr + 4);
+	my $num_blocks = $real_num_blocks + $self->{data}->[$data_ptr + 3];
+	my $max_len = $self->{data}->[$data_ptr + 8];
+	my $min_len = $self->{data}->[$data_ptr + 9];
+	my $h = $max_len - $min_len + 1;
+	my $num_syms = $self->__readUint16($data_ptr + 10 + 2 * $h);
+
+	${d}->{offset} = $data_ptr + 10;
+	${d}->{symlen} = [0 .. $h * 8 + $num_syms - 1];
+	${d}->{sympat} = $data_ptr + 12 + 2 * $h;
+	${d}->{min_len} = $min_len;
+
+	$self->{_next} = $data_ptr + 12 + 2 * $h + 3 * $num_syms + ($num_syms & 1);
+
+	my $num_indices = ($tb_size + (1 << $d->{idxbits}) - 1) >> $d->{idxbits};
+	$self->{size}->[$size_idx + 0] = 6 * $num_indices;
+	$self->{size}->[$size_idx + 1] = 2 * $num_blocks;
+	$self->{size}->[$size_idx + 2] = (1 << $d->{blocksize}) * $real_num_blocks;
+
+	my @tmp = (0 .. $num_syms - 1);
+	for my $i (0 .. $num_syms - 1) {
+		if (!$tmp[$i]) {
+			$self->_calcSymlen($d, $i, \@tmp)
+		}
+	}
+
+	$d->{base} = [0 .. $h - 1];
+	$d->{base}->[$h - 1] = 0;
+
+	for my $i (reverse 0 .. $h - 2) {
+		$d->{base}->[$i] = ($d->{base}->[$i + 1]
+			+ $self.__readUint16($d->{offset} + $i * 2)
+			- $self->__readUint16($d->{offset} + $i * 2 + 2)) // 2;
+	}
+
+	for my $i (0 .. $h) {
+		$d->{base}->[$i] <<= 64 - ($min_len + $i);
+	}
+
+	$d->{offset} -= 2 * $d->{min_len};
+
+	return $d;
+}
+
+package Chess::Plisco::Tablebase::Syzygy;
+
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
+
+use constant TBPIECES => 7;
+
 sub new {
 	my ($class, $directory, %__options) = @_;
 
@@ -411,7 +863,7 @@ sub addDirectory {
 		next if $filename !~ /(.*)\.([^.]+)$/;
 		my ($tablename, $ext) = ($1, $2);
 
-		if ($self->__isTablename($tablename) && -f $path) {
+		if ($is_tablename->($tablename) && -f $path) {
 			if ($options{loadWdl} && 'rtbw' eq $ext) {
 				$num_files += $self->__openTable($self->{__wdl}, 'WDL', $path);
 			}
@@ -436,21 +888,6 @@ sub __openTable {
 	$hashtable->{$name} = {};
 
 	return $self;
-}
-
-sub __isTablename {
-	my ($self, $name, %options) = @_;
-
-	%options = (
-		normalized => 1,
-		%options,
-	);
-
-	return (
-		$name =~ TABLENAME_REGEX
-		&& (!$options{normalized} || $self->normalizeTablename($name) eq $name)
-		&& $name ne 'KvK' && 'K' eq substr $name, 0, 1 && $name =~ /vK/
-	);
 }
 
 sub largestWdl {
@@ -484,24 +921,6 @@ sub largest {
 	my $largestDtz = $self->largestDtz;
 
 	return $largestWdl < $largestDtz ? $largestWdl : $largestDtz;
-}
-
-sub normalizeTablename {
-	my ($self, $name, $mirror) = @_;
-
-	my ($white, $black) = split 'v', $name;
-
-	$white = join '', sort { PCHR->{$a} <=> PCHR->{$b} } split //, $white;
-	$black = join '', sort { PCHR->{$a} <=> PCHR->{$b} } split '', $black;
-
-	if ($mirror
-	    ^ ((length($white) < length($black))
-	       && ((join '', map { PCHR->{$_} } split '', $black)
-		       lt (join '', map { PCHR->{$_} } split '', $white)))) {
-		return join 'v', $black, $white;
-	} else {
-		return join 'v', $white, $black;
-	}
 }
 
 sub probeWdl {
