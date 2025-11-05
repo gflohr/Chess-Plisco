@@ -476,7 +476,7 @@ my $calc_key = sub {
 		$bkey .= $pieces[$i - CP_POS_PAWNS] x $popcount;
 	}
 
-	return $mirror ? (join 'v', $wkey, $bkey) : (join 'v', $bkey, $wkey);
+	return $mirror ? (join 'v', $bkey, $wkey) : (join 'v', $wkey, $bkey);
 };
 
 # Some endgames are stored with a different key than their filename
@@ -487,19 +487,22 @@ my $recalc_key = sub {
 	$mirror //= 0;
 
 	my ($w, $b) = $mirror ? (8, 0) : (0, 8);
-	my @order  = (6, 5, 4, 3, 2, 1);
-	my @letters = qw(K Q R B N P);
+	my @l = qw(K Q R B N P);
 
-	my $key = join(
-		'',
-		# white side
-		map { my $n = grep { $_ == ($_ ^ $w) } @$pieces; $letters[$_] x $n } 0 .. $#order,
-		'v',
-		# black side
-		map { my $n = grep { $_ == ($_ ^ $b) } @$pieces; $letters[$_] x $n } 0 .. $#order
-	);
+	my $white = join '', map
+		{
+			my $c = (6 - $_) ^ $w;
+			my $n = grep { $c == $_ } @$pieces;
+			$l[$_] x $n;
+		} 0 .. 5;
+	my $black = join '', map
+		{
+			my $c = (6 - $_) ^ $b;
+			my $n = grep { $c == $_ } @$pieces;
+			$l[$_] x $n;
+		} 0 .. 5;
 
-	return $key;
+	return join 'v', $white, $black;
 };
 
 my $subfactor = sub {
@@ -638,6 +641,7 @@ sub new {
 	# normalise tablename
 	my ($basename) = $path =~ m{([^/]+)$};
 	$basename =~ s/\.[^.]+$//;
+
 	$self->{key} = $normalise_tablename->($basename);
 	$self->{mirrored_key} = $normalise_tablename->($basename, 1);
 	$self->{symmetric} = $self->{key} eq $self->{mirrored_key};
@@ -665,7 +669,14 @@ sub new {
 			{
 				map { $_ => 1 }
 				grep { exists $PCHR_IDX{$_} }
-				split //, "$white_part$black_part"
+				split //, $white_part
+			}
+		};
+		$num_piece_types += keys %{
+			{
+				map { $_ => 1 }
+				grep { exists $PCHR_IDX{$_} }
+				split //, $black_part
 			}
 		};
 
@@ -767,7 +778,7 @@ sub _setupPairs {
 	my $num_syms = $self->__readUint16($data_ptr + 10 + 2 * $h);
 
 	${d}->{offset} = $data_ptr + 10;
-	${d}->{symlen} = [0 .. $h * 8 + $num_syms - 1];
+	${d}->{symlen} = [(0) x ($h * 8 + $num_syms - 1)];
 	${d}->{sympat} = $data_ptr + 12 + 2 * $h;
 	${d}->{min_len} = $min_len;
 
@@ -778,10 +789,10 @@ sub _setupPairs {
 	$self->{size}->[$size_idx + 1] = 2 * $num_blocks;
 	$self->{size}->[$size_idx + 2] = (1 << $d->{blocksize}) * $real_num_blocks;
 
-	my @tmp = (0 .. $num_syms - 1);
+	my @tmp = ((0) x ($num_syms - 1));
 	for my $i (0 .. $num_syms - 1) {
 		if (!$tmp[$i]) {
-			$self->_calcSymlen($d, $i, \@tmp)
+			$self->__calcSymlen($d, $i, \@tmp)
 		}
 	}
 
@@ -942,7 +953,7 @@ sub __pawnFile {
 	return FILE_TO_FILE->[$shifts->[0] & 0x07];
 }
 
-sub __encodePiece {
+sub _encodePiece {
 	my ($self, $norm, $shifts, $factor) = @_;
 
 	my $n = $self->{num};
@@ -1116,7 +1127,7 @@ sub __encodePawn {
 	return $idx;
 }
 
-sub __decompressPairs {
+sub _decompressPairs {
 	my ($self, $d, $idx) = @_;
 
 	if (!$d->{idxbits}) {
@@ -1125,9 +1136,9 @@ sub __decompressPairs {
 
 	my $mainidx = $idx >> $d->{idxbits};
 	my $litidx = ($idx & ($1 << $d->{idxbits}) - 1) - (1 << ($d->{idxbits} - 1));
-	my $block = $self.__readUint32($d->{indextable} + 6 * $mainidx);
+	my $block = $self->__readUint32($d->{indextable} + 6 * $mainidx);
 
-	my $idx_offset = self->__readUint16($d->{indextable} + 6 * $mainidx + 4);
+	my $idx_offset = $self->__readUint16($d->{indextable} + 6 * $mainidx + 4);
 	$litidx += $idx_offset;
 
 	if ($litidx < 0) {
@@ -1148,7 +1159,7 @@ sub __decompressPairs {
 	my $base_idx = -$m;
 	my $symlen_idx = 0;
 
-	my $code = self->__readUint64BE($ptr);
+	my $code = $self->__readUint64BE($ptr);
 
 	$ptr += 2 * 4;
 	my $bitcnt = 0; # Number of empty bits in code
@@ -1158,7 +1169,7 @@ sub __decompressPairs {
 		while ($code < $d->{base}->[$base_idx + $l]) {
 			++$l;
 		}
-		$sym = $self.__readUint16($d->{offset} + $l * 2);
+		$sym = $self->__readUint16($d->{offset} + $l * 2);
 		$sym += ($code - $d->{base}->[$base_idx + $l]) >> (64 - $l);
 		if ($litidx < $d->{symlen}->[$symlen_idx + $sym] + 1) {
 			last;
@@ -1405,14 +1416,14 @@ sub __setupPiecesPiece {
 	my ($self, $p_data) = @_;
 
 	foreach my $i (0 .. $self->{num} - 1) {
-		$self->{pieces}->[0] = [$read_byte->($self->{data}, $p_data + $i + 1) & 0x0f];
+		$self->{pieces}->[0]->[$i] = $read_byte->($self->{data}, $p_data + $i + 1) & 0x0f;
 	}
 	my $order = $read_byte->($self->{data}, $p_data) & 0x0f;
 	$self->_setNormPiece($self->{norm}->[0], $self->{pieces}->[0]);
 	$self->{tb_size}->[0] = $self->_calcFactorsPiece($self->{factor}->[0], $order, $self->{norm}->[0]);
 
 	foreach my $i (0 .. $self->{num} - 1) {
-		$self->{pieces}->[1] = [$read_byte->($self->{data}, $p_data + $i + 1) >> 4];
+		$self->{pieces}->[1]->[$i] = $read_byte->($self->{data}, $p_data + $i + 1) >> 4;
 	}
 	$order = $read_byte->($self->{data}, $p_data) >> 4;
 	$self->_setNormPiece($self->{norm}->[1], $self->{pieces}->[1]);
@@ -1424,19 +1435,18 @@ sub probeWdlTable {
 
 	$self->__initTableWdl;
 
-	# FIXME! We know the key already.
 	my $key = $calc_key->($pos);
 
 	my ($cmirror, $mirror, $bside);
 	my $to_move = cp_pos_to_move $pos;
 	if (!$self->{symmetric}) {
-		if ($key != $self->{key}) {
+		if ($key ne $self->{key}) {
 			$cmirror = 8;
 			$mirror = 0x38;
 			$bside = $to_move == CP_WHITE;
 		} else {
 			$cmirror = $mirror = 0;
-			$bside = $to_move == CP_WHITE;
+			$bside = $to_move != CP_WHITE;
 		}
 	} else {
 		$cmirror = $to_move == CP_WHITE ? 0 : 8;
@@ -1446,37 +1456,36 @@ sub probeWdlTable {
 
 	my $res;
 	if (!$self->{has_pawns}) {
-		my $p = [0 .. $TBPIECES - 1];
+$DB::single = 1;
+		my $p = [(0) x ($TBPIECES - 1)];
 		my $i = 0;
 		while ($i < $self->{num}) {
-			# FIXME! This looks suspicious! Print out $piece_type for debugging.
 			my $piece_type = $self->{pieces}->[$bside]->[$i] & 0x07;
-			warn "Piece type: $piece_type";
 			my $colour = ($self->{pieces}->[$bside]->[$i] ^ $cmirror) >> 3;
-			my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
+			my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
 
 			while ($bb) {
 				my $shift = cp_bitboard_count_trailing_zbits $bb;
-				$p->[$i] = $shift;
+				$p->[$i++] = $shift;
 
 				$bb = cp_bitboard_clear_least_set $bb;
 			}
 		}
 
-		my $idx = $self->encodePiece($self->{norm}->[$bside], $p, $self->{factor}->[$bside]);
-		$res = $self->decompressPairs($self->{precomp}->[$bside], $idx);
+		# FIXME! idx is not always used by decompressPairs()!
+		my $idx = $self->_encodePiece($self->{norm}->[$bside], $p, $self->{factor}->[$bside]);
+		$res = $self->_decompressPairs($self->{precomp}->[$bside], $idx);
 	} else {
-		my $p = [0 .. $TBPIECES - 1];
+		my $p = [(0) x ($TBPIECES - 1)];
 		my $i = 0;
 		my $k = $self->{files}->[0]->{pieces}->[0]->[0] ^ $cmirror;
 		my $colour = $k >> 3;
 		my $piece_type = $k & 0x07;
-		warn "Piece type: $piece_type";
 
-		my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
+		my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
 		while ($bb) {
 			my $shift = cp_bitboard_count_trailing_zbits $bb;
-			$p->[$i] = $shift ^ $mirror;
+			$p->[$i++] = $shift ^ $mirror;
 
 			$bb = cp_bitboard_clear_least_set $bb;
 		}
@@ -1487,19 +1496,19 @@ sub probeWdlTable {
 		while ($i < $self->{num}) {
 			my $colour = ($pc->[$i] ^ $cmirror) >> 3;
 			my $piece_type = $pc->[$i] & 0x07;
-			warn "Piece type: $piece_type";
-			my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
+			my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
 
 			while ($bb) {
 				my $shift = cp_bitboard_count_trailing_zbits $bb;
-				$p->[$i] = $shift ^ $mirror;
+				$p->[$i++] = $shift ^ $mirror;
 
 				$bb = cp_bitboard_clear_least_set $bb;
 			}
 		}
 
-		my $idx = $self->encodePawn($self->{files}->[$f]->{norm}[$bside], $p, $self->{files}->[$f]->{factor}->[$bside]);
-		$res = $self->decompressPairs($self->{files}->[$f]->{precomp}->[$bside], $idx);
+		# FIXME! idx is not always used by decompressPairs()!
+		my $idx = $self->_encodePawn($self->{files}->[$f]->{norm}[$bside], $p, $self->{files}->[$f]->{factor}->[$bside]);
+		$res = $self->_decompressPairs($self->{files}->[$f]->{precomp}->[$bside], $idx);
 	}
 
 	return $res - 2;
