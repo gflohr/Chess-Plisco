@@ -18,6 +18,9 @@ use List::Util qw(reduce);
 use Locale::TextDomain qw('Chess-Plisco');
 use Scalar::Util qw(reftype);
 
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
+
 my $TBPIECES = 7;
 
 use constant INVTRIANGLE => [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
@@ -35,6 +38,12 @@ my $flipdiag = sub {
 	my ($shift) = @_;
 
 	return (($shift >> 3) | ($shift << 3)) & 63;
+};
+
+my $read_byte = sub {
+	my ($data, $offset) = @_;
+
+	return ord substr $data, $offset, 1;
 };
 
 my @PTWIST = (
@@ -548,6 +557,7 @@ sub new {
 }
 
 package PawnFileDataDtz;
+
 sub new {
 	my ($class, %args) = @_;
 
@@ -563,6 +573,8 @@ package Table;
 
 use Fcntl qw(O_RDONLY O_BINARY);
 use Sys::Mmap qw(mmap PROT_READ MAP_SHARED);
+
+use Locale::TextDomain qw(Chess-Plisco);
 
 use constant FLAP => [
 	0,  0,  0,  0,  0,  0,  0, 0,
@@ -680,29 +692,29 @@ sub _initMmap {
 	# Get the file size.
 	my $size = -s $fh;
 
+	# Validate the file size.
+	die __x("Invalid file size: Ensure '{path}' is a valid syzygy tablebase.\n",
+			path => $self->{path})
+		if $size % 64 != 16;
+
+	# Make sure that the file is not closed.
+	$self->{data_fh} = $fh;
+
 	# Memory-map the file.
 	my $data;
 	mmap($data, $size, PROT_READ, MAP_SHARED, $fh)
 		or die __x("Cannot mmap '{path}': {error}\n",
 			path => $self->{path}, error => $@);
 
-	close($fh);
-
-	# Validate the file size.
-	die __x("Invalid file size: Ensure '{path}' is a valid syzygy tablebase.\n",
-			path => $self->{path})
-		if $size % 64 != 16;
-
-	# Store the memory-mapped string in the object.
-	$self->{data} = \$data;
+	$self->{data} = $data;
 }
 
-sub __checkMagic {
+sub _checkMagic {
 	my ($self, $magic) = @_;
 
 	my @valid_magics = ($magic); # Use list so that we can theoretically expand.
 
-	my $header = substr(${$self->{data}}, 0, 4);
+	my $header = substr($self->{data}, 0, 4);
 
 	my $ok = 0;
 	for my $m (@valid_magics) {
@@ -724,13 +736,13 @@ sub _setupPairs {
 
 	my $d = new PairsData;
 
-	$self->{_flags} = $self->{data}[$data_ptr];
+	$self->{_flags} = $read_byte->($self->{data}, $data_ptr);
 
-	if ($self->{data}->[$data_ptr] & 0x80) {
+	if ($self->{_flags} & 0x80) {
 		$d->{idxbits} = 0;
 
 		if ($wdl) {
-			$d->{min_len} = $self->{data}->[$data_ptr + 1];
+			$d->{min_len} = $read_byte->($self->{data}, $data_ptr + 1);
 		} else {
 			# http://www.talkchess.com/forum/viewtopic.php?p=698093#698093
 			$d->{min_len} = 0;
@@ -744,13 +756,13 @@ sub _setupPairs {
 		return $d;
 	}
 
-	$d->{blocksize} = $self->{data}->[$data_ptr + 1];
-	$d->{idxbits} = $self->{data}->[$data_ptr + 2];
+	$d->{blocksize} = $read_byte->($self->{data}, $data_ptr + 1);
+	$d->{idxbits} = $read_byte->($self->{data}, $data_ptr + 2);
 
 	my $real_num_blocks = $self->__readUint32($data_ptr + 4);
-	my $num_blocks = $real_num_blocks + $self->{data}->[$data_ptr + 3];
-	my $max_len = $self->{data}->[$data_ptr + 8];
-	my $min_len = $self->{data}->[$data_ptr + 9];
+	my $num_blocks = $real_num_blocks + $read_byte->($self->{data}, $data_ptr + 3);
+	my $max_len = $read_byte->($self->{data}, $data_ptr + 8);
+	my $min_len = $read_byte->($self->{data}, $data_ptr + 9);
 	my $h = $max_len - $min_len + 1;
 	my $num_syms = $self->__readUint16($data_ptr + 10 + 2 * $h);
 
@@ -899,12 +911,12 @@ sub __calcSymlen {
 
 	my $w = $d->{sympat} + 3 * $s;
 
-	my $s2 = ($self->{data}->[$w + 2] << 4) | ($self->{data}->[$w + 1] >> 4);
+	my $s2 = ($read_byte->($self->{data}, $w + 2) << 4) | ($read_byte->($self->{data}, $w + 1) >> 4);
 
 	if ($s2 == 0x0fff) {
 		$d->{symlen}->[$s] = 0;
 	} else {
-		my $s1 = (($self->{data}->[$w + 1] & 0xf) << 8) | $self->{data}->[$w];
+		my $s1 = (($read_byte->($self->{data}, $w + 1) & 0xf) << 8) | $read_byte->($self->{data}, $w);
 		if (!$tmp->[$s1]) {
 			$self->__calcSymlen($d, $s1, $tmp);
 		}
@@ -1167,20 +1179,20 @@ sub __decompressPairs {
 	my $sympat = $d->{sympat};
 	while ($d->{symlen}->[$symlen_idx + $sym]) {
 		my $w = $sympat + 3 * $sym;
-		my $s1 = (($self->{data}->[$w + 1] & 0xf) << 8) | $self->{data}->[$w];
+		my $s1 = (($read_byte->($self->{data}, $w + 1) & 0xf) << 8) | $read_byte->($self->{data}, $w);
 		if ($litidx < $d->{symlen}->[$symlen_idx + $s1] + 1) {
 			$sym = $s1;
 		} else {
 			$litidx -= $d->{symlen}->[$symlen_idx + $s1] + 1;
-			$sym = ($self->{data}->[$w + 2] << 4) | ($self->{data}->[$w + 1] >> 4);
+			$sym = ($read_byte->($self->{data}, $w + 2) << 4) | ($read_byte->($self->{data}, $w + 1) >> 4);
 		}
 	}
 
 	my $w = $sympat + 3 * $sym;
 	if ($self->isa('DtzTable')) {
-		return (($self->data->[$w + 1] & 0x0f) << 8) | $self->{data}->[$w];
+		return (($read_byte->($self->{data}, $w + 1) & 0x0f) << 8) | $read_byte->($self->{data}, $w);
 	} else {
-		return $self->{data}->[$w];
+		return $read_byte->($self->{data}, $w);
 	}
 }
 
@@ -1213,6 +1225,10 @@ sub close {
 
 	if (defined $self->{data}) {
 		delete $self->{data};
+	}
+
+	if (defined $self->{data_fh}) {
+		close $self->{data_fh};
 	}
 
 	return;
@@ -1258,21 +1274,22 @@ sub __initTableWdl {
 	$self->{size} = [(0) x (8 * 3)];
 
 	# Used if there are only pieces.
-	$self->{precomp} = {};
-	$self->{pieces} = {};
+	$self->{precomp} = [];
+	$self->{pieces} = [];
 	$self->{factor} = [[(0) x $TBPIECES], [(0) x $TBPIECES]];
 	$self->{norm} = [[(0) x $self->{num}], [(0) x $self->{num}]];
 
 	# Used if there are pawns.
 	$self->{files} = [(new PawnFileData) x 4];
 
-	my $split = $self->{data}->[4] & 0x01;
-	my $files = $self->{data}->[4] & 0x02 ? 4 : 1;
+	my $code = $read_byte->($self->{data}, 4);
+	my $split = $code & 0x01;
+	my $files = $code & 0x02 ? 4 : 1;
 
 	my $data_ptr = 5;
 
 	if (!$self->{has_pawns}) {
-		$self->setupPiecesPiece($data_ptr);
+		$self->__setupPiecesPiece($data_ptr);
 
 		$data_ptr += $self->{num} + 1;
 		$data_ptr += $data_ptr & 0x01;
@@ -1362,21 +1379,21 @@ sub __setupPiecesPawn {
 	my ($self, $p_data, $p_tb_size, $f) = @_;
 
 	my $j = 1 + $self->{pawns}->[1] > 0;
-	my $order = $self->{data}->[$p_data] & 0x0f;
-	my $order2 = $self->{pawns}->[1] ? $self->{data}->[$p_data + 1] & 0x0f : 0x0f;
+	my $order = $read_byte->($self->{data}, $p_data) & 0x0f;
+	my $order2 = $self->{pawns}->[1] ? $read_byte->($self->{data}, $p_data + 1) & 0x0f : 0x0f;
 
 	$self->{files}->[$f]->{pieces}->[0] = [
-		map { $self->{data}->[$p_data + $_ + $j] & 0x0f } (0 .. $self->{num} - 1)
+		map { $read_byte->($self->{data}, $p_data + $_ + $j) & 0x0f } (0 .. $self->{num} - 1)
 	];
 
 	$self->{files}->[$f]->{norm}->[0] = [ (0) x $self->{num} ];	$self->{set_norm_pawn}->($self->{files}->[$f]->{norm}->[0], $self->{files}->[$f]->{pieces}->[0]);
 	$self->{files}->[$f]->{factor}->[0] = [0 .. $TBPIECES - 1];
 	$self->{tb_size}->[$p_tb_size] = $self->_calcFactorsPawn($self->{files}->[$f]->{factor}->[0], $order, $order2, $self->{files}->[$f]->{norm}->[0], $f);
 
-	$order = $self->{data}->[$p_data] >> 4;
-	$order2 = $self->{pawns}->[1] ? $self->{data}->[$p_data + 1] >> 4 : 0x0f;
+	$order = $read_byte->($self->{data}, $p_data) >> 4;
+	$order2 = $self->{pawns}->[1] ? $read_byte->($self->{data}, $p_data + 1) >> 4 : 0x0f;
 	$self->{files}->[$f]->{pieces}->[1] = [
-		map { $self->{data}->[$p_data + $_ + $j] >> 4 } (0 .. $self->{num} - 1)
+		map { $read_byte->($self->{data}, $p_data + $_ + $j) >> 4 } (0 .. $self->{num} - 1)
 	];
 	$self->{files}->[$f]->{norm}->[1] = [0 .. $self->{num} - 1];
 	$self._setNormPawn($self->{files}->[$f]->{norm}->[1], $self->{files}->[$f]->{pieces}->[1]);
@@ -1388,16 +1405,16 @@ sub __setupPiecesPiece {
 	my ($self, $p_data) = @_;
 
 	foreach my $i (0 .. $self->{num} - 1) {
-		$self->{pieces}->[0] = [$self->{data}->[$p_data + $i + 1] & 0x0f];
+		$self->{pieces}->[0] = [$read_byte->($self->{data}, $p_data + $i + 1) & 0x0f];
 	}
-	my $order = $self->{data}->[$p_data] & 0x0f;
+	my $order = $read_byte->($self->{data}, $p_data) & 0x0f;
 	$self->_setNormPiece($self->{norm}->[0], $self->{pieces}->[0]);
 	$self->{tb_size}->[0] = $self->_calcFactorsPiece($self->{factor}->[0], $order, $self->{norm}->[0]);
 
 	foreach my $i (0 .. $self->{num} - 1) {
-		$self->{pieces}->[1] = [$self->{data}->[$p_data + $i + 1] >> 4];
+		$self->{pieces}->[1] = [$read_byte->($self->{data}, $p_data + $i + 1) >> 4];
 	}
-	$order = $self->{data}->[$p_data] >> 4;
+	$order = $read_byte->($self->{data}, $p_data) >> 4;
 	$self->_setNormPiece($self->{norm}->[1], $self->{pieces}->[1]);
 	$self->{tb_size}->[1] = $self->_calcFactorsPiece($self->{factor}->[1], $order, $self->{norm}->[1]);
 }
@@ -1407,6 +1424,7 @@ sub probeWdlTable {
 
 	$self->__initTableWdl;
 
+	# FIXME! We know the key already.
 	my $key = $calc_key->($pos);
 
 	my ($cmirror, $mirror, $bside);
@@ -1434,7 +1452,7 @@ sub probeWdlTable {
 			# FIXME! This looks suspicious! Print out $piece_type for debugging.
 			my $piece_type = $self->{pieces}->[$bside]->[$i] & 0x07;
 			warn "Piece type: $piece_type";
-			my $colour = ($self->{pieces}->[$bside][$i] ^ $cmirror) >> 3;
+			my $colour = ($self->{pieces}->[$bside]->[$i] ^ $cmirror) >> 3;
 			my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
 
 			while ($bb) {
@@ -1464,7 +1482,7 @@ sub probeWdlTable {
 		}
 
 		my $f = $self->pawnFile($p);
-		my $pc = $self->{files}->[$f]->pieces->[$bside];
+		my $pc = $self->{files}->[$f]->{pieces}->[$bside];
 
 		while ($i < $self->{num}) {
 			my $colour = ($pc->[$i] ^ $cmirror) >> 3;
@@ -1481,7 +1499,7 @@ sub probeWdlTable {
 		}
 
 		my $idx = $self->encodePawn($self->{files}->[$f]->{norm}[$bside], $p, $self->{files}->[$f]->{factor}->[$bside]);
-		$res = $self->decompressPairs($self->{files}->[$f]->{precomp}[$bside], $idx);
+		$res = $self->decompressPairs($self->{files}->[$f]->{precomp}->[$bside], $idx);
 	}
 
 	return $res - 2;
@@ -1490,6 +1508,7 @@ sub probeWdlTable {
 package Chess::Plisco::Tablebase::Syzygy;
 
 use File::Basename qw(basename);
+use Locale::TextDomain qw('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
@@ -1537,13 +1556,13 @@ sub addDirectory {
 	foreach my $filename (@files) {
 		my $path = File::Spec->catfile($directory, $filename);
 
-		++$num_files if $self->addFile($path, %options)
+		++$num_files if $self->__addFile($path, %options)
 	}
 
 	return $num_files;
 }
 
-sub addFile {
+sub __addFile {
 	my ($self, $path, %__options) = @_;
 
 	my %options = (
@@ -1625,6 +1644,7 @@ sub probeWdl {
 	my ($value) = $self->__probeAb($pos, -2, 2);
 
 	# FIXME! Check en-passant!
+	warn "en-passant check not yet implemented";
 
 	return $value;
 }
@@ -1705,11 +1725,42 @@ sub __probeAb {
 sub __probeWdlTable {
 	my ($self, $pos) = @_;
 
-	return 42;
-}
+	my $game_over = $pos->gameOver(1);
+	if ($game_over) {
+		if ($game_over & CP_GAME_WHITE_WINS) {
+			return 2;
+		} elsif ($game_over & CP_GAME_BLACK_WINS) {
+			return -2;
+		} else {
+			return 0;
+		}
+	}
 
-sub __initTableWdl {
+	# Check for KvK.
+	my $kings = cp_pos_kings $pos;
+	my $occupancy = $pos->[CP_POS_WHITE_PIECES] | $pos->[CP_POS_BLACK_PIECES];
+	if ($kings == $occupancy) {
+		return 0;
+	}
 
+	my $key = $calc_key->($pos);
+	my $table = $self->{wdl}->{$key};
+	if (!$table) {
+		my $piece_count;
+		cp_bitboard_popcount $occupancy, $piece_count;
+		if ($piece_count > $TBPIECES) {
+			die __x("syzygy tables support up to {TBPIECES} pieces, not {piece_count}: {fen}",
+				TBPIECES => $TBPIECES,
+				piece_count => $piece_count,
+				fen => $pos->toFEN);
+		} else {
+			die __x(__"Missing WDL table '{key}'.\n", key => $key);
+		}
+	}
+
+	# FIXME! Bump LRU!
+
+	return $table->probeWdlTable($pos);
 }
 
 1;
