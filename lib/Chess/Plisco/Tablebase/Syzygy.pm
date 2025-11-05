@@ -1514,12 +1514,12 @@ sub new {
 
 	warn "LRU not yet implemented!";
 
-	$self->__addDirectory($directory, %options) if defined $directory;
+	$self->addDirectory($directory, %options) if defined $directory;
 
 	return $self;
 }
 
-sub __addDirectory {
+sub addDirectory {
 	my ($self, $directory, %__options) = @_;
 
 	my %options = (
@@ -1534,19 +1534,16 @@ sub __addDirectory {
 	my @files = readdir $dh;
 
 	my $num_files = 0;
-	my $largest = 0;
-	my $smallest = 0;
 	foreach my $filename (@files) {
 		my $path = File::Spec->catfile($directory, $filename);
 
-		$num_files += $self->__addFile($path, %options)
+		++$num_files if $self->addFile($path, %options)
 	}
 
-	# FIXME! Describe better what has been found.
 	return $num_files;
 }
 
-sub __addFile {
+sub addFile {
 	my ($self, $path, %__options) = @_;
 
 	my %options = (
@@ -1668,8 +1665,7 @@ sub __probeAb {
 	my $en_passant_shift = cp_pos_en_passant_shift $pos;
 	my $v;
 	foreach my $move ($pos->legalMoves) {
-		my $captured;
-		cp_move_captured $move, $captured;
+		my $captured = cp_move_captured $move;
 
 		if (!$captured) {
 			next;
@@ -1697,7 +1693,7 @@ sub __probeAb {
 
 	}
 
-	TODO: $v = $self->__probeWdlTable($pos);
+	$v = $self->__probeWdlTable($pos);
 
 	if ($alpha >= $v) {
 		return $alpha, 1 + $alpha > 0;

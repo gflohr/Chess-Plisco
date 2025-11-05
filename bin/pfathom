@@ -45,8 +45,6 @@ my $tb = Chess::Plisco::Tablebase::Syzygy->new($options{path});
 my $largest = $tb->largest;
 if (!defined $largest) {
 	usage_error __"Error initializing tablebase.";
-} elsif (!$largest) {
-	usage_error __"No tablebase files found.";
 }
 
 my $position = eval { Chess::Plisco->new($fen) };
@@ -55,17 +53,9 @@ if (!$position) {
 	usage_error $error;
 }
 
-my $num_pieces = $position->bitboardPopcount($position->[CP_POS_BLACK_PIECES]
-		| $position->[CP_POS_WHITE_PIECES]);
-if ($num_pieces > $largest) {
-	die __x("Position has too many pieces ({pieces}) "
-			. " but the tablebase has a maximum of {largest}.\n",
-		pieces => $num_pieces, largest => $largest);
-}
-
 my $res = $tb->getWdl($position);
 if (!defined $res) {
-	die __"Position not found in tablebase!\n"
+	die __"No WDL table for this position found in tablebase!\n"
 }
 warn "Result: $res";
 
