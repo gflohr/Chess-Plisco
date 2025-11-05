@@ -204,8 +204,10 @@ use constant CP_RANK_6 => (5);
 use constant CP_RANK_7 => (6);
 use constant CP_RANK_8 => (7);
 
-use constant CP_WHITE_MASK => 0x5555555555555555;
-use constant CP_BLACK_MASK => 0xaaaaaaaaaaaaaaaa;
+use constant CP_WHITE_MASK => 0x55aa55aa55aa55aa;
+use constant CP_BLACK_MASK => 0xaa55aa55aa55aa55;
+use constant CP_LIGHT_MASK => 0x55aa55aa55aa55aa;
+use constant CP_DARK_MASK => 0xaa55aa55aa55aa55;
 
 use constant CP_PIECE_CHARS => [
 	['', 'P', 'N', 'B', 'R', 'Q', 'K'],
@@ -214,6 +216,14 @@ use constant CP_PIECE_CHARS => [
 
 use constant CP_RANDOM_SEED => 0x415C0415C0415C0;
 my $cp_random = CP_RANDOM_SEED;
+
+# Game states.
+use constant CP_GAME_OVER => 1 << 0;
+use constant CP_GAME_WHITE_WINS => 1 << 1;
+use constant CP_GAME_BLACK_WINS => 1 << 2;
+use constant CP_GAME_STALEMATE => 1 << 3;
+use constant CP_GAME_FIFTY_MOVES => 1 << 4;
+use constant CP_GAME_INSUFFICIENT_MATERIAL => 1 << 5;
 
 my @pawn_aux_data = (
 	# White.
@@ -1790,55 +1800,30 @@ sub bitboardMoreThanOneSet {
 	return cp_bitboard_more_than_one_set $bitboard;
 }
 
-sub insufficientMaterial {
-	my ($self) = @_;
+sub gameOver {
+	my ($self, $forcible) = @_;
 
-	# FIXME! Once we distinguish black and white material (should we?),
-	# we can try to take an early exit here if any of the two sides has
-	# more material than a bishop.
+	my $state = 0;
 
-	# All of these are sufficient to mate.
-	if (cp_pos_pawns($self) | cp_pos_rooks($self) | cp_pos_queens($self)) {
-		return;
+	my @legal = $self->legalMoves;
+	if (!@legal) {
+		$state |= CP_GAME_OVER;
+		if (cp_pos_in_check $self) {
+			if (CP_WHITE == cp_pos_to_move $self) {
+				$state |= CP_GAME_BLACK_WINS;
+			} else {
+				$state |= CP_GAME_WHITE_WINS;
+			}
+		} else {
+			$state |= CP_GAME_STALEMATE;
+		}
+	} elsif (100 <= cp_pos_half_move_clock $self) {
+		$state |= CP_GAME_OVER | CP_GAME_FIFTY_MOVES;
+	} elsif ($self->insufficientMaterial($forcible)) {
+		$state |= CP_GAME_OVER | CP_GAME_INSUFFICIENT_MATERIAL;
 	}
 
-	# There is neither a queen nor a rook nor a pawn.  Two or more minor
-	# pieces on one side can always mate.
-	my $not_kings = ~$self->[CP_POS_KINGS];
-
-	my $white = $self->[CP_POS_WHITE_PIECES];
-	my $white_minor_pieces = $white & $not_kings;
-	if (cp_bitboard_more_than_one_set($white_minor_pieces)) {
-		return;
-	}
-
-	my $black = $self->[CP_POS_BLACK_PIECES];
-	my $black_minor_pieces = $black & $not_kings;
-	if (cp_bitboard_more_than_one_set($black_minor_pieces)) {
-		return;
-	}
-
-	# One minor piece against a lone king cannot mate.
-	if(!($white_minor_pieces && $black_minor_pieces)) {
-		return 1;
-	}
-
-	# Both sides have exactly one minor piece.  The only combination that
-	# is a draw is KBKB with bishops of different color.  That means, that
-	# both sides can mate if a knight is on the board.
-	if ($self->[CP_POS_KNIGHTS]) {
-		return;
-	}
-
-	# Every side has one bishop.  It is not necessarily a draw, if they are
-	# on different colored squares.
-	my $bishops = $self->[CP_POS_BISHOPS];
-	if (!!($white & $bishops & CP_WHITE_MASK)
-	    != !!($black & $bishops & CP_BLACK_MASK)) {
-		return;
-	}
-
-	return 1;
+	return $state;
 }
 
 sub __updateZobristKey {
@@ -2013,54 +1998,102 @@ sub __zobristKeyDump {
 }
 
 sub insufficientMaterial {
-	my ($self) = @_;
-
-	# FIXME! Once we distinguish black and white material (should we?),
-	# we can try to take an early exit here if any of the two sides has
-	# more material than a bishop.
+	my ($self, $forcible) = @_;
 
 	# All of these are sufficient to mate.
 	if (cp_pos_pawns($self) | cp_pos_rooks($self) | cp_pos_queens($self)) {
 		return;
 	}
 
-	# There is neither a queen nor a rook nor a pawn.  Two or more minor
-	# pieces on one side can always mate.
-	my $not_kings = ~$self->[CP_POS_KINGS];
-
-	my $white = $self->[CP_POS_WHITE_PIECES];
-	my $white_minor_pieces = $white & $not_kings;
-	if (cp_bitboard_more_than_one_set($white_minor_pieces)) {
-		return;
-	}
-
-	my $black = $self->[CP_POS_BLACK_PIECES];
-	my $black_minor_pieces = $black & $not_kings;
-	if (cp_bitboard_more_than_one_set($black_minor_pieces)) {
-		return;
-	}
-
-	# One minor piece against a lone king cannot mate.
-	if(!($white_minor_pieces && $black_minor_pieces)) {
+	# There is neither a queen nor a rook nor a pawn.
+	my $bishop_bb = cp_pos_bishops $self;
+	my $knight_bb = cp_pos_knights $self;
+	my $not_kings = $bishop_bb | $knight_bb;
+	if (!cp_bitboard_more_than_one_set $not_kings) {
+		# Lone king versus lone king or a single minor piece.  Always a draw.
 		return 1;
 	}
-
-	# Both sides have exactly one minor piece.  The only combination that
-	# is a draw is KBKB with bishops of different color.  That means, that
-	# both sides can mate if a knight is on the board.
-	if ($self->[CP_POS_KNIGHTS]) {
-		return;
+	
+	# We have at least two minor pieces.  The only situation, where a mate
+	# is technically impossible is, when we have only same-coloured bishops,
+	# no matter on which side.
+	if (!$forcible && $bishop_bb && $knight_bb) {
+		return; # Mate theoretically possible.
 	}
 
-	# Every side has one bishop.  It is not necessarily a draw, if they are
-	# on different colored squares.
-	my $bishops = $self->[CP_POS_BISHOPS];
-	if (!!($white & $bishops & CP_WHITE_MASK)
-	    != !!($black & $bishops & CP_BLACK_MASK)) {
-		return;
+	my $light_squared_bishop_bb = $bishop_bb & CP_LIGHT_MASK;
+	my $dark_squared_bishop_bb = $bishop_bb & CP_DARK_MASK;
+
+	if (!($light_squared_bishop_bb && $dark_squared_bishop_bb)) {
+		# We either have no bishops or all bishops move on same-coloured
+		# fields. If we have knights, a mate can be delivered.
+		#
+		# If there are no knights, all bishops move on the same squares. No
+		# matter how many we have, this is always a draw. If there are knights,
+		# a mate is maybe possible if one side has more than one knight.
+		if (!$knight_bb) {
+			return 1; # Only same-coloured bishops on the board.
+		}
+
+		# We have knights. If there are knights and bishops or more than one
+		# knight, a mate is theoretically possible.
+		if (!$forcible) {
+			return if $bishop_bb || cp_bitboard_more_than_one_set $knight_bb;
+		}
+
+		# There is at least one knight. We only considered KNNvK a forcible draw.
+		# Probing Syzygy endgame tables shows more constellations but this is
+		# out of scope of this function.
+		my $white_pieces = cp_pos_white_pieces $self;
+		my $black_pieces = cp_pos_black_pieces $self;
+		my $white_knight_bb = $white_pieces & $knight_bb;
+		my $black_knight_bb = $black_pieces & $knight_bb;
+		my $white_knight_pair = cp_bitboard_more_than_one_set($white_knight_bb);
+		my $black_knight_pair = cp_bitboard_more_than_one_set($black_knight_bb);
+
+		# If both sides have a knight pair, we do not report a draw,
+		# although endgame tablebases will probably consider most of them
+		# a draw.
+		return 1 if $white_knight_pair && $black_knight_pair;
+
+		# Only KNNvK and KNvKN are considered a draw. We can detect that
+		# with a popcount of the knight bitboard.
+		my $num_knights;
+		cp_bitboard_popcount $knight_bb, $num_knights;
+
+		return $num_knights <= 2;
+	} else {
+		return if !$forcible; # Mate theoratically possible.
+
+		# The bishops are different-coloured, and we have at least two.
+		# If one side has at least two bishops, a mate can be forced.
+		my $white_pieces = cp_pos_white_pieces $self;
+		my $black_pieces = cp_pos_black_pieces $self;
+
+		if (!($bishop_bb & $white_pieces) && ($bishop_bb && $black_pieces)) {
+			# All bishops are on one side. A mate can probably be forced.
+			return;
+		}
+
+		# Both sides have at least one bishop. We consider KBvKB a draw,
+		# all other cases can be won.
+		return if $knight_bb;
+
+		# We only have bishops. If either side has more than one bishop,
+		# the position is considered winnable.
+		my $white_bishop_pair = cp_bitboard_more_than_one_set($white_pieces & $bishop_bb);
+		my $black_bishop_pair = cp_bitboard_more_than_one_set($white_pieces & $bishop_bb);
+
+		if ((!$white_bishop_pair) && !($black_bishop_pair)) {
+			# Either side has exactly one bishop.
+			return 1;
+		}
 	}
 
-	return 1;
+	# FIXME! KNNvK is also a technical draw.
+
+	# In all other cases, we cannot determine the outcome.
+	return;
 }
 
 # Do not remove this line!
@@ -2092,7 +2125,7 @@ my @export_board = qw(
 	CP_E_MASK CP_F_MASK CP_G_MASK CP_H_MASK
 	CP_1_MASK CP_2_MASK CP_3_MASK CP_4_MASK
 	CP_5_MASK CP_6_MASK CP_7_MASK CP_8_MASK
-	CP_WHITE_MASK CP_BLACK_MASK
+	CP_WHITE_MASK CP_BLACK_MASK CP_LIGHT_MASK CP_DARK_MASK
 );
 
 my @export_pieces = qw(
@@ -2111,10 +2144,19 @@ my @export_magicmoves = qw(
 	CP_MAGICMOVESRDB
 );
 
+my @export_game = qw(
+	CP_GAME_OVER
+	CP_GAME_WHITE_WINS
+	CP_GAME_BLACK_WINS
+	CP_GAME_STALEMATE
+	CP_GAME_FIFTY_MOVES
+	CP_GAME_INSUFFICIENT_MATERIAL
+);
+
 my @export_aux = qw(CP_INT_SIZE CP_CHAR_BIT CP_RANDOM_SEED);
 
 our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors,
-		@export_magicmoves, @export_aux);
+		@export_magicmoves, @export_game, @export_aux);
 
 our %EXPORT_TAGS = (
 	accessors => [@export_accessors],
@@ -2122,6 +2164,7 @@ our %EXPORT_TAGS = (
 	board => [@export_board],
 	magicmoves => [@export_magicmoves],
 	aux => [@export_aux],
+	# game => [@export_game],
 	all => [@EXPORT_OK],
 );
 
