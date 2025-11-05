@@ -265,8 +265,6 @@ my @PFACTOR = ([], [], [], [], []);
 my $binom = sub {
 	my ($x, $y) = @_;
 
-	use integer;
-
 	my $numerator = reduce { $a * $b } $x - $y + 1 .. $x;
 	my $denominator = reduce { $a * $b } 1 .. $y;
 
@@ -328,7 +326,7 @@ use constant PA_FLAGS => [8, 0, 0, 0, 4];
 
 use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
 
-my @PCHR => ('K', 'Q', 'R', 'B', 'N', 'P');
+my @PCHR = ('K', 'Q', 'R', 'B', 'N', 'P');
 my %PCHR_IDX = map { $PCHR[$_] => $_ } 0 .. $#PCHR;
 
 use constant TABLENAME_REGEX => qr/^[KQRBNP]+v[KQRBNP]+\Z/;
@@ -442,8 +440,8 @@ my $tablenames = sub {
 
 	while ($white_pieces >= $black_pieces) {
 		push @targets, $first . ('P' x $white_pieces) . 'v' . $first . ('P' x $black_pieces);
-		$white_pieces--;
-		$black_pieces++;
+		--$white_pieces;
+		++$black_pieces;
 	}
 
 	return $all_dependencies->(\@targets, $one_king);
@@ -651,13 +649,15 @@ sub new {
 				($self->{pawns}->[1], $self->{pawns}->[0]);
 		}
 	} else {
-		my $j = 0;
-		foreach my $piece_type (@PCHR) {
-			$j++ if ($black_part =~ /$piece_type/ && ($black_part =~ tr/$piece_type/$piece_type/) == 1);
-			$j++ if ($white_part =~ /$piece_type/ && ($white_part =~ tr/$piece_type/$piece_type/) == 1);
-		}
+		my $num_piece_types = keys %{
+			{
+				map { $_ => 1 }
+				grep { exists $PCHR_IDX{$_} }
+				split //, "$white_part$black_part"
+			}
+		};
 
-		if ($j >= 3) {
+		if ($num_piece_types >= 3) {
 			$self->{enc_type} = 0;
 		} else {
 			$self->{enc_type} = 2;
@@ -1438,8 +1438,6 @@ sub probeWdlTable {
 			my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
 
 			while ($bb) {
-				use integer;
-
 				my $shift = cp_bitboard_count_trailing_zbits $bb;
 				$p->[$i] = $shift;
 
@@ -1459,8 +1457,6 @@ sub probeWdlTable {
 
 		my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
 		while ($bb) {
-			use integer;
-
 			my $shift = cp_bitboard_count_trailing_zbits $bb;
 			$p->[$i] = $shift ^ $mirror;
 
@@ -1477,8 +1473,6 @@ sub probeWdlTable {
 			my $bb = ($colour == 0) ? ($pos->[$piece_type] & cp_pos_white_pieces($pos)) : ($pos->[$piece_type] & cp_pos_black_pieces($pos)); 
 
 			while ($bb) {
-				use integer;
-
 				my $shift = cp_bitboard_count_trailing_zbits $bb;
 				$p->[$i] = $shift ^ $mirror;
 
