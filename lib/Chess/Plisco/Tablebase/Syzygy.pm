@@ -1659,8 +1659,31 @@ sub largest {
 	return $largestWdl < $largestDtz ? $largestWdl : $largestDtz;
 }
 
+sub __checkPosition {
+	my ($self, $pos) = @_;
+
+	if ($pos->castlingRights) {
+		die __x("Syzygy tables do not contain positions with castling rights: {fen}",
+			fen => $pos->toFEN);
+	}
+
+	my $piece_count;
+	cp_bitboard_popcount $pos->occupied, $piece_count;
+
+	if ($piece_count > $TBPIECES + 1) {
+		die __x("syzygy tables support up to {TBPIECES} pieces, not {piece_count}: {fen}",
+			TBPIECES => $TBPIECES,
+			piece_count => $piece_count,
+			fen => $pos->toFEN);
+	}
+
+	return $self;
+}
+
 sub probeWdl {
 	my ($self, $pos) = @_;
+
+	$self->__checkPosition;
 
 	my ($value) = $self->__probeAb($pos, -2, 2);
 
@@ -1747,21 +1770,6 @@ sub getWdl {
 sub __probeAb {
 	my ($self, $pos, $alpha, $beta) = @_;
 
-	if ($pos->castlingRights) {
-		die __x("Syzygy tables do not contain positions with castling rights: {fen}",
-			fen => $pos->toFEN);
-	}
-
-	my $piece_count;
-	cp_bitboard_popcount $pos->occupied, $piece_count;
-
-	if ($piece_count > $TBPIECES + 1) {
-		die __x("syzygy tables support up to {TBPIECES} pieces, not {piece_count}: {fen}",
-			TBPIECES => $TBPIECES,
-			piece_count => $piece_count,
-			fen => $pos->toFEN);
-	}
-
 	# Iterate over all non-ep captures.
 	my $v;
 	foreach my $move ($remove_ep->($pos)->legalMoves) {
@@ -1828,12 +1836,12 @@ sub __probeWdlTable {
 	my $full_key = join '', $key, '.', TBW_SUFFIX;
 	my $table = $self->{tables}->{$full_key};
 	if (!$table) {
-		$table = new WdlTable($path);
+		$table = WdlTable->new($path);
 		$self->{tables}->{$full_key} = $table if $table;
 	}
 
 	if (!$table) {
-		die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
+		die __x("Cannot initialize WDL table '{key}'.\n";, key => $key);
 	}
 
 	return $table->probeWdlTable($pos);
