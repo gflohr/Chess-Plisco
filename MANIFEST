@@ -56,6 +56,7 @@ t/03parse-san.t
 t/03san.t
 t/04check-check.t
 t/04do-move.t
+t/04game-over.t
 t/04insufficient-material.t
 t/04king-shift.t
 t/04legal-moves.t
