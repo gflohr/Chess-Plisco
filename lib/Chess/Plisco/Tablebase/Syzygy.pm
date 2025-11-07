@@ -1773,15 +1773,11 @@ sub __probeAb {
 	# Iterate over all non-ep captures.
 	my $v;
 	foreach my $move ($remove_ep->($pos)->legalMoves) {
-		my $captured = cp_move_captured $move;
-
-		if (!$captured) {
-			next;
-		}
+		cp_move_captured($move) or next;
 
 		my $undo = $pos->doMove($move);
 		eval {
-			my $v_plus = $self->__probeAb($pos, -$beta, -$alpha);
+			my ($v_plus) = $self->__probeAb($pos, -$beta, -$alpha);
 			$v = -$v_plus;
 		};
 		$pos->undoMove($undo);
