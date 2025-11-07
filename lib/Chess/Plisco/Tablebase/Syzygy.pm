@@ -1606,15 +1606,19 @@ sub __addFile {
 	my ($tablename, $ext) = split /\./, $basename, 2;
 
 	if ($is_tablename->($tablename)) {
+		my ($white_part, $black_part) = split 'v', $tablename;
+		my $mirrored_tablename = join 'v', $black_part, $white_part;
 		if ($ext eq TBW_SUFFIX) {
 			if ($options{load_wdl}) {
 				$self->{wdl}->{$tablename} = $path;
+				$self->{wdl}->{$mirrored_tablename} = $path;
 
 				return 1;
 			}
 		} elsif ($ext eq TBZ_SUFFIX) {
 			if ($options{load_dtz}) {
 				$self->{dtz}->{$tablename} = $path;
+				$self->{dtz}->{$mirrored_tablename} = $path;
 
 				return 1;
 			}
@@ -1817,10 +1821,6 @@ sub __probeWdlTable {
 
 	my $key = $calc_key->($pos);
 	my $path = $self->{wdl}->{$key};
-	if (!defined $path) {
-		my $key = $normalise_tablename->($key, 1);
-		$path = $self->{wdl}->{$key};
-	}
 	if (!defined $path) {
 		die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
 	}
