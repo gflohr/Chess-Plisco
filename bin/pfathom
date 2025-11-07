@@ -116,8 +116,8 @@ sub print_wdl_moves {
 		qq([DrawingMoves "@{[join ', ', @draws]}"]),
 		qq([LosingMoves "@{[join ', ', @losses]}"]),
 	);
-	if (@losses) {
-		push @report, qq([UnknownOutcomeMoves "@{[join ', ', @losses]}"]);
+	if (@unknown) {
+		push @report, qq([UnknownOutcomeMoves "@{[join ', ', @unknown]}"]);
 	}
 
 	return join "\n", @report, '';
