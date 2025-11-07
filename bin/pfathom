@@ -53,11 +53,29 @@ if (!$position) {
 	usage_error $error;
 }
 
-my $res = $tb->getWdl($position);
-if (!defined $res) {
-	die __"No WDL table for this position found in tablebase!\n"
-}
-warn "Result: $res";
+my $wdl = $tb->probeWdl($position);
+
+my @wdl_to_name_str = (
+	__"Loss",
+	__"BlessedLoss",
+	__"Draw",
+	__"CursedWin",
+	__"Win",
+);
+
+my $wdl_result = $wdl_to_name_str[$wdl + 2];
+
+print <<EOF;
+[Event ""]
+[Site ""]
+[Date "??"]
+[Round] "-"]
+[White "Syzygy"]
+[Black "Syzygy"]
+[Result "$wdl_result"]
+[FEN "$fen"]
+
+EOF
 
 sub display_usage {
 	print __x(<<EOF, program => $0);
