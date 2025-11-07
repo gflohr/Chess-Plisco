@@ -538,6 +538,16 @@ my $dtz_before_zeroing = sub {
 	return $sign * $factor;
 };
 
+package MissingTableException;
+
+use overload '""' => sub { ${$_[0]} };
+
+sub new {
+	my ($self, $msg) = @_;
+
+	bless \$msg;
+}
+
 package PairsData;
 
 sub new {
@@ -1730,8 +1740,13 @@ sub getWdl {
 	eval {
 		$result = $self->probeWdl($pos);
 	};
-	if ($@ && $@ ne __("Missing table!\n")) {
-		die $@;
+	if ($@) {
+		if (ref $@ && $@->isa('MissingTableException')) {
+			return;
+		} else {
+			# Re-throw.
+			die $@;
+		}
 	}
 
 	return $result;
@@ -1820,7 +1835,7 @@ sub __probeWdlTable {
 				piece_count => $piece_count,
 				fen => $pos->toFEN);
 		} else {
-			die __x(__"Missing WDL table '{key}'.\n", key => $key);
+			die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
 		}
 	}
 
