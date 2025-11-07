@@ -46,6 +46,16 @@ my $read_byte = sub {
 	return ord substr $data, $offset, 1;
 };
 
+my $remove_ep = sub {
+	my ($pos) = @_;
+
+	my $pos2 = $pos->copy;
+
+	_cp_pos_set_en_passant_shift $pos2, 0;
+
+	return $pos2;
+};
+
 my @PTWIST = (
 	 0,  0,  0,  0,  0,  0,  0,  0,
 	47, 35, 23, 11, 10, 22, 34, 46,
@@ -1654,16 +1664,60 @@ sub probeWdl {
 
 	my ($value) = $self->__probeAb($pos, -2, 2);
 
-	my $pos_info = cp_pos_info $pos;
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	if (!$ep_shift) {
-		return $value;
+	# Positions where en passant is possible need special care because the
+	# Syzygy tablebases assume that en passant is not possible. Otherwise,
+	# we can just return the result of the probe.  We can also take an
+	# early exit if the probe reported a win with the 50-move-rule.
+	return $value if $value == 2;
+
+	my $ep_shift = cp_pos_en_passant_shift $pos;
+	return $value if !$ep_shift;
+
+	# Positions resulting from en passant captures have not been considered,
+	# when generating the table. We do that now, in the wrapper code, by
+	# trying to play these en passant captures.  If any of them (maximum 2)
+	# yields a better result than the probe, that move should be played.
+	#
+	# Test case: 8/8/8/pPk5/8/8/8/7K w - a6 0 1
+	#
+	# It is also possible that the only legal moves in a position are en
+	# passant captures. Example: K7/3n1P2/1k6/pP6/8/8/8/8 w - a6 0 1. In this
+	# case, the best of the captures have to be played.
+	my $v1 = -3;
+	my @legal_moves = $pos->legalMoves;
+	my @ep_captures;
+	foreach my $move (@legal_moves) {
+		my $to = cp_move_to $move;
+		next if $to != $ep_shift;
+
+		my $piece = cp_move_piece $move;
+		next if $piece != CP_PAWN;
+
+		push @ep_captures, $move;
 	}
 
-	my $v1 = -3;
-	foreach my $move ($pos->generateLegalMoves) {
-		my $san = $pos->SAN($move);
-		print("Trying $san");
+	foreach my $move (@ep_captures) {
+		my $undo = $pos->doMove($move);
+
+		my ($v0_plus) = $self->__probeAb($pos, -2, 2);
+		my $v0 = -$v0_plus;
+
+		$pos->undoMove($undo);
+
+		if ($v0 > $v1) {
+			$v1 = $v0;
+		}
+	}
+
+	if ($v1 > -3) {
+		if ($v1 >= $value) {
+			$value = $v1;
+		} elsif ($value == 0) {
+			if (@legal_moves == @ep_captures) {
+				# All legal moves are en passant captures.
+				$value = $v1;
+			}
+		}
 	}
 	
 	return $value;
@@ -1702,20 +1756,12 @@ sub __probeAb {
 	}
 
 	# Iterate over all non-ep captures.
-	my $en_passant_shift = cp_pos_en_passant_shift $pos;
 	my $v;
-	foreach my $move ($pos->legalMoves) {
+	foreach my $move ($remove_ep->($pos)->legalMoves) {
 		my $captured = cp_move_captured $move;
 
 		if (!$captured) {
 			next;
-		}
-
-		if ($en_passant_shift) {
-			my $to = cp_move_to $move;
-			if ($en_passant_shift == $to) {
-				next;
-			}
 		}
 
 		$pos->doMove($move);
