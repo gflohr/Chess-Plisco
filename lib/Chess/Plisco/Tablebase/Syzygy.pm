@@ -1694,15 +1694,17 @@ sub probeWdl {
 
 	foreach my $move (@ep_captures) {
 		my $undo = $pos->doMove($move);
+		eval {
+			my ($v0_plus) = $self->__probeAb($pos, -2, 2);
+			my $v0 = -$v0_plus;
 
-		my ($v0_plus) = $self->__probeAb($pos, -2, 2);
-		my $v0 = -$v0_plus;
 
+			if ($v0 > $v1) {
+				$v1 = $v0;
+			}
+		};
 		$pos->undoMove($undo);
-
-		if ($v0 > $v1) {
-			$v1 = $v0;
-		}
+		die $@ if $@;
 	}
 
 	if ($v1 > -3) {
@@ -1765,10 +1767,13 @@ sub __probeAb {
 			next;
 		}
 
-		$pos->doMove($move);
-		my $v_plus = $self->__probeAb($pos, -$beta, -$alpha);
-		$v = -$v_plus;
-		$pos->undoMove($move);
+		my $undo = $pos->doMove($move);
+		eval {
+			my $v_plus = $self->__probeAb($pos, -$beta, -$alpha);
+			$v = -$v_plus;
+		};
+		$pos->undoMove($undo);
+		die $@ if $@;
 
 		if ($v > $alpha) {
 			if ($v >= $beta) {

@@ -56,14 +56,22 @@ if (!$position) {
 my $wdl = $tb->probeWdl($position);
 
 my @wdl_to_name_str = (
-	__"Loss",
-	__"BlessedLoss",
-	__"Draw",
-	__"CursedWin",
-	__"Win",
+	"Loss",
+	"BlessedLoss",
+	"Draw",
+	"CursedWin",
+	"Win",
 );
 
 my $wdl_result = $wdl_to_name_str[$wdl + 2];
+my $result;
+if ($wdl < 0) {
+	$result = "0-1";
+} elsif ($wdl > 0) {
+	$result = "1-0";
+} else {
+	$result = "1/2-1/2";
+}
 
 print <<EOF;
 [Event ""]
@@ -72,10 +80,48 @@ print <<EOF;
 [Round] "-"]
 [White "Syzygy"]
 [Black "Syzygy"]
-[Result "$wdl_result"]
+[Result "$result"]
 [FEN "$fen"]
-
+[WDL "$wdl_result"]
 EOF
+
+my $wdl_moves = print_wdl_moves($tb, $position);
+print $wdl_moves if $wdl_moves;
+
+sub print_wdl_moves {
+	my ($tb, $pos) = @_;
+
+	my (@wins, @draws, @losses, @unknown);
+	foreach my $move ($pos->legalMoves) {
+		my $san = $pos->SAN($move);
+		my $undo = $pos->doMove($move);
+		my $wdl = $tb->getWdl($pos);
+		$pos->undoMove($undo);
+
+		if (!defined $wdl) {
+			push @unknown, $wdl;
+		} elsif ($wdl == -2) {
+			push @losses, $san;
+		} elsif ($wdl == -1 || $wdl == 0 || $wdl == +1) {
+			push @draws, $san;
+		} elsif ($wdl == 2) {
+			push @wins, $san;
+		} else {
+			push @unknown, $san;
+		}
+	}
+
+	my @report = (
+		qq([WinningMoves "@{[join ', ', @wins]}"]),
+		qq([DrawingMoves "@{[join ', ', @draws]}"]),
+		qq([LosingMoves "@{[join ', ', @losses]}"]),
+	);
+	if (@losses) {
+		push @report, qq([UnknownOutcomeMoves "@{[join ', ', @losses]}"]);
+	}
+
+	return join "\n", @report, '';
+}
 
 sub display_usage {
 	print __x(<<EOF, program => $0);
