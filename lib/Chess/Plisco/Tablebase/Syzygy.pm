@@ -1818,6 +1818,10 @@ sub __probeWdlTable {
 	my $key = $calc_key->($pos);
 	my $path = $self->{wdl}->{$key};
 	if (!defined $path) {
+		my $key = $normalise_tablename->($key, 1);
+		$path = $self->{wdl}->{$key};
+	}
+	if (!defined $path) {
 		die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
 	}
 
