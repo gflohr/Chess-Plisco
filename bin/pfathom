@@ -73,7 +73,7 @@ if ($wdl < 0) {
 	$result = "1/2-1/2";
 }
 
-print <<EOF;
+my $pgn = <<EOF;
 [Event ""]
 [Site ""]
 [Date "??"]
@@ -86,7 +86,11 @@ print <<EOF;
 EOF
 
 my $wdl_moves = print_wdl_moves($tb, $position);
-print $wdl_moves if $wdl_moves;
+$pgn .= $wdl_moves;
+
+print $pgn;
+
+my $tree = WDLTree->new;
 
 sub print_wdl_moves {
 	my ($tb, $pos) = @_;
@@ -188,6 +192,14 @@ This program is free software. It comes without any warranty, to
 the extent permitted by applicable law.
 EOF
 }
+
+package WDLTree;
+
+sub new {
+	bless {}, shift;
+}
+
+;
 
 =head1 NAME
 
