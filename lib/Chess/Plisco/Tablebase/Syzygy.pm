@@ -1841,7 +1841,7 @@ sub __probeWdlTable {
 	}
 
 	if (!$table) {
-		die __x("Cannot initialize WDL table '{key}'.\n"; key => $key);
+		die __x("Cannot initialize WDL table '{key}'.\n", key => $key);
 	}
 
 	return $table->probeWdlTable($pos);
