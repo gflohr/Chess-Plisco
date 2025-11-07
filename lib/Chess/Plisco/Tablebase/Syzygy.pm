@@ -1683,7 +1683,7 @@ sub __checkPosition {
 sub probeWdl {
 	my ($self, $pos) = @_;
 
-	$self->__checkPosition;
+	$self->__checkPosition($pos);
 
 	my ($value) = $self->__probeAb($pos, -2, 2);
 
