@@ -1540,6 +1540,7 @@ package Chess::Plisco::Tablebase::Syzygy;
 
 use File::Basename qw(basename);
 use Locale::TextDomain qw('Chess-Plisco');
+use Tie::Cache::LRU;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
@@ -1551,18 +1552,22 @@ sub new {
 	my ($class, $directory, %__options) = @_;
 
 	my %options = (
-		loadWdl => 1,
-		loadDtz => 1,
-		maxFds => 128,
+		load_wdl => 1,
+		load_dtz => 1,
+		max_fds => 128,
 		%__options
 	);
 
+	my %tables;
+	if (0 + $options{max_fds} > 0) {
+		tie %tables, 'Tie::Cache::LRU', $options{max_fds};
+	}
+
 	my $self = bless {
+		tables => \%tables,
 		wdl => {},
 		dtz => {},
 	}, $class;
-
-	warn "LRU not yet implemented!";
 
 	$self->addDirectory($directory, %options) if defined $directory;
 
@@ -1573,13 +1578,14 @@ sub addDirectory {
 	my ($self, $directory, %__options) = @_;
 
 	my %options = (
-		loadWdl => 1,
-		loadDtz => 1,
+		load_wdl => 1,
+		load_dtz => 1,
 		%__options
 	);
 
 	$directory = File::Spec->rel2abs($directory);
 
+	# FIXME! Use File::Globstar to recursively find all files.
 	opendir my $dh, $directory or return 0;
 	my @files = readdir $dh;
 
@@ -1594,46 +1600,26 @@ sub addDirectory {
 }
 
 sub __addFile {
-	my ($self, $path, %__options) = @_;
-
-	my %options = (
-		loadWdl => 1,
-		loadDtz => 1,
-		%__options
-	);
+	my ($self, $path, %options) = @_;
 
 	my $basename = basename $path;
 	my ($tablename, $ext) = split /\./, $basename, 2;
 
 	if ($is_tablename->($tablename)) {
-		if ($options{loadWdl}) {
-			if ($ext eq TBW_SUFFIX) {
-				return $self->__openTable($self->{wdl}, 'WdlTable', $path);
-			}
-		}
+		if ($ext eq TBW_SUFFIX) {
+			if ($options{load_wdl}) {
+				$self->{wdl}->{$tablename} = $path;
 
-		if($options{loadDtz}) {
-			if ($ext eq TBZ_SUFFIX) {
-				return $self->__openTable($self->{dtz}, 'DtzTable', $path);
+				return 1;
+			}
+		} elsif ($ext eq TBZ_SUFFIX) {
+			if ($options{load_dtz}) {
+				$self->{dtz}->{$tablename} = $path;
+
+				return 1;
 			}
 		}
 	}
-}
-
-sub __openTable {
-	my ($self, $hashtable, $class_name, $path) = @_;
-
-	return if 'DtzTable' eq $class_name;
-
-	my $table = $class_name->new($path);
-	if (exists $hashtable->{$table->{key}}) {
-		$hashtable->{$table->{key}}->close;
-	}
-
-	$hashtable->{$table->{key}} = $table;
-	$hashtable->{$table->{mirrored_key}} = $table;
-
-	return 1;
 }
 
 sub largestWdl {
@@ -1825,21 +1811,21 @@ sub __probeWdlTable {
 	}
 
 	my $key = $calc_key->($pos);
-	my $table = $self->{wdl}->{$key};
-	if (!$table) {
-		my $piece_count;
-		cp_bitboard_popcount $occupancy, $piece_count;
-		if ($piece_count > $TBPIECES) {
-			die __x("syzygy tables support up to {TBPIECES} pieces, not {piece_count}: {fen}",
-				TBPIECES => $TBPIECES,
-				piece_count => $piece_count,
-				fen => $pos->toFEN);
-		} else {
-			die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
-		}
+	my $path = $self->{wdl}->{$key};
+	if (!defined $path) {
+		die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
 	}
 
-	# FIXME! Bump LRU!
+	my $full_key = join '', $key, '.', TBW_SUFFIX;
+	my $table = $self->{tables}->{$full_key};
+	if (!$table) {
+		$table = new WdlTable($path);
+		$self->{tables}->{$full_key} = $table if $table;
+	}
+
+	if (!$table) {
+		die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
+	}
 
 	return $table->probeWdlTable($pos);
 }
