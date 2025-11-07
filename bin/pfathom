@@ -98,13 +98,14 @@ sub print_wdl_moves {
 		my $wdl = $tb->getWdl($pos);
 		$pos->undoMove($undo);
 
+		# The WDL value is now from the other side's perspective!
 		if (!defined $wdl) {
 			push @unknown, $wdl;
-		} elsif ($wdl == -2) {
-			push @losses, $san;
-		} elsif ($wdl == -1 || $wdl == 0 || $wdl == +1) {
-			push @draws, $san;
 		} elsif ($wdl == 2) {
+			push @losses, $san;
+		} elsif ($wdl == -1 || $wdl == 0 || $wdl == 1) {
+			push @draws, $san;
+		} elsif ($wdl == -2) {
 			push @wins, $san;
 		} else {
 			push @unknown, $san;
