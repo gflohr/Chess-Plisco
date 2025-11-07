@@ -574,8 +574,11 @@ sub new {
 
 package Table;
 
+use integer;
+
 use Fcntl qw(O_RDONLY O_BINARY);
 use Sys::Mmap qw(mmap PROT_READ MAP_SHARED);
+use Math::Int64 qw(uint64);
 
 use Locale::TextDomain qw(Chess-Plisco);
 
@@ -796,13 +799,13 @@ sub _setupPairs {
 		}
 	}
 
-	$d->{base} = [0 .. $h - 1];
+	$d->{base} = [(0) x $h];
 	$d->{base}->[$h - 1] = 0;
 
 	for my $i (reverse 0 .. $h - 2) {
-		$d->{base}->[$i] = ($d->{base}->[$i + 1]
+		$d->{base}->[$i] = uint64(($d->{base}->[$i + 1]
 			+ $self->__readUint16($d->{offset} + $i * 2)
-			- $self->__readUint16($d->{offset} + $i * 2 + 2)) / 2;
+			- $self->__readUint16($d->{offset} + $i * 2 + 2)) / 2);
 	}
 
 	for my $i (0 .. $h) {
@@ -1068,7 +1071,6 @@ sub _encodePawn {
 	my $t = $self->{pawns}->[0] - 1;
 	my $idx = $PAWNIDX[$t]->[FLAP->[$shifts->[0]]];
 	foreach my $i (reverse 1 .. $t) {
-		warn "i: $i";
 		$idx += $binom->($PTWIST[$shifts->[$i]], $t - $i + 1);
 	}
 	$idx *= $factor->[0];
@@ -1136,7 +1138,7 @@ sub _decompressPairs {
 	}
 
 	my $mainidx = $idx >> $d->{idxbits};
-	my $litidx = ($idx & ($1 << $d->{idxbits}) - 1) - (1 << ($d->{idxbits} - 1));
+	my $litidx = ($idx & (1 << $d->{idxbits}) - 1) - (1 << ($d->{idxbits} - 1));
 	my $block = $self->__readUint32($d->{indextable} + 6 * $mainidx);
 
 	my $idx_offset = $self->__readUint16($d->{indextable} + 6 * $mainidx + 4);
@@ -1165,6 +1167,7 @@ sub _decompressPairs {
 	$ptr += 2 * 4;
 	my $bitcnt = 0; # Number of empty bits in code
 	my $sym;
+
 	while (1) {
 		my $l = $m;
 		while ($code < $d->{base}->[$base_idx + $l]) {
@@ -1183,9 +1186,6 @@ sub _decompressPairs {
 			$code |= $self->__readUint32BE($ptr) << $bitcnt;
 			$ptr += 4;
 		}
-
-		# Cut off at 64bit.
-		$code &= 0xffffffffffffffff;
 	}
 
 	my $sympat = $d->{sympat};
@@ -1211,13 +1211,13 @@ sub _decompressPairs {
 sub __readUint64BE {
 	my ($self, $data_ptr) = @_;
 
-	return unpack(UINT64_BE, substr($self->{data}, $data_ptr, 8));
+	return uint64(unpack(UINT64_BE, substr($self->{data}, $data_ptr, 8)));
 }
 
 sub __readUint32 {
 	my ($self, $data_ptr) = @_;
 
-	return unpack(UINT32, substr($self->{data}, $data_ptr, 4));
+	return uint64(unpack(UINT32, substr($self->{data}, $data_ptr, 4)));
 }
 
 sub __readUint32BE {
