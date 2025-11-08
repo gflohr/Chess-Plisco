@@ -37,21 +37,11 @@ sub search {
 	$self->{__game_over} = 0;
 	$self->{__max_depth} = 0;
 	$self->{__nodes} = 0;
-	$self->{__wdl} = 0;
+	$self->{__wdl} = $wdl;
 
-	my ($min, $max);
-	if ($wdl == -1) {
-		$min = -2; $max = -1;
-	} elsif ($wdl == 1) {
-		$min = 1;
-		$max = 2;
-	} else {
-		$min = $max = $wdl;
-	}
 	while (1) {
 		my @line;
-		my $score = $self->negamax(1, $pos, $self->{__max_depth}, $wdl - 1, $wdl + 1, $min, $max, \@line);
-		warn "Nodes searched at depth $self->{__max_depth}: $self->{__nodes}\n";
+		my $score = $self->negamax(1, $pos, $self->{__max_depth}, $wdl - 1, $wdl + 1, \@line);
 		if ($self->{__game_over}) {
 			return @line;
 		}
@@ -60,7 +50,7 @@ sub search {
 }
 
 sub negamax {
-	my ($self, $ply, $pos, $depth, $alpha, $beta, $min, $max, $pline) = @_;
+	my ($self, $ply, $pos, $depth, $alpha, $beta, $pline) = @_;
 
 	++$self->{__nodes};
 
@@ -73,26 +63,31 @@ sub negamax {
 		return $probe_value;
 	}
 
-	my @legal = $pos->legalMoves;
-
-	my ($min_value, $max_value);
-
 	foreach my $move ($pos->legalMoves) {
 		my $san = $pos->SAN($move);
-		my $to_move = $pos->toMove;
 		my $undo = $pos->doMove($move);
-		my $value = -$self->negamax($ply + 1, $pos, $depth - 1, -$beta, -$alpha, -$max, -$min, \@line);
+		my $value = -$self->negamax($ply + 1, $pos, $depth - 1, -$beta, -$alpha, \@line);
 		$pos->undoMove($undo);
 
-		if ($value < $min || $value > $max) {
-			next;
-		}
-
-		if ($value > $alpha || ($self->{__game_over} && $value >= $alpha)) {
+		if ($value > $alpha
+		    || ($self->{__game_over} && $value >= $alpha)) {
 			$alpha = $value;
 			@$pline = ($san, @line);
 
-			return $alpha if $self->{__game_over};
+			my $colour = $pos->toMove ? 'black' : 'white';
+
+			if ($self->{__game_over}) {
+				# For black, the sign of the value and of the WDL probe must
+				# differ to be a hit. We don't check for exact values because
+				# we have to handle cursed wins and blessed losses.
+				if ($self->{__game_over} & CP_GAME_BLACK_WINS) {
+					return $alpha if $alpha * $self->{__wdl} < 0;
+				} elsif ($self->{__game_over} & CP_GAME_WHITE_WINS) {
+					return $alpha if $alpha * $self->{__wdl} > 0;
+				} else {
+					return $alpha if $alpha == 0;
+				}
+			}
 		}
 
 		# This must come after changing the principal variation because the

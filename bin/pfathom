@@ -98,7 +98,10 @@ $pgn .= print_pv $position, @pv;
 print $pgn;
 
 sub print_pv {
-	my ($pos, @pv) = @_;
+	my ($_pos, @pv) = @_;
+
+$DB::single = 1;
+	my $pos = $_pos->copy;
 
 	my $output = "\n1.";
 	my $ply = 0;
@@ -109,11 +112,16 @@ sub print_pv {
 
 	while (@pv) {
 		if ($ply && !($ply & 1)) {
-			$output .= $ply >> 1;
+			my $movenum = ($ply >> 1) + 1;
+			$output .= " $movenum.";
 		}
+		++$ply;
 
-		my $san = shift @pv;
-		$output .= " $san";
+		my $move = shift @pv;
+		#$pos->doMove($move);
+		#my $san = $pos->SAN($move);
+
+		$output .= " $move";
 	}
 
 	return $output . "\n";
