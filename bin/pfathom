@@ -92,7 +92,7 @@ $pgn .= $wdl_moves;
 
 # Test position: 8/7k/8/5K2/8/8/1Q4p1/8 w - - 0 1
 my $tree = Chess::Plisco::Tablebase::SearchTree->new($tb);
-my @pv = $tree->search($position);
+my @pv = $tree->search($position, $wdl);
 $pgn .= print_pv $position, @pv;
 
 print $pgn;

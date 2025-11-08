@@ -32,15 +32,16 @@ sub new {
 }
 
 sub search {
-	my ($self, $pos) = @_;
+	my ($self, $pos, $wdl) = @_;
 
 	$self->{__game_over} = 0;
 	$self->{__max_depth} = 0;
 	$self->{__nodes} = 0;
-	$self->{__line} = [];
+	$self->{__wdl} = 0;
+
 	while (1) {
 		my @line;
-		my $score = -$self->negamax(1, $pos, $self->{__max_depth}, -INF, INF, \@line);
+		my $score = $self->negamax(1, $pos, $self->{__max_depth}, $wdl - 1, $wdl + 1, \@line);
 		warn "Nodes searched at depth $self->{__max_depth}: $self->{__nodes}\n";
 		if ($self->{__game_over}) {
 			return @line;
@@ -56,32 +57,23 @@ sub negamax {
 
 	my @line;
 
-	# FIXME! Only probe at leaves!
-	my $probe_value = $self->{__tb}->probeWdl($pos);
-	my $game_over = $self->{__game_over} = $self->{__tb}->gameOver;
 	if ($depth <= 0) {
-		print join ' ', @{$self->{__line}}, "$probe_value\n";
-		return cp_pos_to_move($pos) ? $probe_value : $probe_value;
-	}
-	
-	if ($game_over) {
-		if ($game_over & CP_GAME_WHITE_WINS) {
-			return 2;
-		} elsif ($game_over & CP_GAME_BLACK_WINS) {
-			return -2;
-		} else {
-			return 0;
-		}
+		my $probe_value = $self->{__tb}->probeWdl($pos);
+		$self->{__game_over} = $self->{__tb}->gameOver;
+
+		return $probe_value;
 	}
 
 	my @legal = $pos->legalMoves;
 
+	my ($min_value, $max_value);
+
 	foreach my $move ($pos->legalMoves) {
 		my $san = $pos->SAN($move);
-		push @{$self->{__line}}, $san;
+		my $to_move = $pos->toMove;
 		my $undo = $pos->doMove($move);
 		my $value = -$self->negamax($ply + 1, $pos, $depth - 1, -$beta, -$alpha, \@line);
-		pop @{$self->{__line}};
+		warn "To move: $to_move, $value <=> $self->{__wdl}\n";
 		$pos->undoMove($undo);
 
 		if ($value > $alpha || ($self->{__game_over} && $value >= $alpha)) {
