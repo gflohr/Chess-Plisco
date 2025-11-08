@@ -1812,13 +1812,16 @@ sub __probeWdlTable {
 
 	my $game_over = $self->{game_over} = $pos->gameOver(1);
 	if ($game_over) {
+		my $value;
 		if ($game_over & CP_GAME_WHITE_WINS) {
-			return 2;
+			$value = 2;
 		} elsif ($game_over & CP_GAME_BLACK_WINS) {
-			return -2;
+			$value = -2;
 		} else {
-			return 0;
+			$value = 0;
 		}
+
+		return cp_pos_to_move($pos) ? -$value : $value;
 	}
 
 	my $key = $calc_key->($pos);
