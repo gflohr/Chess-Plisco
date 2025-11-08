@@ -39,9 +39,18 @@ sub search {
 	$self->{__nodes} = 0;
 	$self->{__wdl} = 0;
 
+	my ($min, $max);
+	if ($wdl == -1) {
+		$min = -2; $max = -1;
+	} elsif ($wdl == 1) {
+		$min = 1;
+		$max = 2;
+	} else {
+		$min = $max = $wdl;
+	}
 	while (1) {
 		my @line;
-		my $score = $self->negamax(1, $pos, $self->{__max_depth}, $wdl - 1, $wdl + 1, \@line);
+		my $score = $self->negamax(1, $pos, $self->{__max_depth}, $wdl - 1, $wdl + 1, $min, $max, \@line);
 		warn "Nodes searched at depth $self->{__max_depth}: $self->{__nodes}\n";
 		if ($self->{__game_over}) {
 			return @line;
@@ -51,7 +60,7 @@ sub search {
 }
 
 sub negamax {
-	my ($self, $ply, $pos, $depth, $alpha, $beta, $pline) = @_;
+	my ($self, $ply, $pos, $depth, $alpha, $beta, $min, $max, $pline) = @_;
 
 	++$self->{__nodes};
 
@@ -72,9 +81,12 @@ sub negamax {
 		my $san = $pos->SAN($move);
 		my $to_move = $pos->toMove;
 		my $undo = $pos->doMove($move);
-		my $value = -$self->negamax($ply + 1, $pos, $depth - 1, -$beta, -$alpha, \@line);
-		warn "To move: $to_move, $value <=> $self->{__wdl}\n";
+		my $value = -$self->negamax($ply + 1, $pos, $depth - 1, -$beta, -$alpha, -$max, -$min, \@line);
 		$pos->undoMove($undo);
+
+		if ($value < $min || $value > $max) {
+			next;
+		}
 
 		if ($value > $alpha || ($self->{__game_over} && $value >= $alpha)) {
 			$alpha = $value;
