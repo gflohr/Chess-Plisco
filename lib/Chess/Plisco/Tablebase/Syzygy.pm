@@ -1749,12 +1749,46 @@ sub probeWdl {
 	return $value;
 }
 
+sub probeDtz {
+	my ($self, $pos) = @_;
+
+	my $v = $self->probeDtzNoEP($pos);
+	warn "FIXME! Handle en passant!";
+
+	return $v;
+}
+
+sub probeDtzNoEP {
+	my ($self, $pos) = @_;
+
+	return 42;
+}
+
 sub getWdl {
 	my ($self, $pos) = @_;
 
 	my $result;
 	eval {
 		$result = $self->probeWdl($pos);
+	};
+	if ($@) {
+		if (ref $@ && $@->isa('MissingTableException')) {
+			return;
+		} else {
+			# Re-throw.
+			die $@;
+		}
+	}
+
+	return $result;
+}
+
+sub getDtz {
+	my ($self, $pos) = @_;
+
+	my $result;
+	eval {
+		$result = $self->probeDtz($pos);
 	};
 	if ($@) {
 		if (ref $@ && $@->isa('MissingTableException')) {
