@@ -21,6 +21,7 @@ use Chess::Plisco::Tablebase::SearchTree;
 sub display_usage;
 sub usage_error;
 sub version_information;
+sub print_pv;
 
 my %options = (
 	path => $ENV{TB_PATH}
@@ -91,12 +92,32 @@ $pgn .= $wdl_moves;
 
 # Test position: 8/7k/8/5K2/8/8/1Q4p1/8 w - - 0 1
 my $tree = Chess::Plisco::Tablebase::SearchTree->new($tb);
-my @line = $tree->search($position);
+my @pv = $tree->search($position);
+$pgn .= print_pv $position, @pv;
 
 print $pgn;
 
-use Data::Dumper;
-warn Dumper \@line;
+sub print_pv {
+	my ($pos, @pv) = @_;
+
+	my $output = "\n1.";
+	my $ply = 0;
+	if ($pos->toMove == CP_BLACK) {
+		$output .= '..';
+		++$ply;
+	}
+
+	while (@pv) {
+		if ($ply && !($ply & 1)) {
+			$output .= $ply >> 1;
+		}
+
+		my $san = shift @pv;
+		$output .= " $san";
+	}
+
+	return $output . "\n";
+}
 
 sub print_wdl_moves {
 	my ($tb, $pos) = @_;
