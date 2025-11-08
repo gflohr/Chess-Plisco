@@ -994,7 +994,7 @@ sub _encodePiece {
 	}
 
 	my $i = 0;
-	foreach $i (0 .. $n) {
+	foreach $i (0 .. $n - 1) {
 		if ($offdiag->($shifts->[$i])) {
 			last;
 		}
@@ -1002,7 +1002,7 @@ sub _encodePiece {
 
 	my $limit = $self->{enc_type} == 0 ? 3 : 2;
 	if ($i < $limit && $offdiag->($shifts->[$i]) > 0) {
-		foreach $i (0 .. $n) {
+		foreach $i (0 .. $n - 1) {
 			$shifts->[$i] = $flipdiag->($shifts->[$i]);
 		}
 	}
@@ -1075,13 +1075,13 @@ sub _encodePawn {
 	my $n = $self->{num};
 
 	if ($shifts->[0] & 0x04) {
-		foreach my $i (0 .. $n) {
+		foreach my $i (0 .. $n - 1) {
 			$shifts->[$i] ^= 0x07;
 		}
 	}
 
-	foreach my $i (1, $self->{pawns}->[0] - 1) {
-		foreach my $j ($i + 1, $self->{pawns}->[0] - 1) {
+	foreach my $i (1 .. $self->{pawns}->[0] - 1) {
+		foreach my $j ($i + 1 .. $self->{pawns}->[0] - 1) {
 			if ($PTWIST[$shifts->[$i]] < $PTWIST[$shifts->[$j]]) {
 				($shifts->[$i], $shifts->[$j]) = ($shifts->[$j], $shifts->[$i]);
 			}
@@ -1503,8 +1503,8 @@ sub probeWdlTable {
 		my $k = $self->{files}->[0]->{pieces}->[0]->[0] ^ $cmirror;
 		my $colour = $k >> 3;
 		my $piece_type = $k & 0x07;
+		my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos));
 
-		my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
 		while ($bb) {
 			my $shift = cp_bitboard_count_trailing_zbits $bb;
 			$p->[$i++] = $shift ^ $mirror;
@@ -1567,6 +1567,7 @@ sub new {
 		tables => \%tables,
 		wdl => {},
 		dtz => {},
+		game_over => 0,
 	}, $class;
 
 	$self->addDirectory($directory, %options) if defined $directory;
@@ -1802,10 +1803,14 @@ sub __probeAb {
 	return $v, 1
 }
 
+sub gameOver {
+	shift->{game_over};
+}
+
 sub __probeWdlTable {
 	my ($self, $pos) = @_;
 
-	my $game_over = $pos->gameOver(1);
+	my $game_over = $self->{game_over} = $pos->gameOver(1);
 	if ($game_over) {
 		if ($game_over & CP_GAME_WHITE_WINS) {
 			return 2;
