@@ -16,6 +16,7 @@ use Getopt::Long;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Tablebase::Syzygy;
+use Chess::Plisco::Tablebase::SearchTree;
 
 sub display_usage;
 sub usage_error;
@@ -88,9 +89,14 @@ EOF
 my $wdl_moves = print_wdl_moves($tb, $position);
 $pgn .= $wdl_moves;
 
+# Test position: 8/7k/8/5K2/8/8/1Q4p1/8 w - - 0 1
+my $tree = Chess::Plisco::Tablebase::SearchTree->new($tb);
+my @line = $tree->search($position);
+
 print $pgn;
 
-my $tree = WDLTree->new;
+use Data::Dumper;
+warn Dumper \@line;
 
 sub print_wdl_moves {
 	my ($tb, $pos) = @_;
@@ -193,13 +199,7 @@ the extent permitted by applicable law.
 EOF
 }
 
-package WDLTree;
-
-sub new {
-	bless {}, shift;
-}
-
-;
+1;
 
 =head1 NAME
 

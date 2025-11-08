@@ -1818,7 +1818,7 @@ sub __probeWdlTable {
 		} elsif ($game_over & CP_GAME_BLACK_WINS) {
 			$value = -2;
 		} else {
-			$value = 0;
+			return 0;
 		}
 
 		return cp_pos_to_move($pos) ? -$value : $value;
