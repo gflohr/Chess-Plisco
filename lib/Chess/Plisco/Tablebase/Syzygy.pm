@@ -1816,13 +1816,6 @@ sub __probeWdlTable {
 		}
 	}
 
-	# Check for KvK.
-	my $kings = cp_pos_kings $pos;
-	my $occupancy = $pos->[CP_POS_WHITE_PIECES] | $pos->[CP_POS_BLACK_PIECES];
-	if ($kings == $occupancy) {
-		return 0;
-	}
-
 	my $key = $calc_key->($pos);
 	my $path = $self->{wdl}->{$key};
 	if (!defined $path) {
