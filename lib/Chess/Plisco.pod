@@ -1520,6 +1520,35 @@ The number of bits in a char.  Should be 8.
 A pretty arbitrary value used to initialize the pseudo-random number
 generator L</RNG>.
 
+=head1 FAQ
+
+=head2 Operation ">>" no method found
+
+The B<Chess::Plisco> overloads the stringification so that you can print
+objects into their FEN representation. That has the disadvantage in Perl that
+you get funny error messages, when you accidentally use any other operator
+on a B<Chess::Plisco> object. Examples:
+
+    $position = Chess::Plisco->new;
+
+    say $position; # Works fine, and prints the FEN representation;
+    $position >> 1; # Errors:
+    # Operation ">>" no method found,
+    #         left argument in overloaded package Chess::Plisco
+    #         right argument has no overloaded magic at SOURCE LOCATION
+
+Unfortunately, B<SOURCE LOCATION> is not neccessarily in your own code. If
+you call a method with a B<Chess::Plisco> object that expects something else,]
+for example an integer, the location will be somewhere in the code of the
+module. Example:
+
+    $position = Chess::Plisco->new;
+    # ...
+    $position->doMove($position); # Ouch!
+
+The location of the error message will now be inside the source code of
+B<Chess::Plisco>.
+
 =head1 COPYRIGHT
 
 Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>.
