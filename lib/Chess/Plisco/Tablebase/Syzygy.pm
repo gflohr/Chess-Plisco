@@ -532,6 +532,20 @@ my $dtz_before_zeroing = sub {
 	return $sign * $factor;
 };
 
+package SyzygyTesting;
+
+sub calc_key {
+	my (undef, $pos, $mirror) = @_;
+
+	return $calc_key->($pos, $mirror);
+}
+
+sub normalise_tablename {
+	my (undef, $name, $mirror) = @_;
+
+	return $normalise_tablename->($name, $mirror);
+}
+
 package MissingTableException;
 
 use overload '""' => sub { ${$_[0]} };
