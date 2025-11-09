@@ -339,8 +339,6 @@ for my $i (0 .. 4) {
 	$MFACTOR[$i] = $s;
 }
 
-use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
-
 my @PCHR = ('K', 'Q', 'R', 'B', 'N', 'P');
 my %PCHR_IDX = map { $PCHR[$_] => $_ } 0 .. $#PCHR;
 
@@ -1807,6 +1805,7 @@ use Chess::Plisco::Macro;
 
 use constant TBW_SUFFIX => 'rtbw';
 use constant TBZ_SUFFIX => 'rtbz';
+use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
 
 sub new {
 	my ($class, $directory, %__options) = @_;
@@ -2008,10 +2007,80 @@ sub probeWdl {
 sub probeDtz {
 	my ($self, $pos) = @_;
 
-	my $v = $self->__probeDtzNoEP($pos);
-	warn "FIXME! Handle en passant!";
+	my $value = $self->__probeDtzNoEP($pos);
 
-	return $v;
+	# Positions where en passant is possible need special care because the
+	# Syzygy tablebases assume that en passant is not possible. Otherwise,
+	# we can just return the result of the probe.
+	my $ep_shift = cp_pos_en_passant_shift $pos;
+	return $value if !$ep_shift;
+
+	# Positions resulting from en passant captures have not been considered,
+	# when generating the table. We do that now, in the wrapper code, by
+	# trying to play these en passant captures.  If any of them (maximum 2)
+	# yields a better result than the probe, that move should be played.
+	#
+	# Test case: 8/8/8/pPk5/8/8/8/7K w - a6 0 1
+	#
+	# It is also possible that the only legal moves in a position are en
+	# passant captures. Example: K7/3n1P2/1k6/pP6/8/8/8/8 w - a6 0 1. In this
+	# case, the best of the captures have to be played.
+	my $v1 = -3;
+	my @legal_moves = $pos->legalMoves;
+	my @ep_captures;
+	foreach my $move (@legal_moves) {
+		my $to = cp_move_to $move;
+		next if $to != $ep_shift;
+
+		my $piece = cp_move_piece $move;
+		next if $piece != CP_PAWN;
+
+		push @ep_captures, $move;
+	}
+
+	foreach my $move (@ep_captures) {
+		my $undo = $pos->doMove($move);
+		eval {
+			my ($v0_plus) = $self->__probeAb($pos, -2, 2);
+			my $v0 = -$v0_plus;
+
+			if ($v0 > $v1) {
+				$v1 = $v0;
+			}
+		};
+		$pos->undoMove($undo);
+		die $@ if $@;
+	}
+
+	if ($v1 > -3) {
+		$v1 = WDL_TO_DTZ->[$v1 + 2];
+		if ($value < -100) {
+			if ($v1 >= 0) {
+				$value = $v1;
+			}
+		} elsif ($value < 0) {
+			if ($v1 >= 0 || $v1 < -100) {
+				$value = $v1;
+			}
+		} elsif ($value > 100) {
+			if ($v1 > 0) {
+				$value = $v1;
+			}
+		} elsif ($value > 0) {
+			if ($v1 == 1) {
+				$value = $v1;
+			}
+		} elsif ($v1 >= 0) {
+			$value = $v1;
+		} else {
+			if (@legal_moves == @ep_captures) {
+				# All legal moves are en passant captures.
+				$value = $v1;
+			}
+		}
+	}
+
+	return $value;
 }
 
 sub __probeDtzNoEP {
