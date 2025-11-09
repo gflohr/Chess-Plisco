@@ -2104,8 +2104,8 @@ sub __probeDtzNoEP {
 	return $best;
 }
 
-sub getWdl {
-	my ($self, $pos) = @_;
+sub safeProbeWdl {
+	my ($self, $pos, $default) = @_;
 
 	my $result;
 	eval {
@@ -2113,7 +2113,7 @@ sub getWdl {
 	};
 	if ($@) {
 		if (ref $@ && $@->isa('MissingTableException')) {
-			return;
+			return $default;
 		} else {
 			# Re-throw.
 			die $@;
@@ -2123,8 +2123,8 @@ sub getWdl {
 	return $result;
 }
 
-sub getDtz {
-	my ($self, $pos) = @_;
+sub safeProbeDtz {
+	my ($self, $pos, $default) = @_;
 
 	my $result;
 	eval {
@@ -2132,7 +2132,7 @@ sub getDtz {
 	};
 	if ($@) {
 		if (ref $@ && $@->isa('MissingTableException')) {
-			return;
+			return $default;
 		} else {
 			# Re-throw.
 			die $@;
