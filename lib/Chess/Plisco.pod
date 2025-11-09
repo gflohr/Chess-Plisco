@@ -338,7 +338,7 @@ the fact that they are necessarily the first king move.
 =back
 
 The half-move-clock is important because both players can claim a draw, when
-the half-move clock has reached 50.
+the half-move clock has reached 100.
 
 =item B<halfMoveClock>
 
