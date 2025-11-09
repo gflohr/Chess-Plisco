@@ -1278,7 +1278,6 @@ use Chess::Plisco qw(:all);
 use base qw(Table);
 
 use constant TBW_MAGIC => "\x71\xe8\x23\x5d";
-use constant TBZ_MAGIC => "\xd7\x66\x0c\xa5";
 
 sub new {
 	my ($class, @args) = @_;
@@ -1536,6 +1535,158 @@ sub probeWdlTable {
 	return $res - 2;
 }
 
+package DtzTable;
+
+use base qw(Table);
+
+use constant TBZ_MAGIC => "\xd7\x66\x0c\xa5";
+
+sub __initTableDtz {
+	my ($self) = @_;
+
+	$self->_initMmap;
+
+	if ($self->{initialized}) {
+		return;
+	}
+
+	$self->_checkMagic(TBZ_MAGIC);
+
+	$self->{factor} = [(0) x $TBPIECES];
+	$self->{norm} = [(0) x $self->{num}];
+	$self->{tb_size} = [0, 0, 0, 0];
+	$self->{size} = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	$self->{files} = [
+		PawnFileDataDtz->new,
+		PawnFileDataDtz->new,
+		PawnFileDataDtz->new,
+		PawnFileDataDtz->new,
+	];
+
+
+	my $files = ($read_byte->($self->{data}, 4) & 0x2) ? 4 : 1;
+
+	my $p_data = 5;
+
+	if (!$self->{has_pawns}) {
+		$self->{map_idx} = [[0, 0, 0, 0]];
+
+		$self->__setupPiecesPieceDtz($p_data, 0);
+		$p_data += $self->{num} + 1;
+		$p_data += $p_data & 0x01;
+
+		$self->{precomp} = $self->_setupPairs($p_data, $self->{tb_size}->[0], 0);
+		$self->{flags} = $self->{_flags};
+
+		$p_data = $self->{_next};
+		$self->{p_map} = $p_data;
+		if ($self->{flags} & 2) {
+			if (!$self->{flags} & 16) {
+				foreach my $i (0 .. 3) {
+					$self->{map_idx}->[0]->[$i] = $p_data + 1 - $self->{p_map};
+					$p_data += 1 + $read_byte->($self->{data}, $p_data);
+				}
+			} else {
+				foreach my $i (0 .. 3) {
+					$self->{map_idx}->[0]->[$i] = (defined $self->{p_map}) ? ($p_data + 2 - $self->{p_map}) : 2;
+					$p_data += 2 + 2 * $self->_readUint16($p_data);
+				}
+			}
+		}
+		$p_data += $p_data & 0x01;
+
+		$self->{precomp}->{indextable} = $p_data;
+		$p_data += $self->{size}->[0];
+
+		$self->{precomp}->{sizetable} = $p_data;
+		$p_data += $self->{size}->[1];
+
+		$p_data = ($p_data + 0x3f) & ~0x3f;
+		$self->{precomp}->{data} = $p_data;
+		$p_data += $self->{size}->[2];
+
+		$self->{key} = $recalc_key->($self->{pieces});
+		$self->{mirrored_key} = $recalc_key->($self->{pieces}, 1);
+	} else {
+		my $s = 1 + ($self->{pawns}->[1] > 0);
+		foreach my $f (0 .. 3) {
+			$self->__setupPiecesPawnDtz($p_data, $f, $f);
+			$p_data += $self->{num} + $s;
+		}
+		$p_data += $p_data & 0x01;
+
+		$self->{flags} = [];
+		foreach my $f (0 .. ($files - 1)) {
+			$self->{files}->{$f}->{precomp} = $self->_setupPairs($p_data, $self->{tb_size}->[$f], 3 * $f);
+			$p_data = $self->{_next};
+			# FIXME! self._flags is probably an integer.
+			push @{$self->{flags}}, @{$self->{_flags}};
+		}
+
+		$self->{map_idx} = [];
+		$self->{p_map} = $p_data;
+		foreach my $f (0 .. ($files - 1)) {
+			push @{$self->{map_idx}}, [];
+			if ($self->{flags}->[$f] & 2) {
+				if (!$self->{flags}->[$f] & 16) {
+					foreach (0 .. 3) {
+						push @{$self->{map_idx}->[-1]}, $p_data + 1 - $self->{p_map};
+						$p_data += 1 + $read_byte->($self->{data}, $p_data);
+					}
+				} else {
+					$p_data += $p_data & 0x01;
+					foreach (0 .. 3) {
+						if (defined $self->{p_map}) {
+							push @{$self->{map_idx}->[-1]}, $p_data + 2 - $self->{p_map};
+						} else {
+							push @{$self->{map_idx}->[-1]}, 2;
+						}
+						$p_data += 2 + 2 * $self->_readUint16($p_data);
+					}
+				}
+			}
+		}
+		$p_data += $p_data & 0x01;
+
+		foreach my $f (0 .. ($files - 1)) {
+			$self->{files}->[$f]->{precomp}->{indextable} = $p_data;
+			$p_data += $self->{size}->[3 * $f];
+		}
+
+		foreach my $f (0 .. ($files - 1)) {
+			$self->{files}->[$f]->{precomp}->{sizetable} = $p_data;
+			$p_data += $self->{size}->[3 * $f + 1];
+		}
+
+		foreach my $f (0 .. ($files - 1)) {
+			$p_data = ($p_data + 0x3f) & ~0x3f;
+			$self->{files}->[$f]->{precomp}->{data} = $p_data;
+			$p_data += $self->size->[3 * $f + 2];
+		}
+	}
+
+	$self->{initialized} = 1;
+}
+
+sub __setupPiecesPieceDtz {
+	my ($self, $p_data, $p_tb_size) = @_;
+
+	foreach my $i (0 .. $self->{num} - 1) {
+		$self->{pieces}->[$i] = $read_byte->($self->{data}, $p_data + $i + 1);
+	}
+	my $order = $read_byte->($self->{data}, $p_data) & 0x0f;
+	$self->_setNormPiece($self->{norm}, $self->{pieces});
+	$self->{tb_size}->[$p_tb_size] = $self->_calcFactorsPiece($self->{factor}, $order, $self->{norm});
+}
+
+sub probeDtzTable {
+	my ($self, $pos) = @_;
+
+	$self->__initTableDtz;
+
+	die;
+}
+
 package Chess::Plisco::Tablebase::Syzygy;
 
 use File::Basename qw(basename);
@@ -1690,10 +1841,7 @@ sub probeWdl {
 
 	# Positions where en passant is possible need special care because the
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
-	# we can just return the result of the probe.  We can also take an
-	# early exit if the probe reported a win with the 50-move-rule.
-	return $value if $value == 2;
-
+	# we can just return the result of the probe.
 	my $ep_shift = cp_pos_en_passant_shift $pos;
 	return $value if !$ep_shift;
 
@@ -1726,7 +1874,6 @@ sub probeWdl {
 			my ($v0_plus) = $self->__probeAb($pos, -2, 2);
 			my $v0 = -$v0_plus;
 
-
 			if ($v0 > $v1) {
 				$v1 = $v0;
 			}
@@ -1752,16 +1899,104 @@ sub probeWdl {
 sub probeDtz {
 	my ($self, $pos) = @_;
 
-	my $v = $self->probeDtzNoEP($pos);
+	my $v = $self->__probeDtzNoEP($pos);
 	warn "FIXME! Handle en passant!";
 
 	return $v;
 }
 
-sub probeDtzNoEP {
+sub __probeDtzNoEP {
 	my ($self, $pos) = @_;
 
-	return 42;
+	my ($wdl, $success) = $self->__probeAb($pos, -2, 2);
+
+	return 0 if $wdl == 0;
+
+	if ($success == 2
+	    || !($pos->[CP_POS_WHITE_PIECES + cp_pos_to_move($pos)] & ~cp_pos_pawns($pos))) {
+		return $dtz_before_zeroing->($wdl);
+	}
+
+	my $moves;
+	if ($wdl > 0) {
+		# Generate all legal non-capturing pawn moves.
+		$moves //= [$pos->legalMoves];
+		foreach my $move (@$moves) {
+			next if cp_move_piece($move) != CP_PAWN;
+			next if cp_move_captured($move);
+
+			my $undo = $pos->doMove($move);
+
+			my $v = eval { -$self->probeWdl($pos) };
+			if ($v == $wdl) {
+				return ($v == 2) ? 1 : 101;
+			}
+		}
+	}
+
+	my ($dtz, $success) = $self->__probeDtzTable($pos, $wdl);
+	if ($success >= 0) {
+		if ($wdl > 0) {
+			return $dtz_before_zeroing->($wdl) + $wdl;
+		} else {
+			return $dtz_before_zeroing->($wdl) - $wdl;
+		}
+	}
+
+	my $best;
+
+	if ($wdl > 0) {
+		$best = 0xffff;
+
+		# Generate all quite non-pawn moves.
+		$moves //= [$pos->legalMoves];
+		foreach my $move (@$moves) {
+			next if cp_move_piece($move) == CP_PAWN;
+			next if cp_move_captured($move);
+
+			my $undo = $pos->doMove($move);
+			my $v = eval { -$self->probeDtz($pos) };
+			$pos->undoMove($undo);
+
+			if ($v == 1) {
+				my $game_over = $pos->gameOver;
+				if (($game_over & CP_GAME_WHITE_WINS)
+				    || ($game_over & CP_GAME_BLACK_WINS)) {
+					$best = 1;
+				}
+			} elsif (($v > 0) && (($v + 1) < $best)) {
+				$best = $v + 1;
+			}
+		}
+	} else {
+		$best = -1;
+
+		$moves //= [$pos->legalMoves];
+		foreach my $move (@$moves) {
+			my $undo = $pos->doMove($move);
+
+			my $v;
+			eval {
+				if (!cp_pos_half_move_clock($pos)) {
+					if ($wdl == -2) {
+						$v = -1;
+					} else {
+						($v, $success) = $self.__probeAb($pos, 1, 2);
+						$v = ($v == 2) ? 0 : -101;
+					}
+				} else {
+					$v = -$self->__probeDtz($pos) - 1;
+				}
+			};
+			$pos->undoMove($undo);
+
+			if ($v < $best) {
+				$best = $v;
+			}
+		}
+	}
+
+	return $best;
 }
 
 sub getWdl {
@@ -1876,6 +2111,29 @@ sub __probeWdlTable {
 	}
 
 	return $table->probeWdlTable($pos);
+}
+
+sub __probeDtzTable {
+	my ($self, $pos) = @_;
+
+	my $key = $calc_key->($pos);
+	my $path = $self->{dtz}->{$key};
+	if (!defined $path) {
+		die new MissingTableException(__x(__"Missing DTZ table '{key}'.\n", key => $key));
+	}
+
+	my $full_key = join '', $key, '.', TBZ_SUFFIX;
+	my $table = $self->{tables}->{$full_key};
+	if (!$table) {
+		$table = DtzTable->new($path);
+		$self->{tables}->{$full_key} = $table if $table;
+	}
+
+	if (!$table) {
+		die __x("Cannot initialize DTZ table '{key}'.\n", key => $key);
+	}
+
+	return $table->probeDtzTable($pos);
 }
 
 1;
