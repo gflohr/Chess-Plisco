@@ -1522,6 +1522,21 @@ generator L</RNG>.
 
 =head1 FAQ
 
+=head2 What Does Plisco Mean?
+
+I originally wrote a chess engine in C and named it "tate", just because I
+liked the name. But then I found out about Emory Andrew Tate Jr., an
+international master of chess. As it turned out, Tate hated chess computers
+and never used them. I therefore decided that the name "tate" was inappropriate.
+
+The chess engine was then renamed to "lisco" (in Bulgarian: лиско) which means
+fox in Bulgarian. The name of the engine had changed but its countless bugs
+remained. I decided that it would be easier to debug the engine in Perl
+but all available chess libraries were either too buggy or too slow or both
+for using them. So I decided to write a library that was well tested and
+fast enough, and that library is now B<Chess::Plisco>. The first letter
+P stands for Perl.
+
 =head2 Operation ">>" no method found
 
 The B<Chess::Plisco> overloads the stringification so that you can print
