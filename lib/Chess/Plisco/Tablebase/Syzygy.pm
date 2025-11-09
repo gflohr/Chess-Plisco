@@ -339,10 +339,6 @@ for my $i (0 .. 4) {
 	$MFACTOR[$i] = $s;
 }
 
-use constant WDL_TO_MAP => [1, 3, 0, 2, 0];
-
-use constant PA_FLAGS => [8, 0, 0, 0, 4];
-
 use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
 
 my @PCHR = ('K', 'Q', 'R', 'B', 'N', 'P');
@@ -1537,9 +1533,16 @@ sub probeWdlTable {
 
 package DtzTable;
 
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
+
 use base qw(Table);
 
 use constant TBZ_MAGIC => "\xd7\x66\x0c\xa5";
+
+use constant WDL_TO_MAP => [1, 3, 0, 2, 0];
+
+use constant PA_FLAGS => [8, 0, 0, 0, 4];
 
 sub __initTableDtz {
 	my ($self) = @_;
@@ -1680,11 +1683,117 @@ sub __setupPiecesPieceDtz {
 }
 
 sub probeDtzTable {
-	my ($self, $pos) = @_;
+	my ($self, $pos, $wdl) = @_;
 
 	$self->__initTableDtz;
 
-	die;
+	my $key = $calc_key->($pos);
+
+	my ($cmirror, $mirror, $bside);
+	my $to_move = cp_pos_to_move $pos;
+	if (!$self->{symmetric}) {
+		if ($key ne $self->{key}) {
+			$cmirror = 8;
+			$mirror = 0x38;
+			$bside = $to_move == CP_WHITE;
+		} else {
+			$cmirror = $mirror = 0;
+			$bside = $to_move != CP_WHITE;
+		}
+	} else {
+		$cmirror = $to_move == CP_WHITE ? 0 : 8;
+		$mirror = $to_move == CP_WHITE ? 0 : 0x38;
+		$bside = 0
+	}
+
+	my $res;
+	if (!$self->{has_pawns}) {
+		if (($self->{flags} & 1) != $bside && !$self->{symmetric}) {
+			return 0, -1;
+		}
+
+		my $pc = $self->{pieces};
+		my $p = [(0) x $TBPIECES - 1];
+		my $i = 0;
+		while ($i < $self->{num}) {
+			my $piece_type = $pc->[$i] & 0x07;
+			my $colour = ($pc->[$i] ^ $cmirror) >> 3;
+			my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
+
+			while ($bb) {
+				my $shift = cp_bitboard_count_trailing_zbits $bb;
+				$p->[$i++] = $shift;
+
+				$bb = cp_bitboard_clear_least_set $bb;
+			}
+		}
+
+		# FIXME!
+		my $idx = $self->_encodePiece($self->{norm}, $p, $self->{factor});
+		$res = $self->_decompressPairs($self->{precomp}, $idx);
+
+		if ($self->{flags} & 2) {
+			if (!$self->{flags} & 16) {
+				$res = $read_byte->($self->{data}, $self->{p_map} + $self->{map_idx}->[0]->[WDL_TO_MAP->[$wdl + 2]] + $res);
+			} else {
+				$res = $self->_readUint16($self->{p_map} + 2 * ($self->{map_idx}->[0]->[WDL_TO_MAP->[$wdl + 2]] + $res));
+			}
+		}
+
+		if (!($self->{flags} & PA_FLAGS->[$wdl + 2]) || ($wdl & 1)) {
+			$res *= 2;
+		}
+	} else {
+		my $k = $self->{files}->[0]->{pieces}->[0] ^ $cmirror;
+		my $piece_type = $k & 0x07;
+		my $colour = $k >> 3;
+		my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
+
+		my $i = 0;
+		my $p = [(0) .. $TBPIECES - 1];
+		while ($bb) {
+			my $shift = cp_bitboard_count_trailing_zbits $bb;
+			$p->[$i++] = $shift;
+
+			$bb = cp_bitboard_clear_least_set $bb;
+		}
+
+		my $f = $self->_pawnFile($p);
+		if ($self->{flags}->[$f] & 1 != $bside) {
+			return 0, -1;
+		}
+
+		my $pc = $self->{files}->[$f]->{pieces};
+		while ($i < $self->{num}) {
+			$piece_type = $pc->[$i] & 0x07;
+			$colour = ($pc->[$i] ^ $cmirror) >> 3;
+			my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
+
+			while ($bb) {
+				my $shift = cp_bitboard_count_trailing_zbits $bb;
+				$p->[$i++] = $shift;
+
+				$bb = cp_bitboard_clear_least_set $bb;
+			}
+		}
+
+		my $idx = $self->encodePawn($self->{files}->[$f]->{norm}, $p, $self->{files}->[$f]->{factor});
+		$res = $self->_decompressPairs($self->{files}->[$f]->{precomp}, $idx);
+
+		if ($self->{flags}->[$f] & 2) {
+			if (!$self->{flags}->[$f] & 16) {
+				$res = $read_byte->($self->{data}, $self->{p_map} + $self->{map_idx}->[$f]->[WDL_TO_MAP->[$wdl + 2]] + $res);
+			} else {
+				$res = $self->_readUint16($self->{p_map} + 2 * ($self->{map_idx}->[$f]->[WDL_TO_MAP->[$wdl + 2]] + $res));
+			}
+		}
+
+		if (!($self->{flags}->[$f] & $->[$wdl + 2]) || ($wdl & 1)) {
+			$res *= 2;
+		}
+	}
+
+	return $res, 1;
 }
 
 package Chess::Plisco::Tablebase::Syzygy;
