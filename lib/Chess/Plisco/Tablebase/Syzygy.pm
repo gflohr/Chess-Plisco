@@ -2227,7 +2227,7 @@ sub __probeWdlTable {
 	my $full_key = join '', $key, '.', TBW_SUFFIX;
 	my $table = $self->{tables}->{$full_key};
 	if (!$table) {
-		$table = WdlTable->new($path);
+		$table = Chess::Plisco::Tablebase::Syzygy::WdlTable->new($path);
 		$self->{tables}->{$full_key} = $table if $table;
 	}
 
@@ -2250,7 +2250,7 @@ sub __probeDtzTable {
 	my $full_key = join '', $key, '.', TBZ_SUFFIX;
 	my $table = $self->{tables}->{$full_key};
 	if (!$table) {
-		$table = DtzTable->new($path);
+		$table = Chess::Plisco::Tablebase::Syzygy::DtzTable->new($path);
 		$self->{tables}->{$full_key} = $table if $table;
 	}
 
