@@ -714,12 +714,12 @@ sub _setupPairs {
 	$d->{blocksize} = $read_byte->($self->{data}, $data_ptr + 1);
 	$d->{idxbits} = $read_byte->($self->{data}, $data_ptr + 2);
 
-	my $real_num_blocks = $self->__readUint32($data_ptr + 4);
+	my $real_num_blocks = $self->_readUint32($data_ptr + 4);
 	my $num_blocks = $real_num_blocks + $read_byte->($self->{data}, $data_ptr + 3);
 	my $max_len = $read_byte->($self->{data}, $data_ptr + 8);
 	my $min_len = $read_byte->($self->{data}, $data_ptr + 9);
 	my $h = $max_len - $min_len + 1;
-	my $num_syms = $self->__readUint16($data_ptr + 10 + 2 * $h);
+	my $num_syms = $self->_readUint16($data_ptr + 10 + 2 * $h);
 
 	${d}->{offset} = $data_ptr + 10;
 	${d}->{symlen} = [(0) x ($h * 8 + $num_syms - 1)];
@@ -745,8 +745,8 @@ sub _setupPairs {
 
 	for my $i (reverse 0 .. $h - 2) {
 		$d->{base}->[$i] = uint64(($d->{base}->[$i + 1]
-			+ $self->__readUint16($d->{offset} + $i * 2)
-			- $self->__readUint16($d->{offset} + $i * 2 + 2)) / 2);
+			+ $self->_readUint16($d->{offset} + $i * 2)
+			- $self->_readUint16($d->{offset} + $i * 2 + 2)) / 2);
 	}
 
 	for my $i (0 .. $h) {
@@ -1080,19 +1080,19 @@ sub _decompressPairs {
 
 	my $mainidx = $idx >> $d->{idxbits};
 	my $litidx = ($idx & (1 << $d->{idxbits}) - 1) - (1 << ($d->{idxbits} - 1));
-	my $block = $self->__readUint32($d->{indextable} + 6 * $mainidx);
+	my $block = $self->_readUint32($d->{indextable} + 6 * $mainidx);
 
-	my $idx_offset = $self->__readUint16($d->{indextable} + 6 * $mainidx + 4);
+	my $idx_offset = $self->_readUint16($d->{indextable} + 6 * $mainidx + 4);
 	$litidx += $idx_offset;
 
 	if ($litidx < 0) {
 		while ($litidx < 0) {
 			--$block;
-			$litidx += $self->__readUint16($d->{sizetable} + 2 * $block) + 1;
+			$litidx += $self->_readUint16($d->{sizetable} + 2 * $block) + 1;
 		}
 	} else {
-		while ($litidx > $self->__readUint16($d->{sizetable} + 2 * $block)) {
-			$litidx -= $self->__readUint16($d->{sizetable} + 2 * $block) + 1;
+		while ($litidx > $self->_readUint16($d->{sizetable} + 2 * $block)) {
+			$litidx -= $self->_readUint16($d->{sizetable} + 2 * $block) + 1;
 			++$block;
 		}
 	}
@@ -1103,7 +1103,7 @@ sub _decompressPairs {
 	my $base_idx = -$m;
 	my $symlen_idx = 0;
 
-	my $code = $self->__readUint64BE($ptr);
+	my $code = $self->_readUint64BE($ptr);
 
 	$ptr += 2 * 4;
 	my $bitcnt = 0; # Number of empty bits in code
@@ -1114,7 +1114,7 @@ sub _decompressPairs {
 		while ($code < $d->{base}->[$base_idx + $l]) {
 			++$l;
 		}
-		$sym = $self->__readUint16($d->{offset} + $l * 2);
+		$sym = $self->_readUint16($d->{offset} + $l * 2);
 		$sym += ($code - $d->{base}->[$base_idx + $l]) >> (64 - $l);
 		if ($litidx < $d->{symlen}->[$symlen_idx + $sym] + 1) {
 			last;
@@ -1124,7 +1124,7 @@ sub _decompressPairs {
 		$bitcnt += $l;
 		if ($bitcnt >= 32) {
 			$bitcnt -= 32;
-			$code |= $self->__readUint32BE($ptr) << $bitcnt;
+			$code |= $self->_readUint32BE($ptr) << $bitcnt;
 			$ptr += 4;
 		}
 	}
@@ -1149,25 +1149,25 @@ sub _decompressPairs {
 	}
 }
 
-sub __readUint64BE {
+sub _readUint64BE {
 	my ($self, $data_ptr) = @_;
 
 	return uint64(unpack(UINT64_BE, substr($self->{data}, $data_ptr, 8)));
 }
 
-sub __readUint32 {
+sub _readUint32 {
 	my ($self, $data_ptr) = @_;
 
 	return uint64(unpack(UINT32, substr($self->{data}, $data_ptr, 4)));
 }
 
-sub __readUint32BE {
+sub _readUint32BE {
 	my ($self, $data_ptr) = @_;
 
 	return unpack(UINT32_BE, substr($self->{data}, $data_ptr, 4));
 }
 
-sub __readUint16 {
+sub _readUint16 {
 	my ($self, $data_ptr) = @_;
 
 	return unpack(UINT16, substr($self->{data}, $data_ptr, 2));
@@ -1547,10 +1547,9 @@ sub __initTableDtz {
 
 		$self->{flags} = [];
 		foreach my $f (0 .. ($files - 1)) {
-			$self->{files}->{$f}->{precomp} = $self->_setupPairs($p_data, $self->{tb_size}->[$f], 3 * $f);
+			$self->{files}->[$f]->{precomp} = $self->_setupPairs($p_data, $self->{tb_size}->[$f], 3 * $f);
 			$p_data = $self->{_next};
-			# FIXME! self._flags is probably an integer.
-			push @{$self->{flags}}, @{$self->{_flags}};
+			push @{$self->{flags}}, $self->{_flags};
 		}
 
 		$self->{map_idx} = [];
