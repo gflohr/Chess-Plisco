@@ -19,11 +19,21 @@ use Chess::Plisco::Tablebase::Syzygy;
 
 my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy');
 
-my $pos = Chess::Plisco->new('4kqrb/8/8/8/8/8/8/BRQK4 w - - 0 1');
+my $pos;
 
-ok !defined $tb->safeProbeWdl($pos), 'safe WDL probe';
-ok !defined $tb->safeProbeDtz($pos), 'safe DTZ probe';
-is $tb->safeProbeWdl($pos, 42), 42, 'safe WDL probe default value';
-is $tb->safeProbeDtz($pos, 2304), 2304, 'safe DTZ probe default value';
+$pos = Chess::Plisco->new('8/8/8/5N2/5K2/2kB4/8/8 b - - 0 1');
+is $tb->probeWdl($pos), -2;
+
+$pos = Chess::Plisco->new('7B/5kNK/8/8/8/8/8/8 w - - 0 1');
+is $tb->probeWdl($pos), -2;
+
+$pos = Chess::Plisco->new('N7/8/2k5/8/7K/8/8/B7 w - - 0 1');
+is $tb->probeWdl($pos), 2;
+
+$pos = Chess::Plisco->new('8/8/1NkB4/8/7K/8/8/8 w - - 1 1');
+is $tb->probeWdl($pos), 0;
+
+$pos = Chess::Plisco->new('8/8/8/2n5/2b1K3/2k5/8/8 w - - 0 1');
+is $tb->probeWdl($pos), -2;
 
 done_testing;

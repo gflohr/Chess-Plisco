@@ -17,13 +17,16 @@ use Test::More;
 use Chess::Plisco;
 use Chess::Plisco::Tablebase::Syzygy;
 
-my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy');
+my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy', max_fds => 2);
 
-my $pos = Chess::Plisco->new('4kqrb/8/8/8/8/8/8/BRQK4 w - - 0 1');
+my $pos;
 
-ok !defined $tb->safeProbeWdl($pos), 'safe WDL probe';
-ok !defined $tb->safeProbeDtz($pos), 'safe DTZ probe';
-is $tb->safeProbeWdl($pos, 42), 42, 'safe WDL probe default value';
-is $tb->safeProbeDtz($pos, 2304), 2304, 'safe DTZ probe default value';
+# Winning because of en passant.
+$pos = Chess::Plisco->new('8/8/8/k2Pp3/8/8/8/4K3 w - e6 0 2');
+is $tb->probeWdl($pos), 2;
+
+# Without en passant, it is a draw.
+$pos = Chess::Plisco->new('8/8/8/k2Pp3/8/8/8/4K3 w - - 0 2');
+is $tb->probeWdl($pos), 2;
 
 done_testing;
