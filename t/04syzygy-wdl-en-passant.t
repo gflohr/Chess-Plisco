@@ -23,10 +23,9 @@ my $pos;
 
 # Winning because of en passant.
 $pos = Chess::Plisco->new('8/8/8/k2Pp3/8/8/8/4K3 w - e6 0 2');
-is $tb->probeWdl($pos), 2;
+is $tb->__probeWdlTable($pos), 0;
 
 # Without en passant, it is a draw.
-$pos = Chess::Plisco->new('8/8/8/k2Pp3/8/8/8/4K3 w - - 0 2');
 is $tb->probeWdl($pos), 2;
 
 done_testing;

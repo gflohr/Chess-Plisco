@@ -506,7 +506,7 @@ sub new {
 	my ($class, %args) = @_;
 
 	bless {
-		precomp => $args{precomp} // PairsData->new(),
+		precomp => $args{precomp} // Chess::Plisco::Tablebase::Syzygy::PairsData->new(),
 		factor => $args{factor} // [],
 		pieces => $args{pieces} // [],
 		norm => $args{norm} // [],
@@ -2132,7 +2132,8 @@ sub safeProbeWdl {
 		$result = $self->probeWdl($pos);
 	};
 	if ($@) {
-		if (ref $@ && $@->isa('MissingTableException')) {
+		if (ref $@
+		    && $@->isa('Chess::Plisco::Tablebase::Syzygy::MissingTableException')) {
 			return $default;
 		} else {
 			# Re-throw.
@@ -2221,7 +2222,10 @@ sub __probeWdlTable {
 	my $key = $calc_key->($pos);
 	my $path = $self->{wdl}->{$key};
 	if (!defined $path) {
-		die new MissingTableException(__x(__"Missing WDL table '{key}'.\n", key => $key));
+		die Chess::Plisco::Tablebase::Syzygy::MissingTableException->new(__x(
+			__"Missing WDL table '{key}'.\n",
+			key => $key,
+		));
 	}
 
 	my $full_key = join '', $key, '.', TBW_SUFFIX;
@@ -2244,7 +2248,10 @@ sub __probeDtzTable {
 	my $key = $calc_key->($pos);
 	my $path = $self->{dtz}->{$key};
 	if (!defined $path) {
-		die new MissingTableException(__x(__"Missing DTZ table '{key}'.\n", key => $key));
+		die Chess::Plisco::Tablebase::Syzygy::MissingTableException->new(__x(
+			__"Missing DTZ table '{key}'.\n",
+			key => $key,
+		));
 	}
 
 	my $full_key = join '', $key, '.', TBZ_SUFFIX;
