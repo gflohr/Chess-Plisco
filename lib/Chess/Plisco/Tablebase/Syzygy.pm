@@ -2061,9 +2061,9 @@ sub __probeDtzNoEP {
 	my ($dtz, $success) = $self->__probeDtzTable($pos, $wdl);
 	if ($success >= 0) {
 		if ($wdl > 0) {
-			return $dtz_before_zeroing->($wdl) + $wdl;
+			return $dtz_before_zeroing->($wdl) + $dtz;
 		} else {
-			return $dtz_before_zeroing->($wdl) - $wdl;
+			return $dtz_before_zeroing->($wdl) - $dtz;
 		}
 	}
 
@@ -2191,7 +2191,7 @@ sub __probeAb {
 	$v = $self->__probeWdlTable($pos);
 
 	if ($alpha >= $v) {
-		return $alpha, 1 + $alpha > 0;
+		return $alpha > 0 ? ($alpha, 2) : ($alpha, 1);
 	}
 
 	return $v, 1
