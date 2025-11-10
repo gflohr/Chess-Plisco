@@ -1940,7 +1940,7 @@ sub __probeDtzNoEP {
 			my $undo = $pos->doMove($move);
 
 			my $v = eval { -$self->probeWdl($pos) };
-			$pos->undoMove($move);
+			$pos->undoMove($undo);
 			die $@ if $@;
 
 			if ($v == $wdl) {
