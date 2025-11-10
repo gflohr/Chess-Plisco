@@ -18,17 +18,17 @@ use Chess::Plisco;
 use Chess::Plisco::Tablebase::Syzygy;
 
 my $pos = Chess::Plisco->new('8/8/8/5N2/5K2/2kB4/8/8 b - - 0 1');
-is (SyzygyTesting->calc_key($pos), 'KBNvK', 'calc_key');
+is (Chess::Plisco::Tablebase::Syzygy::Testing->calc_key($pos), 'KBNvK', 'calc_key');
 
 $pos = Chess::Plisco->new;
-is(SyzygyTesting->calc_key($pos), 'KQRRBBNNPPPPPPPPvKQRRBBNNPPPPPPPP', 'initial key');
-is(SyzygyTesting->calc_key($pos), 'KQRRBBNNPPPPPPPPvKQRRBBNNPPPPPPPP', 'initial key mirrored');
+is(Chess::Plisco::Tablebase::Syzygy::Testing->calc_key($pos), 'KQRRBBNNPPPPPPPPvKQRRBBNNPPPPPPPP', 'initial key');
+is(Chess::Plisco::Tablebase::Syzygy::Testing->calc_key($pos), 'KQRRBBNNPPPPPPPPvKQRRBBNNPPPPPPPP', 'initial key mirrored');
 
 $pos = Chess::Plisco->new('8/8/5k2/8/3K4/2Q5/8/8 w - - 0 1');
-is(SyzygyTesting->calc_key($pos), 'KQvK', 'regular key order');
-is(SyzygyTesting->calc_key($pos, 1), 'KvKQ', 'mirrored key order');
+is(Chess::Plisco::Tablebase::Syzygy::Testing->calc_key($pos), 'KQvK', 'regular key order');
+is(Chess::Plisco::Tablebase::Syzygy::Testing->calc_key($pos, 1), 'KvKQ', 'mirrored key order');
 
-is(SyzygyTesting->normalise_tablename('PNBRQKvK'), 'KQRBNPvK', 'normalise_tablename');
-is(SyzygyTesting->normalise_tablename('PNBRQKvK', 1), 'KvKQRBNP', 'normalise_tablename mirrored');
+is(Chess::Plisco::Tablebase::Syzygy::Testing->normalise_tablename('PNBRQKvK'), 'KQRBNPvK', 'normalise_tablename');
+is(Chess::Plisco::Tablebase::Syzygy::Testing->normalise_tablename('PNBRQKvK', 1), 'KvKQRBNP', 'normalise_tablename mirrored');
 
 done_testing;

@@ -445,7 +445,7 @@ my $dtz_before_zeroing = sub {
 	return $sign * $factor;
 };
 
-package SyzygyTesting;
+package Chess::Plisco::Tablebase::Syzygy::Testing;
 
 sub calc_key {
 	my (undef, $pos, $mirror) = @_;
@@ -459,7 +459,7 @@ sub normalise_tablename {
 	return $normalise_tablename->($name, $mirror);
 }
 
-package MissingTableException;
+package Chess::Plisco::Tablebase::Syzygy::MissingTableException;
 
 use overload '""' => sub { ${$_[0]} };
 
@@ -469,7 +469,7 @@ sub new {
 	bless \$msg;
 }
 
-package PairsData;
+package Chess::Plisco::Tablebase::Syzygy::PairsData;
 
 sub new {
 	my ($class, %args) = @_;
@@ -488,7 +488,7 @@ sub new {
 	}, $class;
 }
 
-package PawnFileData;
+package Chess::Plisco::Tablebase::Syzygy::PawnFileData;
 
 sub new {
 	my ($class) = @_;
@@ -500,7 +500,7 @@ sub new {
 	}, $class;
 }
 
-package PawnFileDataDtz;
+package Chess::Plisco::Tablebase::Syzygy::PawnFileDataDtz;
 
 sub new {
 	my ($class, %args) = @_;
@@ -513,7 +513,7 @@ sub new {
 	}, $class;
 }
 
-package Table;
+package Chess::Plisco::Tablebase::Syzygy::Table;
 
 use integer;
 
@@ -689,7 +689,7 @@ sub _checkMagic {
 sub _setupPairs {
 	my ($self, $data_ptr, $tb_size, $size_idx, $wdl) = @_;
 
-	my $d = new PairsData;
+	my $d = Chess::Plisco::Tablebase::Syzygy::PairsData->new;
 
 	$self->{_flags} = $read_byte->($self->{data}, $data_ptr);
 
@@ -1192,11 +1192,11 @@ sub DESTROY {
 	$self->close;
 }
 
-package WdlTable;
+package Chess::Plisco::Tablebase::Syzygy::WdlTable;
 
 use Chess::Plisco qw(:all);
 
-use base qw(Table);
+use base qw(Chess::Plisco::Tablebase::Syzygy::Table);
 
 use constant TBW_MAGIC => "\x71\xe8\x23\x5d";
 
@@ -1233,8 +1233,10 @@ sub __initTableWdl {
 
 	# Used if there are pawns.
 	$self->{files} = [
-		(new PawnFileData), (new PawnFileData),
-		(new PawnFileData), (new PawnFileData),
+		Chess::Plisco::Tablebase::Syzygy::PawnFileData->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileData->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileData->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileData->new,
 	];
 
 	my $code = $read_byte->($self->{data}, 4);
@@ -1456,12 +1458,12 @@ sub probeWdlTable {
 	return $res - 2;
 }
 
-package DtzTable;
+package Chess::Plisco::Tablebase::Syzygy::DtzTable;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
 
-use base qw(Table);
+use base qw(Chess::Plisco::Tablebase::Syzygy::Table);
 
 use constant TBZ_MAGIC => "\xd7\x66\x0c\xa5";
 
@@ -1485,10 +1487,10 @@ sub __initTableDtz {
 	$self->{tb_size} = [0, 0, 0, 0];
 	$self->{size} = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 	$self->{files} = [
-		PawnFileDataDtz->new,
-		PawnFileDataDtz->new,
-		PawnFileDataDtz->new,
-		PawnFileDataDtz->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileDataDtz->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileDataDtz->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileDataDtz->new,
+		Chess::Plisco::Tablebase::Syzygy::PawnFileDataDtz->new,
 	];
 
 
