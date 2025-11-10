@@ -19,7 +19,7 @@ use Chess::Plisco::Tablebase::Syzygy;
 
 my $epd = Chess::Plisco::EPD->new('t/epd/endgame.epd');
 
-my $tb = Chess::Plisco::Tablebase::Syzygy->new('./.t/syzygy');
+my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy');
 
 foreach my $record (@$epd) {
 	my $pos = $record->position;
