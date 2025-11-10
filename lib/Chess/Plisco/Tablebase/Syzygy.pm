@@ -1607,6 +1607,24 @@ sub __setupPiecesPieceDtz {
 	$self->{tb_size}->[$p_tb_size] = $self->_calcFactorsPiece($self->{factor}, $order, $self->{norm});
 }
 
+sub __setupPiecesPawnDtz {
+	my ($self, $p_data, $p_tb_size, $f) = @_;
+
+	my $j = 1;
+	++$j if $self->{pawns}->[1] > 0;
+	my $order = $read_byte->($self->{data}, $p_data) & 0x0f;
+	my $order2 = $self->{pawns}->[1] ? $read_byte->($self->{data}, $p_data + 1) & 0xf : 0xf;
+	foreach my $i (0 .. $self->{num} - 1) {
+		$self->{files}->[$f]->{pieces}->[$i] = $read_byte->($self->{data}, $p_data + $i + $j);
+	}
+
+	$self->{files}->[$f]->{norm} = [(0) x ($self->{num} - 1)];
+	$self->_setNormPawn($self->{files}->[$f]->{norm}, $self->{files}->[$f]->{pieces});
+
+	$self->{files}->[$f]->{factor} = [(0) x ($TBPIECES - 1)];
+	$self->{tb_size}->[$p_tb_size] = $self->_calcFactorsPawn($self->{files}->[$f]->{factor}, $order, $order2, $self->{files}->[$f]->{norm}, $f);
+}
+
 sub probeDtzTable {
 	my ($self, $pos, $wdl) = @_;
 
