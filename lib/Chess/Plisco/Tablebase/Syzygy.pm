@@ -885,7 +885,7 @@ sub __calcSymlen {
 	$tmp->[$s] = 1;
 }
 
-sub __pawnFile {
+sub _pawnFile {
 	my ($self, $shifts) = @_;
 
 	foreach my $i (1 .. $self->{pawns}->[0] - 1) {
@@ -1434,7 +1434,7 @@ sub probeWdlTable {
 			$bb = cp_bitboard_clear_least_set $bb;
 		}
 
-		my $f = $self->__pawnFile($p);
+		my $f = $self->_pawnFile($p);
 		my $pc = $self->{files}->[$f]->{pieces}->[$bside];
 
 		while ($i < $self->{num}) {
@@ -1590,7 +1590,7 @@ sub __initTableDtz {
 		foreach my $f (0 .. ($files - 1)) {
 			$p_data = ($p_data + 0x3f) & ~0x3f;
 			$self->{files}->[$f]->{precomp}->{data} = $p_data;
-			$p_data += $self->size->[3 * $f + 2];
+			$p_data += $self->{size}->[3 * $f + 2];
 		}
 	}
 
@@ -1721,7 +1721,7 @@ sub probeDtzTable {
 			}
 		}
 
-		my $idx = $self->encodePawn($self->{files}->[$f]->{norm}, $p, $self->{files}->[$f]->{factor});
+		my $idx = $self->_encodePawn($self->{files}->[$f]->{norm}, $p, $self->{files}->[$f]->{factor});
 		$res = $self->_decompressPairs($self->{files}->[$f]->{precomp}, $idx);
 
 		if ($self->{flags}->[$f] & 2) {
