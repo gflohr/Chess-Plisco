@@ -1842,7 +1842,6 @@ sub probeWdl {
 sub probeDtz {
 	my ($self, $pos) = @_;
 
-	$DB::single = 1;
 	my $value = $self->__probeDtzNoEP($pos);
 
 	# Positions where en passant is possible need special care because the
@@ -1923,7 +1922,6 @@ sub __probeDtzNoEP {
 	my ($self, $pos) = @_;
 
 	my ($wdl, $success) = $self->__probeAb($pos, -2, 2);
-
 	return 0 if $wdl == 0;
 
 	if ($success == 2
@@ -1942,6 +1940,9 @@ sub __probeDtzNoEP {
 			my $undo = $pos->doMove($move);
 
 			my $v = eval { -$self->probeWdl($pos) };
+			$pos->undoMove($move);
+			die $@ if $@;
+
 			if ($v == $wdl) {
 				return ($v == 2) ? 1 : 101;
 			}
@@ -1971,6 +1972,7 @@ sub __probeDtzNoEP {
 			my $undo = $pos->doMove($move);
 			my $v = eval { -$self->probeDtz($pos) };
 			$pos->undoMove($undo);
+			die $@ if $@;
 
 			if ($v == 1) {
 				my $game_over = $pos->gameOver;
@@ -1995,14 +1997,16 @@ sub __probeDtzNoEP {
 					if ($wdl == -2) {
 						$v = -1;
 					} else {
+						# FIXME! No need to store $success.
 						($v, $success) = $self.__probeAb($pos, 1, 2);
 						$v = ($v == 2) ? 0 : -101;
 					}
 				} else {
-					$v = -$self->__probeDtz($pos) - 1;
+					$v = -$self->probeDtz($pos) - 1;
 				}
 			};
 			$pos->undoMove($undo);
+			die $@ if $@;
 
 			if ($v < $best) {
 				$best = $v;
