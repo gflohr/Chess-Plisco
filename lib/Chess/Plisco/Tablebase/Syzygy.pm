@@ -1511,7 +1511,7 @@ sub __initTableDtz {
 		$p_data = $self->{_next};
 		$self->{p_map} = $p_data;
 		if ($self->{flags} & 2) {
-			if (!$self->{flags} & 16) {
+			if (!($self->{flags} & 16)) {
 				foreach my $i (0 .. 3) {
 					$self->{map_idx}->[0]->[$i] = $p_data + 1 - $self->{p_map};
 					$p_data += 1 + $read_byte->($self->{data}, $p_data);
@@ -1677,7 +1677,7 @@ sub probeDtzTable {
 		$res = $self->_decompressPairs($self->{precomp}, $idx);
 
 		if ($self->{flags} & 2) {
-			if (!$self->{flags} & 16) {
+			if (!($self->{flags} & 16)) {
 				$res = $read_byte->($self->{data}, $self->{p_map} + $self->{map_idx}->[0]->[WDL_TO_MAP->[$wdl + 2]] + $res);
 			} else {
 				$res = $self->_readUint16($self->{p_map} + 2 * ($self->{map_idx}->[0]->[WDL_TO_MAP->[$wdl + 2]] + $res));
