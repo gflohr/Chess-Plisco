@@ -2151,7 +2151,7 @@ sub safeProbeDtz {
 		$result = $self->probeDtz($pos);
 	};
 	if ($@) {
-		if (ref $@ && $@->isa('MissingTableException')) {
+		if (ref $@ && $@->isa('Chess::Plisco::Tablebase::Syzygy::MissingTableException')) {
 			return $default;
 		} else {
 			# Re-throw.

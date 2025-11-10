@@ -19,7 +19,7 @@ use Chess::Plisco::Tablebase::Syzygy;
 
 my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy');
 
-my $pos = Chess::Plisco->new('4kqrb/8/8/8/8/8/8/BRQK4 w - - 0 1');
+my $pos = Chess::Plisco->new('kqrb4/8/8/8/8/8/8/4BRQK w - d3 0 1');
 
 ok !defined $tb->safeProbeWdl($pos), 'safe WDL probe';
 ok !defined $tb->safeProbeDtz($pos), 'safe DTZ probe';
