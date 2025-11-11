@@ -10,14 +10,22 @@
 # http://www.wtfpl.net/ for more details.
 
 use strict;
+use integer;
 
-use Chess::Plisco::Engine;
+use Test::More;
 
-# Wrap that into an eval to make sure that the DESTROY function is executed.
-eval {
-	Chess::Plisco::Engine->new->uci(\*STDIN, \*STDOUT)
-		or die "cannot create engine";
-};
-if ($@) {
-	die $@;
-}
+use Chess::Plisco;
+use Chess::Plisco::Tablebase::Syzygy;
+
+my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy', max_fds => 2);
+
+my $pos;
+
+# Winning because of en passant.
+$pos = Chess::Plisco->new('8/8/8/k2Pp3/8/8/8/4K3 w - e6 0 2');
+is $tb->__probeWdlTable($pos), 0;
+
+# Without en passant, it is a draw.
+is $tb->probeWdl($pos), 2;
+
+done_testing;
