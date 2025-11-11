@@ -44,6 +44,7 @@ my %WriteMakefileArgs = (
     "Exporter" => 0,
     "Fcntl" => 0,
     "File::Basename" => 0,
+    "File::Globstar" => 0,
     "File::Temp" => 0,
     "Filter::Util::Call" => 0,
     "Getopt::Long" => 0,
@@ -73,7 +74,7 @@ my %WriteMakefileArgs = (
     "Test::More" => 0,
     "lib" => 0
   },
-  "VERSION" => "0.6",
+  "VERSION" => "v0.7.0",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -87,6 +88,7 @@ my %FallbackPrereqs = (
   "Exporter" => 0,
   "Fcntl" => 0,
   "File::Basename" => 0,
+  "File::Globstar" => 0,
   "File::Spec" => 0,
   "File::Temp" => 0,
   "Filter::Util::Call" => 0,
