@@ -274,6 +274,18 @@ sub normalise_tablename {
 	return $normalise_tablename->($name, $mirror);
 }
 
+sub offdiag {
+	my (undef, $shift) = @_;
+
+	return $offdiag->($shift);
+}
+
+sub flipdiag {
+	my (undef, $shift) = @_;
+
+	return $flipdiag->($shift);
+}
+
 package Chess::Plisco::Tablebase::Syzygy::MissingTableException;
 
 use overload '""' => sub { ${$_[0]} };
@@ -813,8 +825,9 @@ sub _encodePiece {
 		}
 	}
 
-	my $i = 0;
-	foreach $i (0 .. $n - 1) {
+	my $i;
+	foreach (0 .. $n - 1) {
+		$i = $_;
 		if ($offdiag->($shifts->[$i])) {
 			last;
 		}
