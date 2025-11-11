@@ -843,7 +843,7 @@ sub _encodePiece {
 
 	my $limit = $self->{enc_type} == 0 ? 3 : 2;
 	if ($i < $limit && $offdiag->($shifts->[$i]) > 0) {
-		foreach $i (0 .. $n - 1) {
+		foreach my $i (0 .. $n - 1) {
 			$shifts->[$i] = $flipdiag->($shifts->[$i]);
 		}
 	}
