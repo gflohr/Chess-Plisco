@@ -2,6 +2,8 @@
 
 Chess::Plisco - A comprehensive chess library for Perl
 
+=encoding utf-8
+
 =head1 SYNOPSIS
 
     use Chess::Plisco(:all);
@@ -947,7 +949,7 @@ you will never find a mate.  This constellation is therefore always a draw.
 And, by the way, it would still be a draw if white has three or even more
 bishops as long as they move on same-coloured squares.
 
-=item B<King and Pawn versus Lone King
+=item B<King and Pawn versus Lone King>
 
       a b c d e f g h
      +-+-+-+-+-+-+-+-+
