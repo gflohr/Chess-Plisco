@@ -215,12 +215,26 @@ my @tests = (
 		draw => 1,
 		forcible => 1,
 	},
+	{
+		fen => '8/1K6/1b6/8/8/4n3/2k5/8 b - - 0 1',
+		name => 'KBN vs. K',
+		draw => 0,
+	},
+	{
+		fen => '8/1K6/1b6/8/8/4n3/2k5/8 b - - 0 1',
+		name => 'KBN vs. K (forcible)',
+		draw => 0,
+		forcible => 1,
+	}
 );
 
 plan tests => scalar @tests;
 
 foreach my $test (@tests) {
 	my $pos = Chess::Plisco->new($test->{fen});
+if ($test->{fen} eq '8/1K6/1b6/8/8/4n3/2k5/8 b - - 0 1') {
+	$DB::single = 1;
+}
 	my $forcible = $test->{forcible} ? ' (forcible)' : '';
 	if ($test->{draw}) {
 		ok $pos->insufficientMaterial($test->{forcible}), "$test->{name} should be draw$forcible";

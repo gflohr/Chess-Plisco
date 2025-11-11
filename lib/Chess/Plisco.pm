@@ -2056,12 +2056,14 @@ sub insufficientMaterial {
 		# a draw.
 		return 1 if $white_knight_pair && $black_knight_pair;
 
-		# Only KNNvK and KNvKN are considered a draw. We can detect that
-		# with a popcount of the knight bitboard.
-		my $num_knights;
-		cp_bitboard_popcount $knight_bb, $num_knights;
+		if (!$bishop_bb) {
+			# Only KNNvK and KNvKN are considered a draw. We can detect that
+			# with a popcount of the knight bitboard.
+			my $num_knights;
+			cp_bitboard_popcount $knight_bb, $num_knights;
 
-		return $num_knights <= 2;
+			return $num_knights <= 2;
+		}
 	} else {
 		return if !$forcible; # Mate theoratically possible.
 
@@ -2089,8 +2091,6 @@ sub insufficientMaterial {
 			return 1;
 		}
 	}
-
-	# FIXME! KNNvK is also a technical draw.
 
 	# In all other cases, we cannot determine the outcome.
 	return;
