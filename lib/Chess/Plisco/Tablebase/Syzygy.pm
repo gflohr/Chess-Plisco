@@ -1460,7 +1460,7 @@ sub __initTableDtz {
 		foreach my $f (0 .. ($files - 1)) {
 			push @{$self->{map_idx}}, [];
 			if ($self->{flags}->[$f] & 2) {
-				if (!$self->{flags}->[$f] & 16) {
+				if (!($self->{flags}->[$f] & 16)) {
 					foreach (0 .. 3) {
 						push @{$self->{map_idx}->[-1]}, $p_data + 1 - $self->{p_map};
 						$p_data += 1 + $read_byte->($self->{data}, $p_data);
@@ -1628,7 +1628,7 @@ sub probeDtzTable {
 		$res = $self->_decompressPairs($self->{files}->[$f]->{precomp}, $idx);
 
 		if ($self->{flags}->[$f] & 2) {
-			if (!$self->{flags}->[$f] & 16) {
+			if (!($self->{flags}->[$f] & 16)) {
 				$res = $read_byte->($self->{data}, $self->{p_map} + $self->{map_idx}->[$f]->[WDL_TO_MAP->[$wdl + 2]] + $res);
 			} else {
 				$res = $self->_readUint16($self->{p_map} + 2 * ($self->{map_idx}->[$f]->[WDL_TO_MAP->[$wdl + 2]] + $res));
