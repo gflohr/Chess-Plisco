@@ -1654,6 +1654,7 @@ sub probeDtzTable {
 package Chess::Plisco::Tablebase::Syzygy;
 
 use File::Basename qw(basename);
+use File::Globstar qw(globstar);
 use Locale::TextDomain qw('Chess-Plisco');
 use Tie::Cache::LRU;
 
@@ -1699,17 +1700,22 @@ sub addDirectory {
 		%__options
 	);
 
+	my (@rtbw_files, @rtbz_files);
 	$directory = File::Spec->rel2abs($directory);
 
-	# FIXME! Use File::Globstar to recursively find all files.
-	opendir my $dh, $directory or return 0;
-	my @files = readdir $dh;
+	if ($options{recursive}) {
+		@rtbw_files = globstar "$directory/**/*.rtbw" if $options{load_wdl};
+		@rtbz_files = globstar "$directory/**/*.rtbz" if $options{load_dtz};
+	} else {
+		@rtbw_files = globstar "$directory/*.rtbw" if $options{load_wdl};
+		@rtbz_files = globstar "$directory/*.rtbz" if $options{load_dtz};
+	}
+
+	my @files = (@rtbw_files, @rtbz_files);
 
 	my $num_files = 0;
 	foreach my $filename (@files) {
-		my $path = File::Spec->catfile($directory, $filename);
-
-		++$num_files if $self->__addFile($path, %options)
+		++$num_files if $self->__addFile($filename, %options)
 	}
 
 	return $num_files;
@@ -2169,54 +2175,3 @@ sub __probeDtzTable {
 }
 
 1;
-
-=head1 NAME
-
-Chess::Plisco::Tablebase::Syzygy - Perl interface to Syzygy end-game table bases
-
-=head1 SYNOPSIS
-
-    $tb = Chess::Plisco::Tablebase::Syzygy->new("./3-4-5");
-
-=head1 DESCRIPTION
-
-Warning! This is work in progress and not ready!
-
-The module B<Chess::Plisco::Tablebase::Syzygy> allows access to end-game
-table bases in Syzygy format.
-
-=head1 CONSTRUCTOR
-
-=over 4
-
-=item B<new PATH>
-
-Initialize the database located at B<PATH>.
-
-Throws an exception in case of an error.
-
-B<PATH> can be a list of directories separated by a colon (':') resp. a
-semi-colon ';' for MS-DOS/MS-Windows.
-
-=back
-
-=head1 METHODS
-
-=over 4
-
-=item B<largest>
-
-Returns the maximum number of pieces for which the database can be probed.
-
-A value of 0 means that no table files had been found at the path passsed as an
-argument to the constructor.
-
-=back
-
-=head1 COPYRIGHT
-
-Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>.
-
-=head1 SEE ALSO
-
-L<Chess::Plisco>(3pm), fathom(1), perl(1)
