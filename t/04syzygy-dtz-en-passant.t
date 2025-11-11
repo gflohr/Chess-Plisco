@@ -10,14 +10,22 @@
 # http://www.wtfpl.net/ for more details.
 
 use strict;
+use integer;
 
-use Chess::Plisco::Engine;
+use Test::More;
 
-# Wrap that into an eval to make sure that the DESTROY function is executed.
-eval {
-	Chess::Plisco::Engine->new->uci(\*STDIN, \*STDOUT)
-		or die "cannot create engine";
-};
-if ($@) {
-	die $@;
-}
+use Chess::Plisco;
+use Chess::Plisco::Tablebase::Syzygy;
+
+my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy');
+
+my $pos;
+
+# Loss without en passant.
+$pos = Chess::Plisco->new('8/8/8/8/2pP4/2K5/4k3/8 b - d3 0 1');
+is $tb->__probeDtzNoEP($pos), -1;
+
+# Win with en passant.
+is $tb->probeDtz($pos), 1;
+
+done_testing;
