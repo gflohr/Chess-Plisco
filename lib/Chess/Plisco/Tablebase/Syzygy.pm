@@ -299,9 +299,9 @@ package Chess::Plisco::Tablebase::Syzygy::MissingTableException;
 use overload '""' => sub { ${$_[0]} };
 
 sub new {
-	my ($self, $msg) = @_;
+	my ($class, $msg) = @_;
 
-	bless \$msg;
+	bless \$msg, $class;
 }
 
 package Chess::Plisco::Tablebase::Syzygy::PairsData;
