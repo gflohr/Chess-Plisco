@@ -2099,7 +2099,7 @@ sub gameOver {
 sub __probeWdlTable {
 	my ($self, $pos) = @_;
 
-	my $game_over = $self->{game_over} = $pos->gameOver(1);
+	my $game_over = $self->{game_over} = $pos->gameOver;
 	if ($game_over) {
 		my $value;
 		if ($game_over & CP_GAME_WHITE_WINS) {
