@@ -844,6 +844,7 @@ sub _encodePiece {
 		$i = 3;
 	} else { # K2
 		$idx = KK_IDX->[TRIANGLE->[$shifts->[0]]]->[$shifts->[1]];
+		$i = 2;
 	}
 
 	$idx *= $factor->[0];
