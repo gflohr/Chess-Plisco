@@ -577,13 +577,21 @@ sub newFromFEN {
 	my $to_move = cp_pos_info_to_move($pos_info);
 	if ('-' eq $ep_square) {
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
-	} elsif ($to_move == CP_WHITE && $ep_square =~ /^[a-h]6$/) {
+	} elsif ($to_move == CP_WHITE) {
+		if ($ep_square !~ /^[a-h]6$/) {
+			die __x("Illegal FEN: White to move and en-passant square '{square}' is not on 6th rank.\n",
+				square => $ep_square);
+		}
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
 			_cp_pos_info_set_en_passant_shift($pos_info, $self->squareToShift($ep_square));
 		}
-	} elsif ($to_move == CP_BLACK && $ep_square =~ /^[a-h]3$/) {
+	} elsif ($to_move == CP_BLACK) {
+		if ($ep_square !~ /^[a-h]3$/) {
+			die __x("Illegal FEN: Black to move and en-passant square '{square}' is not on 3rd rank.\n",
+				square => $ep_square);
+		}
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
@@ -610,6 +618,55 @@ sub newFromFEN {
 
 	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $pos_info;
+
+	return $self;
+}
+
+
+sub __legalityCheck {
+	my ($self) = @_;
+
+	# Pawn on 1st or 8th rank?
+	return if $self->[CP_POS_PAWNS] & (CP_1_MASK | CP_8_MASK);
+
+	my $to_move = $self->toMove;
+
+	my $ep_shift = cp_pos_en_passant_shift $self;
+	if ($ep_shift) {
+		my $ep_mask = 1 << $ep_shift;
+		my $occupancy = $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
+		my ($ep_rank_mask, $ep_cross_mask);
+		if ($to_move == CP_WHITE) {
+			$ep_rank_mask = CP_6_MASK;
+			$ep_cross_mask = 1 << ($ep_shift + 8);
+		} else {
+			$ep_rank_mask = CP_3_MASK;
+			$ep_cross_mask = 1 << ($ep_shift - 8);
+		}
+
+		return if !$ep_mask & $ep_rank_mask; # Wrong rank.
+		return if $ep_cross_mask & $occupancy; # En-passant square is occupied.
+	}
+
+	# Check whether the other side's king is in chess.
+	my $king_index = $to_move == CP_WHITE ? CP_POS_BLACK_PIECES : CP_POS_WHITE_PIECES;
+	my $king_bb = $self->[CP_POS_KINGS] & $self->[$king_index];
+	my $king_shift = cp_bitboard_count_trailing_zbits $king_bb;
+
+	my $cp_black = CP_BLACK;
+	if ($to_move == CP_WHITE) {
+		if (_cp_pos_color_attacked $self, CP_BLACK, $king_shift) {
+			return;
+		}
+	} else {
+		if (_cp_pos_color_attacked $self, CP_WHITE, $king_shift) {
+			return;
+		}
+	}
+
+	# Check castling rights consistency.
+
+	# Check number of pieces.
 
 	return $self;
 }
