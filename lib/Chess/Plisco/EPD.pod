@@ -38,6 +38,8 @@ handle that is open for reading.
 
 =over 4
 
+=item B<records>
+
 Returns all found records as L<Chess::Plisco::EPD::Record> objects.
 
 =back
@@ -48,4 +50,4 @@ Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>.
 
 =head1 SEE ALSO
 
-L<Chess::Plisco::Macro>, perl(1)
+L<Chess::Plisco::EPD::Record>, perl(1)
