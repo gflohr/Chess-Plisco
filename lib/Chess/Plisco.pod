@@ -42,6 +42,8 @@ coordinate notation
 
 =item Zobrist Keys
 
+=item Syzygy endgame table probing
+
 =back
 
 For a gentler introduction, please see L<Chess::Plisco::Tutorial>.  The rest
