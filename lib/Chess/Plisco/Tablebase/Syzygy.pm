@@ -1683,7 +1683,6 @@ sub new {
 		tables => \%tables,
 		wdl => {},
 		dtz => {},
-		game_over => 0,
 	}, $class;
 
 	$self->addDirectory($directory, %options) if defined $directory;
@@ -2111,25 +2110,13 @@ sub __probeAb {
 	return $v, 1
 }
 
-sub gameOver {
-	shift->{game_over};
-}
-
 sub __probeWdlTable {
 	my ($self, $pos) = @_;
 
-	my $game_over = $self->{game_over} = $pos->gameOver;
-	if ($game_over) {
-		my $value;
-		if ($game_over & CP_GAME_WHITE_WINS) {
-			$value = 2;
-		} elsif ($game_over & CP_GAME_BLACK_WINS) {
-			$value = -2;
-		} else {
-			return 0;
-		}
-
-		return cp_pos_to_move($pos) ? -$value : $value;
+	# Test for KvK.
+	if ($pos->[CP_POS_KINGS]
+	    == ($pos->[CP_POS_WHITE_PIECES] | $pos->[CP_POS_BLACK_PIECES])) {
+		return 0;
 	}
 
 	my $key = $calc_key->($pos);
