@@ -2150,7 +2150,7 @@ sub __probeWdlTable {
 }
 
 sub __probeDtzTable {
-	my ($self, $pos) = @_;
+	my ($self, $pos, $wdl) = @_;
 
 	my $key = $calc_key->($pos);
 	my $path = $self->{dtz}->{$key};
@@ -2172,7 +2172,7 @@ sub __probeDtzTable {
 		die __x("Cannot initialize DTZ table '{key}'.\n", key => $key);
 	}
 
-	return $table->probeDtzTable($pos);
+	return $table->probeDtzTable($pos, $wdl);
 }
 
 1;
