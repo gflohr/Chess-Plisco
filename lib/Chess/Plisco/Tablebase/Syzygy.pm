@@ -1547,7 +1547,7 @@ sub probeDtzTable {
 		}
 
 		my $pc = $self->{pieces};
-		my $p = [(0) x $TBPIECES - 1];
+		my $p = [(0) x ($TBPIECES - 1)];
 		my $i = 0;
 		while ($i < $self->{num}) {
 			my $piece_type = $pc->[$i] & 0x07;
@@ -1584,7 +1584,7 @@ sub probeDtzTable {
 		my $bb = $colour ? ($pos->[$piece_type] & cp_pos_black_pieces($pos)) : ($pos->[$piece_type] & cp_pos_white_pieces($pos)); 
 
 		my $i = 0;
-		my $p = [(0) x $TBPIECES - 1];
+		my $p = [(0) x ($TBPIECES - 1)];
 		while ($bb) {
 			my $shift = cp_bitboard_count_trailing_zbits $bb;
 			$p->[$i++] = $shift;
