@@ -18,11 +18,14 @@ use Chess::Plisco::EPD;
 use Chess::Plisco::Tablebase::Syzygy;
 
 my $epd = Chess::Plisco::EPD->new('./t/epd/endgame.epd');
-my $epd_large = Chess::Plisco::EPD->new('./t/epd/endgame-large.epd');
+if ($ENV{AUTHOR_TESTING}) {
+	my $epd_large = Chess::Plisco::EPD->new('./t/epd/endgame-large.epd');
+	push @$epd, @$epd_large;
+}
 
 my $tb = Chess::Plisco::Tablebase::Syzygy->new('./t/syzygy');
 
-foreach my $record (@$epd, @$epd_large) {
+foreach my $record (@$epd) {
 	my $pos = $record->position;
 	my $wanted_wdl_table = $record->operation('wdl_table');
 	my $wanted_wdl = $record->operation('wdl');

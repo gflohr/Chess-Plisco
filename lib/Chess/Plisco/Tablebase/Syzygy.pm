@@ -56,6 +56,14 @@ my $remove_ep = sub {
 	return $pos2;
 };
 
+my $is_checkmate = sub {
+	my ($pos) = @_;
+
+	my $game_over = $pos->gameOver or return;
+	return 1 if ($game_over && CP_GAME_WHITE_WINS);
+	return 1 if ($game_over && CP_GAME_BLACK_WINS);
+};
+
 my @PTWIST = (
 	 0,  0,  0,  0,  0,  0,  0,  0,
 	47, 35, 23, 11, 10, 22, 34, 46,
@@ -1984,19 +1992,17 @@ sub __probeDtzNoEP {
 			next if cp_move_captured($move);
 
 			my $undo = $pos->doMove($move);
-			my $v = eval { -$self->probeDtz($pos) };
+			eval {
+				my $v = -$self->probeDtz($pos);
+
+				if ($v == 1 && $is_checkmate->($pos)) {
+					$best = 1;
+				} elsif (($v > 0) && (($v + 1) < $best)) {
+					$best = $v + 1;
+				}
+			};
 			$pos->undoMove($undo);
 			die $@ if $@;
-
-			if ($v == 1) {
-				my $game_over = $pos->gameOver;
-				if (($game_over & CP_GAME_WHITE_WINS)
-				    || ($game_over & CP_GAME_BLACK_WINS)) {
-					$best = 1;
-				}
-			} elsif (($v > 0) && (($v + 1) < $best)) {
-				$best = $v + 1;
-			}
 		}
 	} else {
 		$best = -1;
