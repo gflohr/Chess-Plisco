@@ -1587,13 +1587,13 @@ sub probeDtzTable {
 		my $p = [(0) x ($TBPIECES - 1)];
 		while ($bb) {
 			my $shift = cp_bitboard_count_trailing_zbits $bb;
-			$p->[$i++] = $shift;
+			$p->[$i++] = $shift ^ $mirror;
 
 			$bb = cp_bitboard_clear_least_set $bb;
 		}
 
 		my $f = $self->_pawnFile($p);
-		if ($self->{flags}->[$f] & 1 != $bside) {
+		if (($self->{flags}->[$f] & 1) != $bside) {
 			return 0, -1;
 		}
 
@@ -1605,7 +1605,7 @@ sub probeDtzTable {
 
 			while ($bb) {
 				my $shift = cp_bitboard_count_trailing_zbits $bb;
-				$p->[$i++] = $shift;
+				$p->[$i++] = $shift ^ $mirror;
 
 				$bb = cp_bitboard_clear_least_set $bb;
 			}
