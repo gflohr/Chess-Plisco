@@ -16,6 +16,8 @@ package Chess::Plisco::Engine::Book;
 
 use strict;
 
+use Chess::Opening::Book::Polyglot;
+
 sub new {
 	my ($class, $engine) = @_;
 

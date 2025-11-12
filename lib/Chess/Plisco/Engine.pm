@@ -52,9 +52,9 @@ use constant UCI_OPTIONS => [
 		callback => '__changeBatchMode',
 	},
 	{
-		name => 'BookFile',
-		type => 'string',
-		callback => '__setBookFile',
+		name => 'OwnBook',
+		type => 'check',
+		default => 'false',
 	},
 	{
 		name => 'BookFile',
@@ -457,7 +457,7 @@ sub __setBookFile {
 	}
 
 	my $callback = sub { $self->__info(@_) };
-	$self->{__book}->setBookFile($value, $callback);
+	$self->{__book}->setFile($value, $callback);
 
 	return $self;
 }

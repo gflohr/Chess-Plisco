@@ -63,7 +63,7 @@ sub new {
 		tt => $options{tt},
 		watcher => $options{watcher},
 		info => $options{info} || sub {},
-		book => $options{book_depth},
+		book => $options{book},
 		book_depth => $options{book_depth},
 	};
 
@@ -603,6 +603,14 @@ sub think {
 		$self->printCurrentMove(1, $move, 1);
 		$self->printPV([$move]);
 		return $move;
+	}
+
+	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
+		my $notation = $self->{book}->pickMove($position);
+		if ($notation) {
+			my $move = eval { $position->parseMove($notation) };
+			return $move if $move;
+		}
 	}
 
 	my @line;
