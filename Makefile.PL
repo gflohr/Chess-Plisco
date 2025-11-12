@@ -41,6 +41,7 @@ my %WriteMakefileArgs = (
   "NAME" => "Chess::Plisco",
   "PREREQ_PM" => {
     "Carp" => 0,
+    "Chess::Opening::Book::Polyglot" => 0,
     "Exporter" => 0,
     "Fcntl" => 0,
     "File::Basename" => 0,
@@ -74,7 +75,7 @@ my %WriteMakefileArgs = (
     "Test::More" => 0,
     "lib" => 0
   },
-  "VERSION" => "v0.7.0",
+  "VERSION" => "v0.7.1",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -82,6 +83,7 @@ my %WriteMakefileArgs = (
 
 my %FallbackPrereqs = (
   "Carp" => 0,
+  "Chess::Opening::Book::Polyglot" => 0,
   "Chess::PGN::Parse" => 0,
   "Cwd" => 0,
   "Data::Dumper" => 0,
