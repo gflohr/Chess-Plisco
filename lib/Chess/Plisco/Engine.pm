@@ -308,7 +308,7 @@ sub __onUciCmdGo {
 			my $val = shift @args;
 			$val ||= 0;
 			$val = +$val;
-			unless ($val) {
+			if ($val < 0) {
 				$self->__info("error: argument '$arg' expects an integer > 0");
 				return;
 			}
