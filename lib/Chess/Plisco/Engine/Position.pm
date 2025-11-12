@@ -343,8 +343,10 @@ sub new {
 	my $self = $class->SUPER::new(@args);
 
 	my $op_phase = 0;
+
 	my $op_score = 0;
 	my $eg_score = 0;
+
 	my $white = $self->[CP_POS_WHITE_PIECES];
 	my $black = $self->[CP_POS_BLACK_PIECES];
 
@@ -373,6 +375,16 @@ sub new {
 
 	$self->[CP_POS_OPENING_SCORE] = $op_score;
 	$self->[CP_POS_ENDGAME_SCORE] = $eg_score;
+
+	# Stockfish tells us that e4 is the best opening move and initially
+	# sees a white advantage of 25 centipawns.  When doing the
+	# move, the evaluation will increase by 32 (see the PST for the pawns).
+	# That means, that we should initialise the op_score with -7.
+	# Doing e5 will bump it to the expected 25.
+	my $fen = $self->toFEN;
+	if ($fen eq 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+		$self->[CP_POS_OPENING_SCORE] += -7;
+	}
 
 	$self->[CP_POS_GAME_PHASE] = $op_phase;
 
