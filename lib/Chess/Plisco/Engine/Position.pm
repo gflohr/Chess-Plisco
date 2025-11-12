@@ -381,6 +381,10 @@ sub new {
 	# move, the evaluation will increase by 32 (see the PST for the pawns).
 	# That means, that we should initialise the op_score with -7.
 	# Doing e5 will bump it to the expected 25.
+	#
+	# Unfortunately, that does not gain any strength but will only improve
+	# accuracy. Essentially, it will just shift the displayed evaluation values
+	# depending on the offset of the Stockfish evaluation and ours.
 	my $fen = $self->toFEN;
 	if ($fen eq 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
 		$self->[CP_POS_OPENING_SCORE] += -7;
