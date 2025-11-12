@@ -24,6 +24,7 @@ use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
 use Chess::Plisco::Engine::InputWatcher;
 use Chess::Plisco::Engine::TranspositionTable;
+use Chess::Plisco::Engine::Book;
 
 # These figures are taken from 
 use constant MIN_HASH_SIZE => 1;
@@ -50,6 +51,23 @@ use constant UCI_OPTIONS => [
 		default => 'false',
 		callback => '__changeBatchMode',
 	},
+	{
+		name => 'OwnBook',
+		type => 'check',
+		default => 'false',
+	},
+	{
+		name => 'BookFile',
+		type => 'string',
+		callback => '__setBookFile',
+	},
+	{
+		name => 'BookDepth',
+		type => 'spin',
+		min => 1,
+		max => 1024,
+		default => 20,
+	},
 ];
 
 my $uci_options = UCI_OPTIONS;
@@ -63,6 +81,7 @@ sub new {
 		__position => $position,
 		__signatures => [$position->signature],
 		__options => {},
+		__book => Chess::Plisco::Engine::Book->new,
 	};
 
 	my $options = UCI_OPTIONS;
@@ -314,12 +333,18 @@ sub __onUciCmdGo {
 		$self->{__watcher}->setBatchMode(0);
 	}
 
-	my $tree = Chess::Plisco::Engine::Tree->new(
-		$self->{__position}->copy,
-		$self->{__tt},
-		$self->{__watcher},
-		$info,
-		$self->{__signatures});
+	my %options = (
+		position => $self->{__position}->copy,
+		tt => $self->{__tt},
+		watcher => $self->{__watcher},
+		info => $info,
+		signatures => $self->{__signatures},
+	);
+	if ($self->{__options}->{OwnBook} eq 'true') {
+		$options{book} = $self->{__book};
+		$options{book_depth} = $self->{__options}->{BookDepth};
+	}
+	my $tree = Chess::Plisco::Engine::Tree->new(%options);
 	$tree->{debug} = 1 if $self->{__debug};
 
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
@@ -422,6 +447,19 @@ sub __changeBatchMode {
 		$self->__output("info all commands are ignored during search in"
 				. " batch mode!")
 	}
+}
+
+sub __setBookFile {
+	my ($self, $value) = @_;
+
+	if ($self->{__options}->{OwnBook} ne 'true') {
+		$self->__info("Warning: book file will not be used, when OwnBook is set to 'false'!");
+	}
+
+	my $callback = sub { $self->__info(@_) };
+	$self->{__book}->setFile($value, $callback);
+
+	return $self;
 }
 
 sub __onUciCmdStop {

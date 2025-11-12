@@ -83,11 +83,10 @@ sub __solve {
 	}
 
 	my $tree = Chess::Plisco::Engine::Tree->new(
-		$position,
-		Chess::Plisco::Engine::TranspositionTable->new(16),
-		$self->{__watcher},
-		sub {},
-		[$position->signature],
+		position => $position,
+		tt => Chess::Plisco::Engine::TranspositionTable->new(16),
+		watcher => $self->{__watcher},
+		signatures => [$position->signature],
 	);
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 	my $move = $position->moveCoordinateNotation($tree->think);
