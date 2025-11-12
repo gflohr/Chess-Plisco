@@ -333,15 +333,18 @@ sub __onUciCmdGo {
 		$self->{__watcher}->setBatchMode(0);
 	}
 
-	my $tree = Chess::Plisco::Engine::Tree->new(
+	my %options = (
 		position => $self->{__position}->copy,
 		tt => $self->{__tt},
 		watcher => $self->{__watcher},
 		info => $info,
 		signatures => $self->{__signatures},
-		book => $self->{__options}->{OwnBook} eq 'true' ? : $self->{__book} : undef,
-		book_depth => $self->{__options}->{BookDepth},
 	);
+	if ($self->{__options}->{OwnBook} eq 'true') {
+		$options{book} = $self->{__book};
+		$options{book_depth} = $self->{__options}->{BookDepth};
+	}
+	my $tree = Chess::Plisco::Engine::Tree->new(%options);
 	$tree->{debug} = 1 if $self->{__debug};
 
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);

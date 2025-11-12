@@ -41,6 +41,8 @@ sub setFile {
 sub pickMove {
 	my ($self, $pos) = @_;
 
+	return if !$self->{__book};
+
 	my $fen = $pos->toFEN;
 	my $entry = $self->{__book}->lookupFEN($pos);
 	return if !$entry; # Out of book.
