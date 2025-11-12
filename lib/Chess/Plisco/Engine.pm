@@ -24,6 +24,7 @@ use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
 use Chess::Plisco::Engine::InputWatcher;
 use Chess::Plisco::Engine::TranspositionTable;
+use Chess::Plisco::Engine::Book;
 
 # These figures are taken from 
 use constant MIN_HASH_SIZE => 1;
@@ -50,6 +51,23 @@ use constant UCI_OPTIONS => [
 		default => 'false',
 		callback => '__changeBatchMode',
 	},
+	{
+		name => 'BookFile',
+		type => 'string',
+		callback => '__setBookFile',
+	},
+	{
+		name => 'BookFile',
+		type => 'string',
+		callback => '__setBookFile',
+	},
+	{
+		name => 'BookDepth',
+		type => 'spin',
+		min => 1,
+		max => 1024,
+		default => 20,
+	},
 ];
 
 my $uci_options = UCI_OPTIONS;
@@ -63,6 +81,7 @@ sub new {
 		__position => $position,
 		__signatures => [$position->signature],
 		__options => {},
+		__book => Chess::Plisco::Engine::Book->new,
 	};
 
 	my $options = UCI_OPTIONS;
@@ -422,6 +441,19 @@ sub __changeBatchMode {
 		$self->__output("info all commands are ignored during search in"
 				. " batch mode!")
 	}
+}
+
+sub __setBookFile {
+	my ($self, $value) = @_;
+
+	if ($self->{__options}->{OwnBook} ne 'true') {
+		$self->__info("Warning: book file will not be used, when OwnBook is set to 'false'!");
+	}
+
+	my $callback = sub { $self->__info(@_) };
+	$self->{__book}->setBookFile($value, $callback);
+
+	return $self;
 }
 
 sub __onUciCmdStop {
