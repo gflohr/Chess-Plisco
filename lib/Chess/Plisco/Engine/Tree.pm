@@ -45,7 +45,10 @@ use constant ASPIRATION_WINDOW => 25;
 my @move_values = (0) x 369;
 
 sub new {
-	my ($class, $position, $tt, $watcher, $info, $signatures) = @_;
+	my ($class, %options) = @_;
+
+	my $position = $options{position};
+	my $signatures = $options{signatures};
 
 	# Make sure that the reversible clock does not look beyond the know
 	# positions.  This will simplify the detection of a draw by repetition.
@@ -57,9 +60,11 @@ sub new {
 		position => $position,
 		signatures => $signatures,
 		history_length => -1 + scalar @$signatures,
-		tt => $tt,
-		watcher => $watcher,
-		info => $info || sub {},
+		tt => $options{tt},
+		watcher => $options{watcher},
+		info => $options{info} || sub {},
+		book => $options{book_depth},
+		book_depth => $options{book_depth},
 	};
 
 	bless $self, $class;

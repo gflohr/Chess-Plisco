@@ -334,11 +334,14 @@ sub __onUciCmdGo {
 	}
 
 	my $tree = Chess::Plisco::Engine::Tree->new(
-		$self->{__position}->copy,
-		$self->{__tt},
-		$self->{__watcher},
-		$info,
-		$self->{__signatures});
+		position => $self->{__position}->copy,
+		tt => $self->{__tt},
+		watcher => $self->{__watcher},
+		info => $info,
+		signatures => $self->{__signatures},
+		book => $self->{__options}->{OwnBook} eq 'true' ? : $self->{__book} : undef,
+		book_depth => $self->{__options}->{BookDepth},
+	);
 	$tree->{debug} = 1 if $self->{__debug};
 
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
