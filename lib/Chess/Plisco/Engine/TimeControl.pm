@@ -87,7 +87,6 @@ sub allocateTime {
 
 	my $time_left = $params->{mytime} + $params->{movestogo} * $params->{myinc};
 
-	# FIXME! This should not be fixed_time but have a better name.
 	# FIXME! Depending on the volatility of the position, there should be
 	# a time cushion that can be used if the evaluation changes a lot between      
 	# iterations.

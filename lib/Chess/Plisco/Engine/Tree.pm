@@ -241,6 +241,8 @@ sub alphabeta {
 	my @moves = $position->pseudoLegalMoves;
 
 	# Expand the moves with a score so that they can be sorted.
+	# FIXME! Our evaluation function knows the delta for each move from the
+	# PSTs. Maybe it is better to use that value for sorting?
 	my ($pawns, $knights, $bishops, $rooks, $queens) = 
 		@$position[CP_POS_PAWNS .. CP_POS_QUEENS];
 	my $pos_info = cp_pos_info $position;
@@ -539,6 +541,7 @@ sub rootSearch {
 	my @line = @$pline;
 	my $alpha = -INF;
 	my $beta = +INF;
+	$DB::single = 1;
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
