@@ -394,7 +394,7 @@ sub new {
 	
 	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $info;
-	
+
 	return $self;
 }
 
@@ -533,9 +533,13 @@ sub newFromFEN {
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling state.\n";
 	}
-	if ($castling !~ /^(?:-|K?Q?k?q?)/) {
-		die __x("Illegal FEN: Illegal castling state '{state}'.\n",
-				state => $castling);
+	if ($castling ne '-') {
+		if ($castling !~ /^K?Q?k?q?$/) {
+			die __x("Illegal FEN: Illegal castling state '{state}'.\n",
+					state => $castling);
+		} elsif ($castling eq '') {
+			die __"Illegal FEN: Missing castling state.\n";
+		}
 	}
 
 	my ($piece_type, $piece_color);
@@ -618,55 +622,6 @@ sub newFromFEN {
 
 	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $pos_info;
-
-	return $self;
-}
-
-# FIXME! Is that the same as consistent()?
-sub __legalityCheck {
-	my ($self) = @_;
-
-	# Pawn on 1st or 8th rank?
-	return if $self->[CP_POS_PAWNS] & (CP_1_MASK | CP_8_MASK);
-
-	my $to_move = $self->toMove;
-
-	my $ep_shift = cp_pos_en_passant_shift $self;
-	if ($ep_shift) {
-		my $ep_mask = 1 << $ep_shift;
-		my $occupancy = $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
-		my ($ep_rank_mask, $ep_cross_mask);
-		if ($to_move == CP_WHITE) {
-			$ep_rank_mask = CP_6_MASK;
-			$ep_cross_mask = 1 << ($ep_shift + 8);
-		} else {
-			$ep_rank_mask = CP_3_MASK;
-			$ep_cross_mask = 1 << ($ep_shift - 8);
-		}
-
-		return if !$ep_mask & $ep_rank_mask; # Wrong rank.
-		return if $ep_cross_mask & $occupancy; # En-passant square is occupied.
-	}
-
-	# Check whether the other side's king is in chess.
-	my $king_index = $to_move == CP_WHITE ? CP_POS_BLACK_PIECES : CP_POS_WHITE_PIECES;
-	my $king_bb = $self->[CP_POS_KINGS] & $self->[$king_index];
-	my $king_shift = cp_bitboard_count_trailing_zbits $king_bb;
-
-	my $cp_black = CP_BLACK;
-	if ($to_move == CP_WHITE) {
-		if (_cp_pos_color_attacked $self, CP_BLACK, $king_shift) {
-			return;
-		}
-	} else {
-		if (_cp_pos_color_attacked $self, CP_WHITE, $king_shift) {
-			return;
-		}
-	}
-
-	# Check castling rights consistency.
-
-	# Check number of pieces.
 
 	return $self;
 }
@@ -3104,6 +3059,54 @@ sub squareToShift {
 	my $rank = $2 - 1;
 
 	return $whatever->coordinatesToShift($file, $rank);
+}
+
+sub __legalityCheck {
+	my ($self) = @_;
+
+	# Pawn on 1st or 8th rank?
+	return if $self->[CP_POS_PAWNS] & (CP_1_MASK | CP_8_MASK);
+
+	my $to_move = $self->toMove;
+
+	my $ep_shift = cp_pos_en_passant_shift $self;
+	if ($ep_shift) {
+		my $ep_mask = 1 << $ep_shift;
+		my $occupancy = $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
+		my ($ep_rank_mask, $ep_cross_mask);
+		if ($to_move == CP_WHITE) {
+			$ep_rank_mask = CP_6_MASK;
+			$ep_cross_mask = 1 << ($ep_shift + 8);
+		} else {
+			$ep_rank_mask = CP_3_MASK;
+			$ep_cross_mask = 1 << ($ep_shift - 8);
+		}
+
+		return if !$ep_mask & $ep_rank_mask; # Wrong rank.
+		return if $ep_cross_mask & $occupancy; # En-passant square is occupied.
+	}
+
+	# Check whether the other side's king is in chess.
+	my $king_index = $to_move == CP_WHITE ? CP_POS_BLACK_PIECES : CP_POS_WHITE_PIECES;
+	my $king_bb = $self->[CP_POS_KINGS] & $self->[$king_index];
+	my $king_shift = cp_bitboard_count_trailing_zbits $king_bb;
+
+	my $cp_black = CP_BLACK;
+	if ($to_move == CP_WHITE) {
+		if (_cp_pos_color_attacked $self, CP_BLACK, $king_shift) {
+			return;
+		}
+	} else {
+		if (_cp_pos_color_attacked $self, CP_WHITE, $king_shift) {
+			return;
+		}
+	}
+
+	# Check castling rights consistency.
+
+	# Check number of pieces.
+
+	return $self;
 }
 
 sub consistent {

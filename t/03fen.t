@@ -65,4 +65,9 @@ eval {
 };
 like $@, qr/incomplete or overpopulated rank/i;
 
+eval {
+	Chess::Plisco->newFromFEN('8/8/8/pPk5/8/8/8/7K w a6 - 0 1');
+};
+like $@, qr/Illegal castling state 'a6'/i;
+
 done_testing;
