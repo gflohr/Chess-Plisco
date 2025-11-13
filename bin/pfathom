@@ -100,7 +100,6 @@ print $pgn;
 sub print_pv {
 	my ($_pos, @pv) = @_;
 
-$DB::single = 1;
 	my $pos = $_pos->copy;
 
 	my $output = "\n1.";
