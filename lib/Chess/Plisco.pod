@@ -499,7 +499,9 @@ properties.
 =item B<parseMove(NOTATION)>
 
 Parses the string B<NOTATION> into an integer representing the move or returns
-false, if the B<NOTATION> cannot be parsed or is an illegal move.
+false, if the B<NOTATION> cannot be parsed or is an illegal move.  Note that
+the parser does not do a complete legality check. Use "applyMove()" to test
+whether the move is really legal.
 
 B<NOTATION> can either be a move in Standard Algebraic Notation (SAN) or in
 coordinate notation.  Coordinate notation is the format used by most chess

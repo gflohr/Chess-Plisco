@@ -622,7 +622,7 @@ sub newFromFEN {
 	return $self;
 }
 
-
+# FIXME! Is that the same as consistent()?
 sub __legalityCheck {
 	my ($self) = @_;
 
@@ -1737,10 +1737,9 @@ sub parseMove {
 	my $move;
 
 	if ($notation =~ /^([a-h][1-8])([a-h][1-8])([qrbn])?$/) {
-		$move = $self->__parseUCIMove(map { lc $_ } ($1, $2, $3))
-			or return;
+		$move = $self->__parseUCIMove(map { lc $_ } ($1, $2, $3));
 	} else {
-		$move = $self->__parseSAN($notation) or return;
+		$move = $self->__parseSAN($notation);
 	}
 
 	my $piece;
@@ -1786,7 +1785,11 @@ sub parseMove {
 
 	cp_move_set_color $move, $self->toMove;
 
-	return $move;
+	foreach my $candidate ($self->legalMoves) {
+		return $move if $candidate == $move;
+	}
+
+	die __"Illegal move!\n";
 }
 
 sub __parseUCIMove {
@@ -1796,10 +1799,8 @@ sub __parseUCIMove {
 	my $from = $class->squareToShift($from_square);
 	my $to = $class->squareToShift($to_square);
 
-	return if $from < 0;
-	return if $from > 63;
-	return if $to < 0;
-	return if $to > 63;
+	# There is no need for boundary checking. The regexes [a-h][1-8] used in
+	# the callers are sufficient for that.
 
 	cp_move_set_from($move, $from);
 	cp_move_set_to($move, $to);
@@ -2880,7 +2881,10 @@ sub __parseSAN {
 		}
 
 		# Leading garbage?
-		return if @san;
+		if (@san) {
+			require Carp;
+			Carp::Croak(__"Illegal SAN string: leading garbage found!\n");
+		}
 
 		$pattern = join '', $piece, 
 				$from_file, $from_rank, $to_file, $to_rank, $promote;
@@ -2909,10 +2913,16 @@ sub __parseSAN {
 		@candidates = grep { /^$pattern$/ } @legal;
 	}
 
-	return if @candidates != 1;
+	if (@candidates != 1) {
+		require Carp;
+		Carp::croak(__"Illegal SAN string: move is ambiguous.\n");
+	}
 
 	$move = $candidates[0];
-	return if $move !~ /^[PNBRQK]([a-h][1-8])([a-h][1-8])([qrbn])?$/;
+	if ($move !~ /^[PNBRQK]([a-h][1-8])([a-h][1-8])([qrbn])?$/) {
+		require Carp;
+		Carp::croak(__"Illegal SAN string: syntax error.\n");
+	}
 
 	return $self->__parseUCIMove($1, $2, $3);
 }
