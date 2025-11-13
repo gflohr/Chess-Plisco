@@ -533,49 +533,27 @@ sub newFromFEN {
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling state.\n";
 	}
-	if ($castling ne '-') {
-		if ($castling !~ /^K?Q?k?q?$/) {
-			die __x("Illegal FEN: Illegal castling state '{state}'.\n",
-					state => $castling);
-		} elsif ($castling eq '') {
-			die __"Illegal FEN: Missing castling state.\n";
-		}
-	}
-
-	my ($piece_type, $piece_color);
-
-	($piece_type, $piece_color) = $self->pieceAtShift(CP_E1);
-	if (!($piece_type && $piece_type == CP_KING && $piece_color == CP_WHITE)) {
-		$castling =~ s/KQ//;
-	}
-	($piece_type, $piece_color) = $self->pieceAtShift(CP_E8);
-	if (!($piece_type && $piece_type == CP_KING && $piece_color == CP_BLACK)) {
-		$castling =~ s/kq//;
+	if ($castling ne '-' && $castling !~ /^K?Q?k?q?$/) {
+		die __x("Illegal FEN: Illegal castling state '{state}'.\n",
+				state => $castling);
 	}
 
 	if ($castling =~ /K/) {
-		($piece_type, $piece_color) = $self->pieceAtShift(CP_H1);
-		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_WHITE) {
-			_cp_pos_info_set_white_king_side_castling_right($pos_info, 1);
-		}
+		$self->__checkCastlingState(CP_G1);
+		_cp_pos_info_set_white_king_side_castling_right($pos_info, 1);
 	}
 	if ($castling =~ /Q/) {
-		($piece_type, $piece_color) = $self->pieceAtShift(CP_A1);
-		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_WHITE) {
-			_cp_pos_info_set_white_queen_side_castling_right($pos_info, 1);
-		}
+		$self->__checkCastlingState(CP_C1);
+		_cp_pos_info_set_white_queen_side_castling_right($pos_info, 1);
 	}
+
 	if ($castling =~ /k/) {
-		($piece_type, $piece_color) = $self->pieceAtShift(CP_H8);
-		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_BLACK) {
-			_cp_pos_info_set_black_king_side_castling_right($pos_info, 1);
-		}
+		$self->__checkCastlingState(CP_G8);
+		_cp_pos_info_set_black_king_side_castling_right($pos_info, 1);
 	}
 	if ($castling =~ /q/) {
-		($piece_type, $piece_color) = $self->pieceAtShift(CP_A8);
-		if ($piece_type && $piece_type == CP_ROOK && $piece_color == CP_BLACK) {
-			_cp_pos_info_set_black_queen_side_castling_right($pos_info, 1);
-		}
+		$self->__checkCastlingState(CP_C8);
+		_cp_pos_info_set_black_queen_side_castling_right($pos_info, 1);
 	}
 
 	my $to_move = cp_pos_info_to_move($pos_info);
@@ -622,6 +600,20 @@ sub newFromFEN {
 
 	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $pos_info;
+
+	return $self;
+}
+
+sub __checkCastlingState {
+	my ($self, $king_destination) = @_;
+
+	my $is_white = $king_destination < CP_A2;
+	my $king_square = $is_white ? CP_E1 : CP_E8;
+	my $my_pieces = $is_white ? $self->[CP_POS_WHITE_PIECES] : $self->[CP_POS_BLACK_PIECES];
+
+	if (($my_pieces & $self->[CP_POS_KINGS]) != (1 << $king_square)) {
+		die __"Illegal castling rights: king not on initial square!\n";
+	}
 
 	return $self;
 }

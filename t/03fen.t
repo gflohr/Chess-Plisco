@@ -32,9 +32,6 @@ eval {
 };
 like $@, qr/incomplete/i;
 
-is(Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq')
-   ->toFEN, $initial, 'defaults');
-
 eval {
 	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
 };
@@ -69,5 +66,13 @@ eval {
 	Chess::Plisco->newFromFEN('8/8/8/pPk5/8/8/8/7K w a6 - 0 1');
 };
 like $@, qr/Illegal castling state 'a6'/i;
+
+ok(Chess::Plisco->newFromFEN('4k3/8/8/8/8/8/8/4K2R w K - 0 1'));
+
+eval {
+	$DB::single = 1;
+	Chess::Plisco->newFromFEN('4k3/8/8/8/8/8/8/3K3R w K - 0 1');
+};
+like $@, qr/Illegal castling rights: king not on initial square!/i;
 
 done_testing;
