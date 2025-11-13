@@ -531,10 +531,10 @@ sub newFromFEN {
 	}
 
 	if (!length $castling) {
-		die __"Illegal FEN: Missing castling state.\n";
+		die __"Illegal FEN: Missing castling rights.\n";
 	}
 	if ($castling ne '-' && $castling !~ /^K?Q?k?q?$/) {
-		die __x("Illegal FEN: Illegal castling state '{state}'.\n",
+		die __x("Illegal FEN: Illegal castling rights '{state}'.\n",
 				state => $castling);
 	}
 
@@ -609,10 +609,24 @@ sub __checkCastlingState {
 
 	my $is_white = $king_destination < CP_A2;
 	my $king_square = $is_white ? CP_E1 : CP_E8;
+	my $rook_square;
+	if ($king_destination == CP_G1) {
+		$rook_square = CP_H1;
+	} elsif ($king_destination == CP_C1) {
+		$rook_square = CP_A1;
+	} elsif ($king_destination == CP_G8) {
+		$rook_square = CP_H8;
+	} else {
+		$rook_square = CP_A8;
+	}
 	my $my_pieces = $is_white ? $self->[CP_POS_WHITE_PIECES] : $self->[CP_POS_BLACK_PIECES];
 
 	if (($my_pieces & $self->[CP_POS_KINGS]) != (1 << $king_square)) {
 		die __"Illegal castling rights: king not on initial square!\n";
+	}
+
+	if (!($my_pieces & $self->[CP_POS_ROOKS] & (1 << $rook_square))) {
+		die __"Illegal castling rights: rook not on initial square!\n";
 	}
 
 	return $self;

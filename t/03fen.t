@@ -65,14 +65,18 @@ like $@, qr/incomplete or overpopulated rank/i;
 eval {
 	Chess::Plisco->newFromFEN('8/8/8/pPk5/8/8/8/7K w a6 - 0 1');
 };
-like $@, qr/Illegal castling state 'a6'/i;
+like $@, qr/Illegal castling rights 'a6'/i;
 
 ok(Chess::Plisco->newFromFEN('4k3/8/8/8/8/8/8/4K2R w K - 0 1'));
 
 eval {
-	$DB::single = 1;
-	Chess::Plisco->newFromFEN('4k3/8/8/8/8/8/8/3K3R w K - 0 1');
+	Chess::Plisco->newFromFEN('r3k2r/8/8/8/8/8/8/R4K1R w KQkq - 0 1');
 };
 like $@, qr/Illegal castling rights: king not on initial square!/i;
+
+eval {
+	Chess::Plisco->newFromFEN('r3k2r/8/8/8/8/8/8/R3K1R1 w KQkq - 0 1');
+};
+like $@, qr/Illegal castling rights: rook not on initial square!/i;
 
 done_testing;
