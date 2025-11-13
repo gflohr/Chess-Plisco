@@ -235,7 +235,7 @@ sub alphabeta {
 	}
 
 	if ($depth <= 0) {
-		return $self->quiesce($ply, $alpha, $beta, $pline);
+		return $self->quiesce($ply, $alpha, $beta);
 	}
 
 	my @moves = $position->pseudoLegalMoves;
@@ -481,7 +481,7 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "recurse quiescence search");
 		}
-		$val = -quiesce($self, $ply + 1, -$beta, -$alpha, $pline);
+		$val = -quiesce($self, $ply + 1, -$beta, -$alpha);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value: $val");
