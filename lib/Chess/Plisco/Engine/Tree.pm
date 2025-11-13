@@ -367,7 +367,7 @@ sub alphabeta {
 }
 
 sub quiesce {
-	my ($self, $ply, $alpha, $beta, $pline) = @_;
+	my ($self, $ply, $alpha, $beta) = @_;
 
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
@@ -375,7 +375,6 @@ sub quiesce {
 
 	$self->{seldepth} = cp_max($ply, $self->{seldepth});
 
-	my @line;
 	my $position = $self->{position};
 
 	if (DEBUG) {
@@ -390,7 +389,7 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
 		}
-		return $self->alphabeta($ply, 1, $alpha, $beta, $pline, 0);
+		return $self->alphabeta($ply, 1, $alpha, $beta, []);
 	}
 
 	my $tt = $self->{tt};
@@ -504,7 +503,6 @@ sub quiesce {
 				$self->indent($ply, "raise quiescence alpha to $alpha");
 			}
 			$alpha = $val;
-			@$pline = ($move, @line);
 			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 			$best_move = $move;
 		}
@@ -541,7 +539,6 @@ sub rootSearch {
 	my @line = @$pline;
 	my $alpha = -INF;
 	my $beta = +INF;
-	$DB::single = 1;
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
@@ -552,7 +549,7 @@ sub rootSearch {
 				$self->debug("Deepening to depth $depth");
 				$self->{line} = [];
 			}
-			$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, 1);
+			$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line);
 			if (DEBUG) {
 				$self->debug("Score at depth $depth: $score");
 			}
