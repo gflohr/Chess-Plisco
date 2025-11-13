@@ -79,4 +79,54 @@ eval {
 };
 like $@, qr/Illegal castling rights: rook not on initial square!/i;
 
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4P3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/White has too many pawns/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4p3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/Black has too many pawns/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4R3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/White has too many rooks/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4r3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/Black has too many rooks/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4B3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/White has too many bishops/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4b3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/Black has too many bishops/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4N3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/White has too many knights/i;
+
+eval {
+	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/4n3/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+};
+like $@, qr/Black has too many knights/i;
+
+eval {
+	Chess::Plisco->newFromFEN('7k/8/8/8/8/8/8/Q6K w - - 0 1');
+};
+like $@, qr/side not to move is in check/i;
+
+eval {
+	Chess::Plisco->newFromFEN('7K/8/8/8/8/8/8/q6k b - - 0 1');
+};
+like $@, qr/side not to move is in check/i;
+
 done_testing;

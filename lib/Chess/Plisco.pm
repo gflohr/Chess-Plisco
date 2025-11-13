@@ -497,17 +497,6 @@ sub newFromFEN {
 		$shift -= 16;
 	}
 
-	my $popcount;
-
-	cp_bitboard_popcount $w_pieces & $kings, $popcount;
-	if ($popcount != 1) {
-		die __"Illegal FEN: White must have exactly one king.\n";
-	}
-	cp_bitboard_popcount $b_pieces & $kings, $popcount;
-	if ($popcount != 1) {
-		die __"Illegal FEN: Black must have exactly one king.\n";
-	}
-
 	my $self = bless [], $class;
 
 	$self->[CP_POS_WHITE_PIECES] = $w_pieces;
@@ -529,6 +518,8 @@ sub newFromFEN {
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
+
+	$self->__checkPieceCounts;
 
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling rights.\n";
@@ -557,6 +548,172 @@ sub newFromFEN {
 	}
 
 	my $to_move = cp_pos_info_to_move($pos_info);
+	$self->__checkEnPassantState($ep_square, $to_move, $pos_info);
+
+	cp_pos_info($self) = $pos_info;
+
+	if ($hmc !~ /^0|[1-9][0-9]*$/) {
+		$hmc = 0;
+	}
+	$self->[CP_POS_HALF_MOVE_CLOCK] = $self->[CP_POS_REVERSIBLE_CLOCK] = $hmc;
+
+	if ($moveno !~ /^[1-9][0-9]*$/) {
+		$moveno = 1;
+	}
+
+	if ($to_move == CP_WHITE) {
+			$self->[CP_POS_HALF_MOVES] = ($moveno - 1) << 1;
+	} else {
+			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
+	}
+
+	$self->__checkIllegalCheck($to_move);
+
+	$self->__updateZobristKey;
+	_cp_pos_info_update $self, $pos_info;
+
+	return $self;
+}
+
+sub __checkIllegalCheck {
+	my ($self, $to_move) = @_;
+
+	# Check whether the other side's king is in chess.
+	my $king_index = $to_move == CP_WHITE ? CP_POS_BLACK_PIECES : CP_POS_WHITE_PIECES;
+	my $king_bb = $self->[CP_POS_KINGS] & $self->[$king_index];
+	my $king_shift = cp_bitboard_count_trailing_zbits $king_bb;
+
+	if ($to_move == CP_WHITE) {
+		if (_cp_pos_color_attacked $self, CP_BLACK, $king_shift) {
+			die __"Illegal FEN: side not to move is in check!\n";
+		}
+	} else {
+		if (_cp_pos_color_attacked $self, CP_WHITE, $king_shift) {
+			die __"Illegal FEN: side not to move is in check!\n";
+		}
+	}
+
+	return $self;
+}
+
+sub __checkPieceCounts {
+	my ($self, $pos_info) = @_;
+
+	my $to_move = cp_pos_info_to_move $pos_info;
+
+	my $kings = $self->[CP_POS_KINGS];
+	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
+	my $num_white_kings;
+	cp_bitboard_popcount $w_pieces & $kings, $num_white_kings;
+	if ($num_white_kings != 1) {
+		die __"Illegal FEN: White must have exactly one king.\n";
+	}
+
+	my $b_pieces = $self->[CP_POS_BLACK_PIECES];
+	my $num_black_kings;
+	cp_bitboard_popcount $b_pieces & $kings, $num_black_kings;
+	if ($num_black_kings != 1) {
+		die __"Illegal FEN: Black must have exactly one king.\n";
+	}
+
+	my $pawns = $self->[CP_POS_PAWNS];
+
+	# Pawn on 1st or 8th rank?
+	if ($pawns & (CP_1_MASK | CP_8_MASK)) {
+		die __"Illegal FEN: There can be no pawns on the first or eighth rank.\n";
+	}
+
+	my $num_white_pawns;
+	cp_bitboard_popcount $w_pieces & $pawns, $num_white_pawns;
+	if ($num_white_pawns > 8) {
+		die __x("Illegal FEN: {colour} has too many {pieces}.\n",
+			colour => __"White", pieces => __"pawns");
+	}
+
+	my $num_black_pawns;
+	cp_bitboard_popcount $b_pieces & $pawns, $num_black_pawns;
+	if ($num_black_pawns > 8) {
+		die __x("Illegal FEN: {colour} has too many {pieces}.\n",
+			colour => __"Black", pieces => __"pawns");
+	}
+
+	my $max_white_promotions = 8 - $num_white_pawns;
+	my $max_black_promotions = 8 - $num_black_pawns;
+
+	$self->__checkPromotionConsistency(
+		\$max_white_promotions,
+		__"queens",
+		CP_WHITE, $self->[CP_POS_QUEENS], 1,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_black_promotions,
+		__"queens",
+		CP_WHITE, $self->[CP_POS_QUEENS], 1,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_white_promotions,
+		__"rooks",
+		CP_WHITE, $self->[CP_POS_ROOKS], 2,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_black_promotions,
+		__"rooks",
+		CP_BLACK, $self->[CP_POS_ROOKS], 2,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_white_promotions,
+		__"bishops",
+		CP_WHITE, $self->[CP_POS_BISHOPS], 2,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_black_promotions,
+		__"bishops",
+		CP_BLACK, $self->[CP_POS_BISHOPS], 2,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_white_promotions,
+		__"knights",
+		CP_WHITE, $self->[CP_POS_KNIGHTS], 2,
+	);
+
+	$self->__checkPromotionConsistency(
+		\$max_black_promotions,
+		__"knights",
+		CP_BLACK, $self->[CP_POS_KNIGHTS], 2,
+	);
+
+	return $self;
+}
+
+sub __checkPromotionConsistency {
+	my ($self, $max_promotions, $piece_name, $to_move, $pieces, $initial_count) = @_;
+
+	my $all_pieces = $to_move == CP_WHITE ?
+		$self->[CP_POS_WHITE_PIECES]
+		: $self->[CP_POS_BLACK_PIECES];
+	my $colour_name = $to_move == CP_WHITE ? __"White" : __"Black";
+
+	my $num_pieces;
+	cp_bitboard_popcount $all_pieces & $pieces, $num_pieces;
+
+	$$max_promotions -= $num_pieces - $initial_count;
+	if ($$max_promotions < 0) {
+		die __x("Illegal FEN: {colour} has too many {pieces}.\n",
+			colour => $colour_name, pieces => $piece_name);
+	}
+
+	return $self;
+}
+
+sub __checkEnPassantState {
+	my ($self, $ep_square, $to_move, $pos_info) = @_;
+
 	if ('-' eq $ep_square) {
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
 	} elsif ($to_move == CP_WHITE) {
@@ -580,26 +737,6 @@ sub newFromFEN {
 			_cp_pos_info_set_en_passant_shift($pos_info, $self->squareToShift($ep_square));
 		}
 	}
-
-	cp_pos_info($self) = $pos_info;
-
-	if ($hmc !~ /^0|[1-9][0-9]*$/) {
-		$hmc = 0;
-	}
-	$self->[CP_POS_HALF_MOVE_CLOCK] = $self->[CP_POS_REVERSIBLE_CLOCK] = $hmc;
-
-	if ($moveno !~ /^[1-9][0-9]*$/) {
-		$moveno = 1;
-	}
-
-	if (cp_pos_to_move($self) == CP_WHITE) {
-			$self->[CP_POS_HALF_MOVES] = ($moveno - 1) << 1;
-	} else {
-			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
-	}
-
-	$self->__updateZobristKey;
-	_cp_pos_info_update $self, $pos_info;
 
 	return $self;
 }
@@ -3065,54 +3202,6 @@ sub squareToShift {
 	my $rank = $2 - 1;
 
 	return $whatever->coordinatesToShift($file, $rank);
-}
-
-sub __legalityCheck {
-	my ($self) = @_;
-
-	# Pawn on 1st or 8th rank?
-	return if $self->[CP_POS_PAWNS] & (CP_1_MASK | CP_8_MASK);
-
-	my $to_move = $self->toMove;
-
-	my $ep_shift = cp_pos_en_passant_shift $self;
-	if ($ep_shift) {
-		my $ep_mask = 1 << $ep_shift;
-		my $occupancy = $self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES];
-		my ($ep_rank_mask, $ep_cross_mask);
-		if ($to_move == CP_WHITE) {
-			$ep_rank_mask = CP_6_MASK;
-			$ep_cross_mask = 1 << ($ep_shift + 8);
-		} else {
-			$ep_rank_mask = CP_3_MASK;
-			$ep_cross_mask = 1 << ($ep_shift - 8);
-		}
-
-		return if !$ep_mask & $ep_rank_mask; # Wrong rank.
-		return if $ep_cross_mask & $occupancy; # En-passant square is occupied.
-	}
-
-	# Check whether the other side's king is in chess.
-	my $king_index = $to_move == CP_WHITE ? CP_POS_BLACK_PIECES : CP_POS_WHITE_PIECES;
-	my $king_bb = $self->[CP_POS_KINGS] & $self->[$king_index];
-	my $king_shift = cp_bitboard_count_trailing_zbits $king_bb;
-
-	my $cp_black = CP_BLACK;
-	if ($to_move == CP_WHITE) {
-		if (_cp_pos_color_attacked $self, CP_BLACK, $king_shift) {
-			return;
-		}
-	} else {
-		if (_cp_pos_color_attacked $self, CP_WHITE, $king_shift) {
-			return;
-		}
-	}
-
-	# Check castling rights consistency.
-
-	# Check number of pieces.
-
-	return $self;
 }
 
 sub consistent {
