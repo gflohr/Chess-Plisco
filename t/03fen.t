@@ -27,10 +27,12 @@ is "$pos", $wanted, 'FEN initial position stringified';
 
 is_deeply(Chess::Plisco->newFromFEN($wanted), $pos, 'newFromFEN');
 
-eval {
+$pos = eval {
 	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w');
 };
-like $@, qr/incomplete/i;
+ok $pos;
+ok !$pos->enPassantShift;
+ok !$pos->castlingRights;
 
 eval {
 	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq');
