@@ -550,6 +550,10 @@ sub newFromFEN {
 	my $to_move = cp_pos_info_to_move($pos_info);
 	$pos_info = $self->__checkEnPassantState($ep_square, $to_move, $pos_info);
 
+	# This is not redundant! Without it, the Zobrist key does not get calculated
+	# correctly.
+	cp_pos_info($self) = $pos_info;
+
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
 	}
