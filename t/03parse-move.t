@@ -33,7 +33,7 @@ ok $@, 'e3e4 from start position';
 like $@, qr/Illegal move: start square is empty/, 'e3e4 from start position error match';
 
 $pos = Chess::Plisco->new;
-$move = eval { $pos->parseMove('e1g1', '0-0 from start position') };
+$move = eval { $pos->parseMove('e1g1') };
 ok $@, '0-0 from start position';
 is $@, "Illegal move!\n", '0-0 from start position error match';
 
