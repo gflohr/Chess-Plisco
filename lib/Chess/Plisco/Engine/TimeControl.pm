@@ -46,13 +46,9 @@ sub new {
 
 	if ($params{depth}) {
 		$tree->{max_depth} = $params{depth};
-	} else {
-		# Think for 5 seconds by default.
-		$tree->{allocated_time} = 5000;
-		delete $tree->{max_depth};
 	}
 
-	# Initial value for calibration.
+	# Start with 1000 nodes, later calibrate.
 	$tree->{nodes_to_tc} = 1000;
 
 	if ($params{movetime}) {
@@ -60,10 +56,14 @@ sub new {
 		$tree->{fixed_time} = 1;
 	} elsif ($params{infinite}) {
 		$tree->{max_depth} = Plisco::Engine::Tree->MAX_PLY;
+		$tree->{infinite} = 1;
 	} elsif ($params{nodes}) {
 		$tree->{max_nodes} = $params{nodes};
+		$tree->{infinite} = 1;
 	} elsif ($params{mytime}) {
 		$self->allocateTime($tree, \%params);
+	} else {
+		$tree->{infinite} = 1;
 	}
 
 	if ($params{searchmoves}) {

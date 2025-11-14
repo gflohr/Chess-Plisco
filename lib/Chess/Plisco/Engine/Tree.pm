@@ -85,27 +85,18 @@ sub checkTime {
 	if ($elapsed > 500) {
 		$self->{print_current_move} = 1;
 	}
-	my $allocated = $self->{allocated_time};
-	my $eta = $allocated - $elapsed;
-	if ($eta < 4 && !$self->{max_depth} && !$self->{max_nodes}) {
-		die "PLISCO_ABORTED\n";
+
+	if (!$self->{infinite}) {
+		my $allocated = $self->{allocated_time};
+		my $eta = $allocated - $elapsed;
+		if ($eta < 4) {
+			die "PLISCO_ABORTED\n";
+		}
 	}
 
 	my $nodes = $self->{nodes};
 	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
-	my $max_nodes_to_tc = $nps >> 3;
-
-	if ($self->{max_depth}) {
-		$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
-	} elsif ($self->{max_nodes}) {
-		$self->{nodes_to_tc} =
-			cp_min($nodes + $max_nodes_to_tc, $self->{max_nodes});
-	} else {
-		my $nodes_to_tc = int(($eta * $nps) / 2000);
-
-		$self->{nodes_to_tc} = $nodes + 
-			(($nodes_to_tc < $max_nodes_to_tc) ? $nodes_to_tc : $max_nodes_to_tc);
-	}
+	$self->{nodes_to_tc} = $nps >> 5; # Check the time about 32 times per sec.
 }
 
 sub debug {
@@ -620,7 +611,11 @@ sub think {
 	$self->{tt_hits} = 0;
 
 	if ($self->{debug}) {
-		$self->{info}->("allocated time: $self->{allocated_time}");
+		if ($self->{infinite}) {
+			$self->{info}->("thinking infinitely");
+		} else {
+			$self->{info}->("allocated time: $self->{allocated_time}");
+		}	
 	}
 
 	$self->rootSearch(\@line);
@@ -632,7 +627,7 @@ sub think {
 	} else {
 		# Search has returned no move.
 		$self->{info}->("Error: pick a random move because of search failure.");
-		$line[0] = $legal[int rand @legal];
+		$line[0] = $legal[0];
 	}
 
 	return $line[0];

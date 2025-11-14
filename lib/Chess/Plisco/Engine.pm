@@ -344,6 +344,7 @@ sub __onUciCmdGo {
 		$options{book} = $self->{__book};
 		$options{book_depth} = $self->{__options}->{BookDepth};
 	}
+
 	my $tree = Chess::Plisco::Engine::Tree->new(%options);
 	$tree->{debug} = 1 if $self->{__debug};
 
