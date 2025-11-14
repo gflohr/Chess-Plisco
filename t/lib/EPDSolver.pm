@@ -24,7 +24,7 @@ use Chess::Plisco::Engine::TimeControl;
 sub new {
 	my ($class, $epdfile, $limit, %params) = @_;
 
-	%params{depth} //= 3;
+	$params{depth} //= 3;
 
 	my $epd = Chess::Plisco::EPD->new($epdfile, $params{pseudo_legal});
 
