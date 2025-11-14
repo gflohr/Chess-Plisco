@@ -403,11 +403,12 @@ sub newFromFEN {
 
 	my ($pieces, $color, $castling, $ep_square, $hmc, $moveno)
 			= split /[ \t]+/, $fen;
-	$ep_square = '-' if !defined $ep_square;
-	$hmc = 0 if !defined $hmc;
 	$moveno = 1 if !defined $moveno;
+	$hmc = 0 if !defined $hmc;
+	$ep_square = '-' if !defined $ep_square;
+	$castling = '-' if !defined $castling;
 
-	if (!(defined $pieces && defined $color && defined $castling)) {
+	if (!(defined $pieces && defined $color)) {
 		die __"Illegal FEN: Incomplete.\n";
 	}
 
@@ -521,9 +522,6 @@ sub newFromFEN {
 
 	$self->__checkPieceCounts if !$relaxed;
 
-	if (!length $castling) {
-		die __"Illegal FEN: Missing castling rights.\n";
-	}
 	if ($castling ne '-' && $castling !~ /^K?Q?k?q?$/) {
 		die __x("Illegal FEN: Illegal castling rights '{state}'.\n",
 				state => $castling);
@@ -547,10 +545,10 @@ sub newFromFEN {
 		_cp_pos_info_set_black_queen_side_castling_right($pos_info, 1);
 	}
 
-	my $to_move = cp_pos_info_to_move($pos_info);
-	$self->__checkEnPassantState($ep_square, $to_move, $pos_info);
-
 	cp_pos_info($self) = $pos_info;
+
+	my $to_move = cp_pos_info_to_move($pos_info);
+	$pos_info = $self->__checkEnPassantState($ep_square, $to_move, $pos_info);
 
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
@@ -738,7 +736,7 @@ sub __checkEnPassantState {
 		}
 	}
 
-	return $self;
+	return $pos_info;
 }
 
 sub __checkCastlingState {
@@ -3015,7 +3013,10 @@ sub __parseSAN {
 		@candidates = grep { /^$pattern$/ } @legal;
 	}
 
-	if (@candidates != 1) {
+	if (!@candidates) {
+		require Carp;
+		Carp::croak(__"Illegal SAN string: illegal move.\n");
+	} elsif (@candidates > 1) {
 		require Carp;
 		Carp::croak(__"Illegal SAN string: move is ambiguous.\n");
 	}
