@@ -362,9 +362,9 @@ my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 # __BEGIN_MACROS__
 
 sub new {
-	my ($class, $fen) = @_;
+	my ($class, $fen, $relaxed) = @_;
 
-	return $class->newFromFEN($fen) if defined $fen && length $fen;
+	return $class->newFromFEN($fen, $relaxed) if defined $fen && length $fen;
 
 	my $self = bless [], $class;
 	cp_pos_white_pieces($self) = CP_1_MASK | CP_2_MASK;
@@ -399,7 +399,7 @@ sub new {
 }
 
 sub newFromFEN {
-	my ($class, $fen) = @_;
+	my ($class, $fen, $relaxed) = @_;
 
 	my ($pieces, $color, $castling, $ep_square, $hmc, $moveno)
 			= split /[ \t]+/, $fen;
@@ -519,7 +519,7 @@ sub newFromFEN {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
 
-	$self->__checkPieceCounts;
+	$self->__checkPieceCounts if !$relaxed;
 
 	if (!length $castling) {
 		die __"Illegal FEN: Missing castling rights.\n";
@@ -567,7 +567,7 @@ sub newFromFEN {
 			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
 	}
 
-	$self->__checkIllegalCheck($to_move);
+	$self->__checkIllegalCheck($to_move) if !$relaxed;
 
 	$self->__updateZobristKey;
 	_cp_pos_info_update $self, $pos_info;
@@ -649,7 +649,7 @@ sub __checkPieceCounts {
 	$self->__checkPromotionConsistency(
 		\$max_black_promotions,
 		__"queens",
-		CP_WHITE, $self->[CP_POS_QUEENS], 1,
+		CP_BLACK, $self->[CP_POS_QUEENS], 1,
 	);
 
 	$self->__checkPromotionConsistency(
@@ -1081,10 +1081,10 @@ sub attacked {
 }
 
 sub moveAttacked {
-	my ($self, $move) = @_;
+	my ($self, $move, $pseudo_legal) = @_;
 
 	if ($move =~ /[a-z]/i) {
-		$move = $self->parseMove($move) or return;
+		$move = $self->parseMove($move, $pseudo_legal);
 	}
 
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
@@ -1148,10 +1148,10 @@ sub moveGivesCheck {
 }
 
 sub movePinned {
-	my ($self, $move) = @_;
+	my ($self, $move, $pseudo_legal) = @_;
 
 	if ($move =~ /[a-z]/i) {
-		$move = $self->parseMove($move) or return;
+		$move = $self->parseMove($move, $pseudo_legal);
 	}
 
 	my $to_move = cp_pos_to_move $self;
@@ -1830,7 +1830,7 @@ sub SEE {
 }
 
 sub parseMove {
-	my ($self, $notation) = @_;
+	my ($self, $notation, $pseudo_legal) = @_;
 
 	my $move;
 
@@ -1883,11 +1883,15 @@ sub parseMove {
 
 	cp_move_set_color $move, $self->toMove;
 
-	foreach my $candidate ($self->legalMoves) {
-		return $move if $candidate == $move;
+	if (!$pseudo_legal) {
+		foreach my $candidate ($self->legalMoves) {
+			return $move if $candidate == $move;
+		}
+
+		die __"Illegal move!\n";
 	}
 
-	die __"Illegal move!\n";
+	return $move;
 }
 
 sub __parseUCIMove {
