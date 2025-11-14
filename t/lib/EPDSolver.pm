@@ -24,9 +24,9 @@ use Chess::Plisco::Engine::TimeControl;
 sub new {
 	my ($class, $epdfile, $limit, %params) = @_;
 
-	%params = (depth => 3) unless %params;
+	$params{depth} //= 3;
 
-	my $epd = Chess::Plisco::EPD->new($epdfile);
+	my $epd = Chess::Plisco::EPD->new($epdfile, pseudo_legal => $params{pseudo_legal});
 
 	my $num_tests;
 	if ($limit > 0) {

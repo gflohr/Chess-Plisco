@@ -509,10 +509,14 @@ sub __onUciCmdPosition {
 	$self->{__moves} = [];
 	my @signatures = ($position->signature);
 	if ('moves' eq shift @moves) {
-		foreach my $move (@moves) {
-			my $status = $position->applyMove($move);
-			if (!$status) {
-				$self->__info("error: invalid or illegal move '$move'");
+		for (my $i = 0; $i < @moves; ++$i) {
+			my $move = $moves[$i];
+			eval { $position->applyMove($move) };
+			if ($@) {
+				$@ =~ s/(.+) at .*/$1/s;
+				$moves[$i] = ">>>$move<<<";
+				my $moves = join ' ', @moves;
+				$self->__info("Error with given moves: $moves: $@");
 				return;
 			}
 			push @signatures, $position->signature;
