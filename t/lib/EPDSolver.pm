@@ -26,7 +26,7 @@ sub new {
 
 	$params{depth} //= 3;
 
-	my $epd = Chess::Plisco::EPD->new($epdfile, $params{pseudo_legal});
+	my $epd = Chess::Plisco::EPD->new($epdfile, pseudo_legal => $params{pseudo_legal});
 
 	my $num_tests;
 	if ($limit > 0) {
