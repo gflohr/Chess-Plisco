@@ -1,0 +1,10 @@
+#! /bin/sh
+
+# Running the tests with lib in @INC is really slow because the Macros in
+# the modules have to be expanded for every test file that is run. Instead,
+# we let make and Makemaker do a build, expand the macros in blib, and
+# run the tests with the translated macros.
+perl Makefile.PL
+make
+./expand-macros blib
+prove -b
