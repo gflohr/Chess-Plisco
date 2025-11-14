@@ -20,7 +20,7 @@ use Locale::TextDomain qw('Chess-Plisco');
 use Chess::Plisco::EPD::Record;
 
 sub new {
-	my ($class, $arg, $filename) = @_;
+	my ($class, $arg, $filename, $pseudo_legal) = @_;
 
 	my $reftype = (reftype $arg) || '';
 	my @lines;
@@ -51,7 +51,7 @@ sub new {
 		$line =~ s/ws+$//;
 		next if !length $line;
 
-		my $record = eval { Chess::Plisco::EPD::Record->new($line) };
+		my $record = eval { Chess::Plisco::EPD::Record->new($line, $pseudo_legal) };
 		if ($@) {
 			die "$filename:$lineno: $@";
 		}

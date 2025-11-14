@@ -28,7 +28,7 @@ open my $fh, '<', $filename or die "$filename: $!";
 my @lines = <$fh>;
 my $contents = join '', @lines;
 
-my $epd = Chess::Plisco::EPD->new($filename);
+my $epd = Chess::Plisco::EPD->new($filename, 1);
 ok $epd, 'load epd from file';
 is ((scalar $epd->records), (scalar @lines), "records in file");
 
