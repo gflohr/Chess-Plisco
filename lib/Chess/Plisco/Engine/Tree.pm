@@ -112,7 +112,7 @@ sub debug {
 	my ($self, $msg) = @_;
 
 	chomp $msg;
-	print "DEBUG $msg\n";
+	print STDERR "DEBUG $msg\n";
 
 	return 1;
 }
@@ -156,8 +156,6 @@ sub printPV {
 # __BEGIN_MACROS__
 sub alphabeta {
 	my ($self, $ply, $depth, $alpha, $beta, $pline) = @_;
-
-	my @line;
 
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
@@ -270,6 +268,7 @@ sub alphabeta {
 	my $print_current_move = $ply == 1 && $self->{print_current_move};
 	my $signature_slot = $self->{history_length} + $ply;
 	foreach my $move (@moves) {
+		my @line;
 		my $state = $position->doMove($move) or next;
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
@@ -290,6 +289,7 @@ sub alphabeta {
 				if (DEBUG) {
 					$self->indent($ply, "value $val outside null window, re-search");
 				}
+				undef @line;
 				$val = -$self->alphabeta($ply + 1, $depth - 1,
 						-$beta, -$alpha, \@line);
 			}
@@ -324,6 +324,7 @@ sub alphabeta {
 			$alpha = $val;
 			$pv_found = 1;
 			@$pline = ($move, @line);
+
 			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 			$best_move = $move;
 	

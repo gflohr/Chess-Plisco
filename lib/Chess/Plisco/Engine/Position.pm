@@ -455,4 +455,16 @@ sub endgameDelta {
 	return $endgame_deltas[$index];
 }
 
+# This is only for debugging.
+sub formatMoves {
+	my ($self, @moves) = @_;
+
+	my @formatted;
+	foreach my $move (@moves) {
+		push @formatted, $self->moveCoordinateNotation($move);
+	}
+
+	return @formatted;
+}
+
 1;
