@@ -59,7 +59,7 @@ sub new {
 	my $hmc = $operations{hmvc} || 0;
 	my $fmc = $operations{fmvc} || 1;
 	my $fen = "$pieces $to_move $castling $ep_shift $hmc $fmc";
-	my $position = Chess::Plisco->new($fen);
+	my $position = Chess::Plisco->new($fen, $pseudo_legal);
 
 	bless {
 		__position => $position,
