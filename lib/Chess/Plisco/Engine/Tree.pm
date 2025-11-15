@@ -21,6 +21,7 @@ use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Position;
 
 use Time::HiRes qw(tv_interval);
+use Coro;
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
@@ -61,7 +62,6 @@ sub new {
 		signatures => $signatures,
 		history_length => -1 + scalar @$signatures,
 		tt => $options{tt},
-		watcher => $options{watcher},
 		info => $options{info} || sub {},
 		book => $options{book},
 		book_depth => $options{book_depth},
@@ -73,8 +73,9 @@ sub new {
 sub checkTime {
 	my ($self) = @_;
 
-	$self->{watcher}->check;
-
+	if ($self->{stop_requested}) {
+		die "PLISCO_ABORTED\n";
+	}
 	no integer;
 
 	my $elapsed = 1000 * tv_interval($self->{start_time});
@@ -97,6 +98,8 @@ sub checkTime {
 	my $nodes = $self->{nodes};
 	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
 	$self->{nodes_to_tc} = $nps >> 5; # Check the time about 32 times per sec.
+
+	Coro::AnyEvent::idle();
 }
 
 sub debug {

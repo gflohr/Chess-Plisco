@@ -16,13 +16,14 @@ use integer;
 
 use POSIX qw(:sys_wait_h);
 use Locale::TextDomain qw(Chess-Plisco);
+use Coro;
+use Coro::AnyEvent;
+use AnyEvent;
 
 use Chess::Plisco qw(:all);
-
 use Chess::Plisco::Engine::Position;
 use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
-use Chess::Plisco::Engine::InputWatcher;
 use Chess::Plisco::Engine::TranspositionTable;
 use Chess::Plisco::Engine::Book;
 
@@ -44,12 +45,6 @@ use constant UCI_OPTIONS => [
 		name => 'Clear Hash',
 		type => 'button',
 		callback => '__clearTranspositionTable',
-	},
-	{
-		name => 'Batch',
-		type => 'check',
-		default => 'false',
-		callback => '__changeBatchMode',
 	},
 	{
 		name => 'OwnBook',
@@ -104,13 +99,6 @@ sub uci {
 
 	$self->{__out} = $out;
 	$self->{__out}->autoflush(1);
-	$self->{__watcher} = Chess::Plisco::Engine::InputWatcher->new($in);
-	$self->{__watcher}->onInput(sub {
-		$self->__onUciInput(@_);
-	});
-	$self->{__watcher}->onEof(sub {
-		$self->__onEof(@_);
-	});
 
 	my $version = $Chess::Plisco::Engine::VERSION || 'development version';
 	$self->__output(<<"EOF");
@@ -123,15 +111,17 @@ Try 'help' for a list of commands!
 
 EOF
 
-	while (1) {
-		$self->{__watcher}->check;
-		if (delete $self->{__abort}) {
-			$self->DESTROY; # Make sure to clean-up for MS-DOS.
-			last;
+	my $input_watcher = AE::io $in, 0, sub {
+		my $line = $in->getline;
+		if (!defined $line) {
+			exit; # EOF.
+		} else {
+			chomp $line if defined $line;
+			$self->__onUciInput($line);
 		}
-	}
+	};
 
-	return $self;
+	AnyEvent->loop;
 }
 
 sub DESTROY {
@@ -214,10 +204,7 @@ sub __onUciInput {
 	my $method = '__onUciCmd' . ucfirst lc $cmd;
 	$args = $self->__trim($args);
 	if ($self->can($method)) {
-		my $stop_if_thinking = $self->$method($args);
-		if ($self->{__tree} && $stop_if_thinking) {
-			die "PLISCO_ABORTED\n";
-		}
+		$self->$method($args);
 	} else {
 		$self->{__out}->print("info unknown command '$cmd'\n");
 	}
@@ -286,6 +273,15 @@ sub __onUciCmdSee {
 sub __onUciCmdGo {
 	my ($self, $args) = @_;
 
+	# If a search is already running, stop it first.
+	if ($self->{__search_coro} && $self->{__search_coro}->is_running) {
+		if ($self->{__tree}) {
+			$self->{__tree}->{stop_requested} = 1;
+		}
+		$self->{__search_coro}->join;
+		delete $self->{__tree};
+	}
+
 	my @args = split /[ \t]+/, $args;
 
 	my %params;
@@ -327,16 +323,9 @@ sub __onUciCmdGo {
 		return $self;
 	}
 
-	if ($self->{__options}->{'Batch'} eq 'true') {
-		$self->{__watcher}->setBatchMode(1);
-	} else {
-		$self->{__watcher}->setBatchMode(0);
-	}
-
 	my %options = (
 		position => $self->{__position}->copy,
 		tt => $self->{__tt},
-		watcher => $self->{__watcher},
 		info => $info,
 		signatures => $self->{__signatures},
 	);
@@ -352,24 +341,24 @@ sub __onUciCmdGo {
 
 	$self->{__tree} = $tree;
 	my ($bestmove, $ponder);
-	eval {
-		($bestmove, $ponder) = $tree->think;
-		delete $self->{__tree};
-	};
-	if ($@) {
-		$self->__output("unexpected exception: $@");
-	}
-	if ($bestmove) {
-		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
-		if (defined $ponder) {
-			my $pcn = $self->{__position}->copy->moveCoordinateNotation($ponder);
-			$self->__output("bestmove $cn ponder $pcn");
-		} else {
-			$self->__output("bestmove $cn");
+	$self->{__search_coro} = async {
+		eval {
+			($bestmove, $ponder) = $tree->think;
+			delete $self->{__tree};
+		};
+		if ($@) {
+			$self->__info("error: unexpected exception: $@");
 		}
-	}
-
-	$self->{__watcher}->setBatchMode(0);
+		if ($bestmove) {
+			my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
+			if (defined $ponder) {
+				my $pcn = $self->{__position}->copy->moveCoordinateNotation($ponder);
+				$self->__output("bestmove $cn ponder $pcn");
+			} else {
+				$self->__output("bestmove $cn");
+			}
+		}
+	};
 
 	return $self;
 }
@@ -446,15 +435,6 @@ sub __clearTranspositionTable {
 	$self->{__tt}->clear;
 }
 
-sub __changeBatchMode {
-	my ($self, $value) = @_;
-
-	if ('true' eq $value) {
-		$self->__output("info all commands are ignored during search in"
-				. " batch mode!")
-	}
-}
-
 sub __setBookFile {
 	my ($self, $value) = @_;
 
@@ -471,7 +451,9 @@ sub __setBookFile {
 sub __onUciCmdStop {
 	my ($self) = @_;
 
-	# Ignored. Any valid command will terminate the search.
+	if ($self->{__tree}) {
+		$self->{__tree}->{stop_requested} = 1;
+	}
 
 	return $self;
 }
@@ -558,8 +540,6 @@ sub __onUciCmdHelp {
         quit - quit the engine immediately
 
     See http://wbec-ridderkerk.nl/html/UCIProtocol.html for more information!
-
-    In batch mode, the engine is unresponsive during searches.
 EOF
 
 	return;
@@ -568,9 +548,7 @@ EOF
 sub __onUciCmdQuit {
 	my ($self) = @_;
 
-	$self->{__abort} = 1;
-
-	return $self;
+	exit;
 }
 
 sub __onUciCmdUci {
