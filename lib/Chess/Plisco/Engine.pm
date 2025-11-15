@@ -254,7 +254,6 @@ sub __onUciCmdEvaluate {
 sub __onUciCmdSee {
 	my ($self, $args) = @_;
 
-	$self->__cancelSearch;
 	my $san = $self->__trim($args);
 	if (!length $san) {
 		$self->{__out}->print("usage: see MOVE\n");
@@ -276,12 +275,14 @@ sub __onUciCmdSee {
 sub __cancelSearch {
 	my ($self) = @_;
 
-	if ($self->{__search_coro} && $self->{__search_coro}->is_running) {
+	if ($self->{__search_coro}) {
 		if ($self->{__tree}) {
 			$self->{__tree}->{stop_requested} = 1;
 		}
-		$self->{__search_coro}->join;
+		eval { $self->{__search_coro}->safe_cancel };
+		# Ignore the exception.
 		delete $self->{__tree};
+		delete $self->{__search_coro};
 	}
 }
 
