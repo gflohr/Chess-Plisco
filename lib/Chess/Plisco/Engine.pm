@@ -465,7 +465,7 @@ sub __setBookFile {
 sub __onUciCmdStop {
 	my ($self) = @_;
 
-	# Ignored. Any valid command will terminate the search.
+	$self->{__watcher}->requestStop;
 
 	return $self;
 }

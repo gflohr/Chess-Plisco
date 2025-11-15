@@ -73,7 +73,10 @@ sub new {
 sub checkTime {
 	my ($self) = @_;
 
-	$self->{watcher}->check;
+	$self->{watcher}->check($self);
+	if ($self->{stop_requested}) {
+		die "PLISCO_ABORTED\n";
+	}
 
 	no integer;
 
