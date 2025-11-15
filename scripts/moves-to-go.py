@@ -70,4 +70,4 @@ if line:
     lines.append(', '.join(line))
 
 print("\t" + ",\n\t".join(lines))
-print("];")
+print("];\n\n1;")

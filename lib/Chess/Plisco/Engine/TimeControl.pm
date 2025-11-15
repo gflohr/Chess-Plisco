@@ -18,6 +18,8 @@ use strict;
 
 use Time::HiRes qw(gettimeofday);
 
+use Chess::Plisco::Engine::TimeControl::MovesToGo;
+
 sub new {
 	my ($class, $tree, %params) = @_;
 
@@ -78,11 +80,12 @@ sub new {
 sub allocateTime {
 	my ($self, $tree, $params) = @_;
 
-	# First get a rough estimate of the moves to go.
-	my $mtg = $self->movesToGo;
-
+$DB::single = 1;
+	my $mtg;
 	if ($params->{movestogo} && $params->{movestogo} < $mtg) {
 		$mtg = $params->{movestogo};
+	} else {
+		$mtg = $self->movesToGo;
 	}
 
 	my $time_left = $params->{mytime} + $params->{movestogo} * $params->{myinc};
@@ -96,45 +99,11 @@ sub allocateTime {
 sub movesToGo {
 	my ($self) = @_;
 
-	# FIXME! These parameters should be configurable and their defaults
-	# should be tuned!
-	my $min_moves_remaining = 20;
-	my $max_moves_remaining = 60;
-	my $moves_range = $max_moves_remaining - $min_moves_remaining;
+	my $position = $self->{__tree}->{position};
+	my $score = abs($position->evaluate);
 
-	# We make two very simple assumptions.  The popcount of the weaker
-	# party decreases in the course of the game from 16 to 1.  That
-	# allows us a linear interpolation for the number of moves to go.
-	# On the other hand, the material imbalance may change from 0
-	# to 9 queens (81 for our purposes).  But an imbalance of 10
-	# (one queen plus a pawn) should guaranty a trivial win for the side
-	# to move and we can limit the material imbalance to that.
-	#
-	# And then we simply give each a result a weight with the two results
-	# summing up to 1.0.
-	my $popcount_weight = 0.75;
-	my $material_weight = (1 - $popcount_weight);
-
-	my $pos = $self->{__tree}->{position};
-	my $wpopcount = $pos->bitboardPopcount($pos->whitePieces);
-	my $bpopcount = $pos->bitboardPopcount($pos->blackPieces);
-	my $material = $pos->material;
-
-	my $popcount = $wpopcount < $bpopcount ? $wpopcount : $bpopcount;
-
-	# Popcount slope and constant offset.
-	my $mpc = my $moves_range / (16 - 1);
-	my $cpc = $min_moves_remaining - $mpc;
-
-	# Material imbalance slope and constant offset.
-	my $mmc = -$moves_range / 10 - 0;
-	my $cmc = $max_moves_remaining;
-
-	# FIXME! Since this is only done once per ply, a full evaluation of
-	# the position should be done instead of just looking at the material
-	# balance.
-    my $mtg = $popcount_weight * ($mpc * $popcount + $cpc)
-			 + $material_weight * ($mmc * $material + $cmc);
+	my $mtg = Chess::Plisco::Engine::TimeControl::MovesToGo::MOVES_TO_GO->[$score]
+		// 10;
 
 	return $mtg;
 }
