@@ -53,7 +53,7 @@ sub new {
 	}
 
 	# Initial value for calibration.
-	$tree->{nodes_to_tc} = 1000;
+	$tree->{nodes_to_tc} = 5000;
 
 	if ($params{movetime}) {
 		$tree->{allocated_time} = $params{movetime};

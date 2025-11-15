@@ -73,12 +73,12 @@ sub new {
 sub checkTime {
 	my ($self) = @_;
 
+	no integer;
+
 	$self->{watcher}->check($self);
 	if ($self->{stop_requested}) {
 		die "PLISCO_ABORTED\n";
 	}
-
-	no integer;
 
 	my $elapsed = 1000 * tv_interval($self->{start_time});
 
@@ -88,26 +88,54 @@ sub checkTime {
 	if ($elapsed > 500) {
 		$self->{print_current_move} = 1;
 	}
-	my $allocated = $self->{allocated_time};
-	my $eta = $allocated - $elapsed;
-	if ($eta < 4 && !$self->{max_depth} && !$self->{max_nodes}) {
-		die "PLISCO_ABORTED\n";
-	}
 
+	# FIXME! In ponder mode, make sure that nodes_to_tc and
+	# nodes_to_recalibrate are reset!
 	my $nodes = $self->{nodes};
-	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
-	my $max_nodes_to_tc = $nps >> 3;
 
-	if ($self->{max_depth}) {
+	# FIXME! It is probably better to look at the current nps, not the
+	# overall nps.
+	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
+
+	my $max_nodes_to_tc = $nps >> 2;
+
+	if ($self->{ponder}) {
+		# We have to be quick enough to stop.
+		warn;
+	} elsif ($self->{max_depth}) {
 		$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
 	} elsif ($self->{max_nodes}) {
-		$self->{nodes_to_tc} =
-			cp_min($nodes + $max_nodes_to_tc, $self->{max_nodes});
+		if ($nodes + $max_nodes_to_tc < $self->{max_nodes}) {
+			$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
+		} else {
+			$self->{nodes_to_tc} = $self->{max_nodes};
+		}
 	} else {
-		my $nodes_to_tc = int(($eta * $nps) / 2000);
+		use integer;
 
-		$self->{nodes_to_tc} = $nodes + 
-			(($nodes_to_tc < $max_nodes_to_tc) ? $nodes_to_tc : $max_nodes_to_tc);
+		my $allocated = $self->{allocated_time};
+		my $eta = $allocated - $elapsed;
+		if ($eta < 50) {
+			die "PLISCO_ABORTED\n";
+		}
+
+		# How many nodes should we check until the next time control?
+		# We want to roughly do at least 4 time checks per second to keep the
+		# application responsive.
+		my $max_nodes = $nps >> 2;
+
+		# If we have less than about one second left, we gradually reduce
+		# the batch size so that we do not overuse the allocated time.
+		#
+		# We can expect to process $eta * $nps / 1000 nodes in the remaining
+		# time. In order to play safe, should the performance suddenly drop,
+		# we divide that number by 4. A division by 1000 is roughly a
+		# right shift of 10, a division by 4 a right-shift by 2. We can
+		# therefore just right-shift the product by 12.
+		my $dyn_nodes = ($eta * $nps) >> 12;
+
+		my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
+		$self->{nodes_to_tc} = $nodes + $nodes_to_go;
 	}
 }
 
