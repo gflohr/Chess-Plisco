@@ -666,6 +666,7 @@ sub think {
 		$line[0] = $legal[int rand @legal];
 	}
 
+	# FIXME! Print a warning if we have used more time than allocated.
 	return $line[0];
 }
 
