@@ -198,9 +198,9 @@ sub __msDosSocket {
 sub __onEof {
 	my ($self, $line) = @_;
 
-	$self->{__abort} = 1;
+	$self->DESTROY;
 
-	return $self;
+	exit;
 }
 
 sub __onUciInput {
