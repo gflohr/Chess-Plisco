@@ -232,6 +232,8 @@ sub __onUciCmdBoard {
 sub __onUciCmdEvaluate {
 	my ($self) = @_;
 
+	$self->__cancelSearch;
+
 	my $score = $self->{__position}->evaluate;
 
 	my ($cp_pos_game_phase, $cp_pos_opening_score, $cp_pos_endgame_score) = (
@@ -252,6 +254,7 @@ sub __onUciCmdEvaluate {
 sub __onUciCmdSee {
 	my ($self, $args) = @_;
 
+	$self->__cancelSearch;
 	my $san = $self->__trim($args);
 	if (!length $san) {
 		$self->{__out}->print("usage: see MOVE\n");
@@ -270,10 +273,9 @@ sub __onUciCmdSee {
 	return $self;
 }
 
-sub __onUciCmdGo {
-	my ($self, $args) = @_;
+sub __cancelSearch {
+	my ($self) = @_;
 
-	# If a search is already running, stop it first.
 	if ($self->{__search_coro} && $self->{__search_coro}->is_running) {
 		if ($self->{__tree}) {
 			$self->{__tree}->{stop_requested} = 1;
@@ -281,6 +283,13 @@ sub __onUciCmdGo {
 		$self->{__search_coro}->join;
 		delete $self->{__tree};
 	}
+}
+
+sub __onUciCmdGo {
+	my ($self, $args) = @_;
+
+	# If a search is already running, stop it first.
+	$self->__cancelSearch;
 
 	my @args = split /[ \t]+/, $args;
 
@@ -363,10 +372,11 @@ sub __onUciCmdGo {
 	return $self;
 }
 
-sub __onUciCmdUcinewgame {
+sub __onUciCmdUciNewgame {
 	my ($self) = @_;
 
 	$self->{__tt}->clear;
+	$self->__cancelSearch;
 
 	return $self;
 }
