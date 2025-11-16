@@ -24,6 +24,7 @@ lib/Chess/Plisco/Engine/InputWatcher.pm
 lib/Chess/Plisco/Engine/Position.pm
 lib/Chess/Plisco/Engine/TimeControl.pm
 lib/Chess/Plisco/Engine/TimeControl.pod
+lib/Chess/Plisco/Engine/TimeControl/MovesToGo.pm
 lib/Chess/Plisco/Engine/TranspositionTable.pm
 lib/Chess/Plisco/Engine/Tree.pm
 lib/Chess/Plisco/Engine/Tree.pod

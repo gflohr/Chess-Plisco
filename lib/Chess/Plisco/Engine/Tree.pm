@@ -604,6 +604,14 @@ sub rootSearch {
 			$self->{info}->(__"Error: exception raised: $@");
 		}
 	}
+
+	if ($self->{allocated_time}) {
+		my $elapsed = 1000 * tv_interval($self->{start_time});
+		if ($elapsed > $self->{allocated_time}) {
+			$self->{info}->(__"Error: used $elapsed ms instead of $self->{allocated_time} ms.");
+		}
+	}
+
 	@$pline = @line;
 }
 # __END_MACROS__
