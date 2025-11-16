@@ -31,7 +31,7 @@
 # 3. This notice may not be removed or altered from any source distribution.
 
 # Make Dist::Zilla happy.
-# ABSTRACT: Representation of a chess position with move generator, legality checker etc.
+# ABSTRACT: Ultra-fast chess library with UCI compatible chess engine
 
 # Welcome to the world of spaghetti code!  It is deliberately ugly because
 # trying to avoid function/method call overhead is one of the major goals.
