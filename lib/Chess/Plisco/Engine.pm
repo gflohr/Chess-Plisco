@@ -484,14 +484,6 @@ sub __onUciCmdSetoption {
 	return $self;
 }
 
-sub __debug {
-	my ($self, $msg) = @_;
-
-	return if !$self->{__debug};
-
-	return $self->__info($msg);
-}
-
 sub __resizeTranspositionTable {
 	my ($self, $size) = @_;
 
@@ -697,8 +689,19 @@ sub __output {
 sub __info {
 	my ($self, $msg) = @_;
 
+	$msg = $self->__trim($msg);
+
 	return $self->__output("info $msg");
 }
+
+sub __debug {
+	my ($self, $msg) = @_;
+
+	return if !$self->{__debug};
+
+	return $self->__info($msg);
+}
+
 
 sub __trim {
 	my ($self, $what) = @_;
@@ -707,6 +710,37 @@ sub __trim {
 	$what =~ s/[ \t\r\n]+$//;
 
 	return $what;
+}
+
+sub __updateMoveOverhead {
+	my ($self, %params) = @_;
+
+	return if $params{ponder};
+
+	if (!$self->__isGameContinuation(%params)) {
+		$self->__debug('new game detected');
+		delete $self->{__last_position};
+		delete $self->{__last_go_params};
+		delete $self->{__last_search_time};
+
+		return;
+	}
+}
+
+sub __isGameContinuation {
+	my ($self, %params) = @_;
+
+	return if !$self->{__last_position};
+	return if !$self->{__last_params};
+	return if !$self->{__last_search_time};
+
+	my $last_params = $self->{__last_params};
+
+	foreach my $param (qw(wtime btime winc binc movestogo)) {
+		
+	}
+
+	return;
 }
 
 1;
