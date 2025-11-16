@@ -484,6 +484,14 @@ sub __onUciCmdSetoption {
 	return $self;
 }
 
+sub __debug {
+	my ($self, $msg) = @_;
+
+	return if !$self->{__debug};
+
+	return $self->__info($msg);
+}
+
 sub __resizeTranspositionTable {
 	my ($self, $size) = @_;
 
@@ -690,12 +698,6 @@ sub __info {
 	my ($self, $msg) = @_;
 
 	return $self->__output("info $msg");
-}
-
-sub __debug {
-	my ($self, $msg) = @_;
-
-	return $self->__info("debug $msg");
 }
 
 sub __trim {
