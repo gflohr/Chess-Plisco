@@ -125,7 +125,12 @@ sub onPonderhit {
 	# redo that now. But for the time being, we can only guess and use
 	# one fourth of the won time for the current position.
 	if ($tree->{allocated_time}) {
-		$tree->{allocated_time} += $won_time >> 2;
+		# Apply a little bit of the extra time to this search because it was
+		# a little bit slower, because while pondering, we do more the time
+		# controls more frequently. On the other hand, a ponderhit rather
+		# indicates that the current position is not worth searching very
+		# deeply.
+		$tree->{allocated_time} += $won_time >> 3;
 		$tree->{ponderhit} = 1; # Avoid warnings about using too much time.
 	}
 }
