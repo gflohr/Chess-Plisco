@@ -354,11 +354,11 @@ sub __onUciCmdGo {
 	my ($bestmove, $ponder);
 	eval {
 		($bestmove, $ponder) = $tree->think;
-		delete $self->{__tree};
 	};
 	if ($@) {
 		$self->__output("unexpected exception: $@");
 	}
+	delete $self->{__tree};
 
 	if ($bestmove) {
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
