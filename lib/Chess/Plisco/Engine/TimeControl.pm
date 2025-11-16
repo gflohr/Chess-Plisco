@@ -126,6 +126,7 @@ sub onPonderhit {
 	# one fourth of the won time for the current position.
 	if ($tree->{allocated_time}) {
 		$tree->{allocated_time} += $won_time >> 2;
+		$tree->{ponderhit} = 1; # Avoid warnings about using too much time.
 	}
 }
 

@@ -521,7 +521,15 @@ sub __setBookFile {
 sub __onUciCmdStop {
 	my ($self) = @_;
 
-	$self->__cancelSearch;
+	if ($self->{__tree}) {
+		$self->__cancelSearch;
+
+		# Apparently, all GUIs send a "stop" to cancel a (failed) ponder. And
+		# They also expect a "bestmove" reply. But the tree suppresses that
+		# "bestmove" reply, when the "cancelled" flag is set.  We therefore
+		# unset the flag here.
+		delete $self->{__tree}->{cancelled};
+	}
 
 	return $self;
 }

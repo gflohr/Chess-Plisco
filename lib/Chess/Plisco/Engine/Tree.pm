@@ -37,6 +37,7 @@ use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
 use constant ASPIRATION_WINDOW => 25;
+use constant SAFETY_MARGIN => 50;
 
 # For all combinations of promotion piece and captured piece, calculate a
 # value suitable for sorting.  We choose the raw material balance minus the
@@ -125,7 +126,7 @@ sub checkTime {
 
 		my $allocated = $self->{allocated_time};
 		my $eta = $allocated - $elapsed;
-		if ($eta < 50) {
+		if ($eta < SAFETY_MARGIN) {
 			die "PLISCO_ABORTED\n";
 		}
 
@@ -624,7 +625,7 @@ sub rootSearch {
 		}
 	}
 
-	if ($self->{allocated_time}) {
+	if ($self->{allocated_time} && !$self->{ponderhit}) {
 		my $elapsed = 1000 * tv_interval($self->{start_time});
 		if ($elapsed > $self->{allocated_time}) {
 			$self->{info}->(__"Error: used $elapsed ms instead of $self->{allocated_time} ms.");
@@ -686,7 +687,10 @@ sub think {
 	delete $self->{thinking};
 
 	# Avoid printing the PV or the best move if the search was cancelled.
-	# Otherwise, the GUI may be confused.
+	# Otherwise, the GUI may be confused.  This can actually not happen
+	# when everybody follows the convention that a "stop" is sent to
+	# cancel a ponder but we reset the flag in the "stop" handler and are
+	# good for both cases.
 	return if $self->{cancelled};
 
 	if (@line) {
