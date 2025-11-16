@@ -674,8 +674,45 @@ sub think {
 		$line[0] = $legal[int rand @legal];
 	}
 
-	# FIXME! Print a warning if we have used more time than allocated.
-	return $line[0];
+	my $ponder_move = $self->getPonderMove(@line);
+
+	if (defined $ponder_move) {
+		return $line[0], $line[1];
+	} else {
+		return $line[0];
+	}
+}
+
+sub getPonderMove {
+	my ($self, @line) = @_;
+
+	return if !@line;
+
+	return $line[1] if @line > 1;
+
+	my $pos = $self->{position}->copy;
+
+	# Play our move.
+	$pos->doMove($line[0]);
+
+	# And now try to find an entry in the transposition table.
+	my $signature = $pos->[CP_POS_SIGNATURE];
+	my $tt = $self->{tt};
+	my $tt_move;
+	if (DEBUG) {
+		$self->debug("probing transposition table for ponder move");
+	}
+	# We're not interested in the value.
+	$tt->probe($signature, MAX_PLY + 1, 0, 0, \$tt_move);
+
+	if (DEBUG) {
+		if ($tt_move) {
+			my $cn = $pos->moveCoordinateNotation($tt_move);
+			$self->debug("best move: $cn");
+		}
+	}
+
+	return $tt_move if $tt_move;
 }
 
 # Fill the lookup table for the move values.

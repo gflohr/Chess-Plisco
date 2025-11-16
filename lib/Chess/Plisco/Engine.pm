@@ -350,17 +350,24 @@ sub __onUciCmdGo {
 	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 
 	$self->{__tree} = $tree;
-	my $bestmove;
+
+	my ($bestmove, $ponder);
 	eval {
-		$bestmove = $tree->think;
+		($bestmove, $ponder) = $tree->think;
 		delete $self->{__tree};
 	};
 	if ($@) {
 		$self->__output("unexpected exception: $@");
 	}
+
 	if ($bestmove) {
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
-		$self->__output("bestmove $cn");
+		if (defined $ponder) {
+			my $pcn = $self->{__position}->copy->moveCoordinateNotation($ponder);
+			$self->__output("bestmove $cn ponder $pcn");
+		} else {
+			$self->__output("bestmove $cn");
+		}
 	}
 
 	$self->{__watcher}->setBatchMode(0);
