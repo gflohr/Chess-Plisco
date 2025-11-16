@@ -92,7 +92,7 @@ sub allocateTime {
 		$mtg = $self->movesToGo;
 	}
 
-	my $time_left = $params->{mytime} + $params->{movestogo} * $params->{myinc};
+	my $time_left = $params->{mytime} + $mtg * $params->{myinc};
 
 	# FIXME! Depending on the volatility of the position, there should be
 	# a time cushion that can be used if the evaluation changes a lot between      
