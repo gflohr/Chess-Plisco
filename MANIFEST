@@ -8,7 +8,6 @@ META.yml
 Makefile.PL
 README.md
 README.pod
-bin/pfathom
 bin/plisco
 dist.ini
 lib/Chess/Plisco.pm
@@ -49,6 +48,7 @@ perlcritic.rc
 scripts/gen-positions.pl
 scripts/moves-to-go.pl
 scripts/moves-to-go.py
+scripts/pfathom
 t/00base.t
 t/01expand-placeholders.t
 t/01pre-process.t

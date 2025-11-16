@@ -68,6 +68,11 @@ use constant UCI_OPTIONS => [
 		max => 1024,
 		default => 20,
 	},
+	{
+		name => 'Ponder',
+		type => 'check',
+		default => 'false',
+	},
 ];
 
 my $uci_options = UCI_OPTIONS;
@@ -410,7 +415,6 @@ sub __onUciCmdGo {
 sub __onUciCmdPonderhit {
 	my ($self) = @_;
 
-$DB::single = 1;
 	return if !$self->{__tc};
 
 	$self->{__tc}->onPonderhit;
