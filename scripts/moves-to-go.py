@@ -16,8 +16,11 @@ df = df.sort_values('Evaluation')
 # Fill gaps by linear interpolation first.
 df['MovesToGoMedian'] = df['MovesToGoMedian'].interpolate('linear')
 
-# Apply moving-average smoothing.
-window = 21  # Tune this: larger = smoother, smaller = more detail
+# Apply moving-average smoothing. All the little peaks in the curve are
+# probaly not explainable and we could try to smooth them out further. But
+# having a little bit of randomness in the time allocation is not necessarily
+# bad, and so we don't exaggerate.
+window = 25  # Tune this: larger = smoother, smaller = more detail
 df['Smoothed'] = df['MovesToGoMedian'].rolling(window=window, center=True).mean()
 df['Smoothed'] = df['Smoothed'].bfill().ffill()
 
@@ -56,8 +59,10 @@ print("use constant MOVES_TO_GO => [")
 lines = []
 line = []
 for val in df['Smoothed']:
+    if val < 10:
+        break
     line.append(f"{val:.2f}")
-    if len(line) >= 8:
+    if len(line) >= 9:
         lines.append(', '.join(line))
         line = []
 
@@ -65,4 +70,4 @@ if line:
     lines.append(', '.join(line))
 
 print("\t" + ",\n\t".join(lines))
-print("];")
+print("];\n\n1;")

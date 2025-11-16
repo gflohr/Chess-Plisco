@@ -15,6 +15,10 @@
 # to go as a function of the absolute value of the evaluation.  The assumption
 # is that the higher the evaluation, the lesser the number of moves to go.
 
+# Use like this:
+#
+#     zstd -d -c ~/Downloads/lichess_db_standard_rated_2025-09.pgn.zst | \
+#.        perl -Ilib scripts/moves-to-go.pl >stats.csv
 use strict;
 use v5.10;
 
@@ -23,7 +27,7 @@ use Chess::PGN::Parse;
 use Statistics::Basic qw(median);
 
 use constant MIN_ELO => 2000;
-use constant MAX_POSITIONS => 100000;
+use constant MAX_POSITIONS => 1_000_000;
 
 sub store_value;
 sub get_evaluation;
@@ -57,22 +61,25 @@ while ($pgn->read_game) {
 	my $plies_to_go = @$sans;
 	my $moves_to_go = (1 + $plies_to_go) >> 1;
 	store_value \@moves_to_go, $startval, $moves_to_go;
-	++$num_positions;
+	last if ++$num_positions >= MAX_POSITIONS;
 
-	if ($num_positions < MAX_POSITIONS) {
-		foreach my $san (@$sans) {
-			my $move = $pos->parseMove($san);
-			$pos->doMove($move);
-
-			my $value = abs $pos->evaluate;
-			$moves_to_go = (1 + $plies_to_go) >> 1;
-			store_value \@moves_to_go, $value, $moves_to_go;
-			++$num_positions;
-			last if $num_positions >= MAX_POSITIONS;
-
-			--$plies_to_go;
+	foreach my $san (@$sans) {
+		my $move = eval { $pos->parseMove($san) };
+		if (!$move) {
+			warn "cannot parse '$san': $@ ($pos)\n";
+			next;
 		}
+		$pos->doMove($move);
+
+		my $value = abs $pos->evaluate;
+		$moves_to_go = (1 + $plies_to_go) >> 1;
+		store_value \@moves_to_go, $value, $moves_to_go;
+		++$num_positions;
+		last if $num_positions >= MAX_POSITIONS;
+
+		--$plies_to_go;
 	}
+	#warn "done $num_positions/@{[MAX_POSITIONS]}\n";
 }
 
 if ($num_positions < MAX_POSITIONS) {
@@ -101,5 +108,5 @@ sub get_evaluation {
 
 	my $score = $pos->evaluate($pos);
 
-	return (cp_pos_to_move($self)) ? -$score : $score;
+	return (cp_pos_to_move($pos)) ? -$score : $score;
 }

@@ -37,6 +37,7 @@ use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
 use constant ASPIRATION_WINDOW => 25;
+use constant SAFETY_MARGIN => 50;
 
 # For all combinations of promotion piece and captured piece, calculate a
 # value suitable for sorting.  We choose the raw material balance minus the
@@ -73,9 +74,23 @@ sub new {
 sub checkTime {
 	my ($self) = @_;
 
-	$self->{watcher}->check;
-
 	no integer;
+
+	# Remember whether we are currently pondering. If a "ponderhit" was
+	# returned, the engine object will reset the ponder flag and also reset
+	# the start time to now.  If that happens, we should skip this
+	# recalibration of the nodes to the next time control because the ETA will
+	# be zero or close to 0.
+	my $was_ponder = $self->{ponder};
+
+	# It is important to check for input before checking the time control. If
+	# another "go" command has been received, the engine object will request
+	# us to stop immediately.  When this search terminates, the engine will
+	# immediately resume with the next search.
+	$self->{watcher}->check($self);
+	if ($self->{stop_requested}) {
+		die "PLISCO_ABORTED\n";
+	}
 
 	my $elapsed = 1000 * tv_interval($self->{start_time});
 
@@ -85,26 +100,62 @@ sub checkTime {
 	if ($elapsed > 500) {
 		$self->{print_current_move} = 1;
 	}
-	my $allocated = $self->{allocated_time};
-	my $eta = $allocated - $elapsed;
-	if ($eta < 4 && !$self->{max_depth} && !$self->{max_nodes}) {
-		die "PLISCO_ABORTED\n";
-	}
 
 	my $nodes = $self->{nodes};
-	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
-	my $max_nodes_to_tc = $nps >> 3;
 
-	if ($self->{max_depth}) {
+	# FIXME! It is probably better to look at the current nps, not the
+	# overall nps.
+	my $nps = $elapsed ? (1000 * $nodes / $elapsed) : 10000;
+
+	my $max_nodes_to_tc = $nps >> 2;
+
+	if ($self->{ponder}) {
+		# We have to be quick enough to stop.  On the other hand, pondering
+		# is not effective, if we invoke the time control function too often.
+		$self->{nodes_to_tc} = $nodes + $nps >> 4;
+	} elsif ($self->{max_depth}) {
 		$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
 	} elsif ($self->{max_nodes}) {
-		$self->{nodes_to_tc} =
-			cp_min($nodes + $max_nodes_to_tc, $self->{max_nodes});
+		if ($nodes + $max_nodes_to_tc < $self->{max_nodes}) {
+			$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
+		} else {
+			$self->{nodes_to_tc} = $self->{max_nodes};
+		}
 	} else {
-		my $nodes_to_tc = int(($eta * $nps) / 2000);
+		use integer;
 
-		$self->{nodes_to_tc} = $nodes + 
-			(($nodes_to_tc < $max_nodes_to_tc) ? $nodes_to_tc : $max_nodes_to_tc);
+		my $allocated = $self->{allocated_time};
+		my $eta = $allocated - $elapsed;
+		if ($eta < SAFETY_MARGIN) {
+			die "PLISCO_ABORTED\n";
+		}
+
+		# How many nodes should we check until the next time control?
+		# We want to roughly do at least 4 time checks per second to keep the
+		# application responsive.
+		my $max_nodes = $nps >> 2;
+
+		# Re-calibrate the number of nodes to the next time control.
+		#
+		# But do not do this when the uci engine object has just received
+		# a "ponderhit" command. It has then reset our start time to the
+		# current time and has removed the ponder flag. That is why we have
+		# remembered it at the start of this routine.
+		#
+		# If we have less than about one second left, we gradually reduce
+		# the batch size so that we do not overuse the allocated time.
+		#
+		# We can expect to process $eta * $nps / 1000 nodes in the remaining
+		# time. In order to play safe, should the performance suddenly drop,
+		# we divide that number by 4. A division by 1000 is roughly a
+		# right shift of 10, a division by 4 a right-shift by 2. We can
+		# therefore just right-shift the product by 12.
+		if (!($was_ponder && !$self->{ponder})) {
+			my $dyn_nodes = ($eta * $nps) >> 12;
+
+			my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
+			$self->{nodes_to_tc} = $nodes + $nodes_to_go;
+		}
 	}
 }
 
@@ -573,6 +624,14 @@ sub rootSearch {
 			$self->{info}->(__"Error: exception raised: $@");
 		}
 	}
+
+	if ($self->{allocated_time} && !$self->{ponderhit}) {
+		my $elapsed = 1000 * tv_interval($self->{start_time});
+		if ($elapsed > $self->{allocated_time}) {
+			$self->{info}->(__"Error: used $elapsed ms instead of $self->{allocated_time} ms.");
+		}
+	}
+
 	@$pline = @line;
 }
 # __END_MACROS__
@@ -627,6 +686,13 @@ sub think {
 
 	delete $self->{thinking};
 
+	# Avoid printing the PV or the best move if the search was cancelled.
+	# Otherwise, the GUI may be confused.  This can actually not happen
+	# when everybody follows the convention that a "stop" is sent to
+	# cancel a ponder but we reset the flag in the "stop" handler and are
+	# good for both cases.
+	return if $self->{cancelled};
+
 	if (@line) {
 		$self->printPV(\@line);
 	} else {
@@ -635,7 +701,45 @@ sub think {
 		$line[0] = $legal[int rand @legal];
 	}
 
-	return $line[0];
+	my $ponder_move = $self->getPonderMove(@line);
+
+	if (defined $ponder_move) {
+		return $line[0], $line[1];
+	} else {
+		return $line[0];
+	}
+}
+
+sub getPonderMove {
+	my ($self, @line) = @_;
+
+	return if !@line;
+
+	return $line[1] if @line > 1;
+
+	my $pos = $self->{position}->copy;
+
+	# Play our move.
+	$pos->doMove($line[0]);
+
+	# And now try to find an entry in the transposition table.
+	my $signature = $pos->[CP_POS_SIGNATURE];
+	my $tt = $self->{tt};
+	my $tt_move;
+	if (DEBUG) {
+		$self->debug("probing transposition table for ponder move");
+	}
+	# We're not interested in the value.
+	$tt->probe($signature, MAX_PLY + 1, 0, 0, \$tt_move);
+
+	if (DEBUG) {
+		if ($tt_move) {
+			my $cn = $pos->moveCoordinateNotation($tt_move);
+			$self->debug("best move: $cn");
+		}
+	}
+
+	return $tt_move if $tt_move;
 }
 
 # Fill the lookup table for the move values.
