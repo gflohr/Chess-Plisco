@@ -215,6 +215,13 @@ sub __onUciInput {
 	$args = $self->__trim($args);
 	if ($self->can($method)) {
 		$self->$method($args);
+		# Was this go command cancelled because of an already running search?
+		# In this case, we have remembered the arguments, and can start a new
+		# search now.
+		if ('go' eq lc $cmd && $self->{__go_queue} && !$self->{__tree}) {
+			$args = delete $self->{__go_queue};
+			$self->__onUciCmdGo($args);
+		}
 	} else {
 		$self->{__out}->print("info unknown command '$cmd'\n");
 	}
