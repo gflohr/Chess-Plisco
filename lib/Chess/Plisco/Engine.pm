@@ -376,8 +376,9 @@ sub __onUciCmdGo {
 	}
 	my $tree = Chess::Plisco::Engine::Tree->new(%options);
 	$tree->{debug} = 1 if $self->{__debug};
+	$tree->{ponder} = 1 if $params{ponder};
 
-	my $tc = Chess::Plisco::Engine::TimeControl->new($tree, %params);
+	my $tc = $self->{__tc} = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 
 	$self->{__tree} = $tree;
 
@@ -389,6 +390,7 @@ sub __onUciCmdGo {
 		$self->__output("unexpected exception: $@");
 	}
 	delete $self->{__tree};
+	delete $self->{__tc};
 
 	if ($bestmove) {
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
@@ -401,6 +403,17 @@ sub __onUciCmdGo {
 	}
 
 	$self->{__watcher}->setBatchMode(0);
+
+	return $self;
+}
+
+sub __onUciCmdPonderhit {
+	my ($self) = @_;
+
+$DB::single = 1;
+	return if !$self->{__tc};
+
+	$self->{__tc}->onPonderhit;
 
 	return $self;
 }

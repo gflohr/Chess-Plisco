@@ -16,7 +16,7 @@ package Chess::Plisco::Engine::TimeControl;
 
 use strict;
 
-use Time::HiRes qw(gettimeofday);
+use Time::HiRes qw(gettimeofday tv_interval);
 
 use Chess::Plisco::Engine::TimeControl::MovesToGo;
 
@@ -57,6 +57,11 @@ sub new {
 	# Initial value for calibration.
 	$tree->{nodes_to_tc} = 5000;
 
+	# The parameter "ponder" is ignored and we compute the time allocation
+	# as usual but the search tree will ignore it while pondering. If the
+	# opponent plays the expected move (ponder hit), the start time of the
+	# tree will be reset to the current time and it goes from ponder mode into
+	# normal mode and can then check the time as usual.
 	if ($params{movetime}) {
 		$tree->{allocated_time} = $params{movetime};
 		$tree->{fixed_time} = 1;
@@ -80,7 +85,6 @@ sub new {
 sub allocateTime {
 	my ($self, $tree, $params) = @_;
 
-$DB::single = 1;
 	my $mtg;
 	if ($params->{movestogo} && $params->{movestogo} < $mtg) {
 		$mtg = $params->{movestogo};
@@ -106,6 +110,23 @@ sub movesToGo {
 		// 10;
 
 	return $mtg;
+}
+
+sub onPonderhit {
+	my ($self) = @_;
+
+	my $tree = $self->{__tree};
+	return if !delete $tree->{ponder};
+
+	my $won_time = 1000 * tv_interval($tree->{start_time});
+
+	# At the moment we don't know how to efficiently use the time won. Once,
+	# we do a new assessment after earch search iteration, we can simply
+	# redo that now. But for the time being, we can only guess and use
+	# one fourth of the won time for the current position.
+	if ($tree->{allocated_time}) {
+		$tree->{allocated_time} += $won_time >> 2;
+	}
 }
 
 1;

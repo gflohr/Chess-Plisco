@@ -75,10 +75,17 @@ sub checkTime {
 
 	no integer;
 
-	# It is important to first check for input. If another "go" command has
-	# been received, the engine object will request us to stop immediately.
-	# When this search terminates, the engine will immediately resume with
-	# the next search.
+	# Remember whether we are currently pondering. If a "ponderhit" was
+	# returned, the engine object will reset the ponder flag and also reset
+	# the start time to now.  If that happens, we should skip this
+	# recalibration of the nodes to the next time control because the ETA will
+	# be zero or close to 0.
+	my $was_ponder = $self->{ponder};
+
+	# It is important to check for input before checking the time control. If
+	# another "go" command has been received, the engine object will request
+	# us to stop immediately.  When this search terminates, the engine will
+	# immediately resume with the next search.
 	$self->{watcher}->check($self);
 	if ($self->{stop_requested}) {
 		die "PLISCO_ABORTED\n";
@@ -93,8 +100,6 @@ sub checkTime {
 		$self->{print_current_move} = 1;
 	}
 
-	# FIXME! In ponder mode, make sure that nodes_to_tc and
-	# nodes_to_recalibrate are reset!
 	my $nodes = $self->{nodes};
 
 	# FIXME! It is probably better to look at the current nps, not the
@@ -104,8 +109,9 @@ sub checkTime {
 	my $max_nodes_to_tc = $nps >> 2;
 
 	if ($self->{ponder}) {
-		# We have to be quick enough to stop.
-		warn;
+		# We have to be quick enough to stop.  On the other hand, pondering
+		# is not effective, if we invoke the time control function too often.
+		$self->{nodes_to_tc} = $nodes + $nps >> 4;
 	} elsif ($self->{max_depth}) {
 		$self->{nodes_to_tc} = $nodes + $max_nodes_to_tc;
 	} elsif ($self->{max_nodes}) {
@@ -128,6 +134,13 @@ sub checkTime {
 		# application responsive.
 		my $max_nodes = $nps >> 2;
 
+		# Re-calibrate the number of nodes to the next time control.
+		#
+		# But do not do this when the uci engine object has just received
+		# a "ponderhit" command. It has then reset our start time to the
+		# current time and has removed the ponder flag. That is why we have
+		# remembered it at the start of this routine.
+		#
 		# If we have less than about one second left, we gradually reduce
 		# the batch size so that we do not overuse the allocated time.
 		#
@@ -136,10 +149,12 @@ sub checkTime {
 		# we divide that number by 4. A division by 1000 is roughly a
 		# right shift of 10, a division by 4 a right-shift by 2. We can
 		# therefore just right-shift the product by 12.
-		my $dyn_nodes = ($eta * $nps) >> 12;
+		if (!($was_ponder && !$self->{ponder})) {
+			my $dyn_nodes = ($eta * $nps) >> 12;
 
-		my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
-		$self->{nodes_to_tc} = $nodes + $nodes_to_go;
+			my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
+			$self->{nodes_to_tc} = $nodes + $nodes_to_go;
+		}
 	}
 }
 
