@@ -214,11 +214,19 @@ sub __onUciInput {
 	my $method = '__onUciCmd' . ucfirst lc $cmd;
 	$args = $self->__trim($args);
 	if ($self->can($method)) {
-		$self->$method($args);
+		my $success = $self->$method($args);
 		# Was this go command cancelled because of an already running search?
 		# In this case, we have remembered the arguments, and can start a new
 		# search now.
-		if ('go' eq lc $cmd && $self->{__go_queue} && !$self->{__tree}) {
+		#
+		# This will happen instantly. If a "go" command is sent during a
+		# running search, this will only be noticed during the time control
+		# check of the search tree. The "go" handler does not start a new
+		# search but simply cancels the current search. Because this happens
+		# during the time control check, the current search will terminate
+		# instantly, and we will end up here. Now, the current search will
+		# basically be replaced by a new one without recursion.
+		if ($success && 'go' eq lc $cmd && $self->{__go_queue} && !$self->{__tree}) {
 			$args = delete $self->{__go_queue};
 			$self->__onUciCmdGo($args);
 		}

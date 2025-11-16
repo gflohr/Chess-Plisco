@@ -75,6 +75,10 @@ sub checkTime {
 
 	no integer;
 
+	# It is important to first check for input. If another "go" command has
+	# been received, the engine object will request us to stop immediately.
+	# When this search terminates, the engine will immediately resume with
+	# the next search.
 	$self->{watcher}->check($self);
 	if ($self->{stop_requested}) {
 		die "PLISCO_ABORTED\n";
