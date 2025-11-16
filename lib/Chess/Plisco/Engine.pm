@@ -214,10 +214,7 @@ sub __onUciInput {
 	my $method = '__onUciCmd' . ucfirst lc $cmd;
 	$args = $self->__trim($args);
 	if ($self->can($method)) {
-		my $stop_if_thinking = $self->$method($args);
-		if ($self->{__tree} && $stop_if_thinking) {
-			die "PLISCO_ABORTED\n";
-		}
+		$self->$method($args);
 	} else {
 		$self->{__out}->print("info unknown command '$cmd'\n");
 	}
@@ -283,8 +280,26 @@ sub __onUciCmdSee {
 	return $self;
 }
 
+sub __cancelSearch {
+	my ($self) = @_;
+
+	return if !$self->{__tree};
+
+	$self->{__watcher}->requestStop;
+	$self->{__tree}->{cancelled} = 1;
+
+	return $self;
+}
+
 sub __onUciCmdGo {
 	my ($self, $args) = @_;
+
+	if ($self->__cancelSearch) {
+		# Remember the arguments to this go command and re-try as soon as the
+		# currently still running search terminates.
+		$self->{__go_queue} = $args;
+		return;
+	}
 
 	my @args = split /[ \t]+/, $args;
 
@@ -377,6 +392,8 @@ sub __onUciCmdGo {
 
 sub __onUciCmdUcinewgame {
 	my ($self) = @_;
+
+	$self->__cancelSearch;
 
 	$self->{__tt}->clear;
 
@@ -472,13 +489,15 @@ sub __setBookFile {
 sub __onUciCmdStop {
 	my ($self) = @_;
 
-	$self->{__watcher}->requestStop;
+	$self->__cancelSearch;
 
 	return $self;
 }
 
 sub __onUciCmdPosition {
 	my ($self, $args) = @_;
+
+	$self->__cancelSearch;
 
 	unless (defined $args && length $args) {
 		$self->__info("error: usage: position FEN POSITION | startpos [MOVES...]");
@@ -569,9 +588,7 @@ EOF
 sub __onUciCmdQuit {
 	my ($self) = @_;
 
-	$self->{__abort} = 1;
-
-	return $self;
+	exit;
 }
 
 sub __onUciCmdUci {

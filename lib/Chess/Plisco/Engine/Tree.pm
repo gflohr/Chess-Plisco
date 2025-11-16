@@ -666,6 +666,10 @@ sub think {
 
 	delete $self->{thinking};
 
+	# Avoid printing the PV or the best move if the search was cancelled.
+	# Otherwise, the GUI may be confused.
+	return if $self->{cancelled};
+
 	if (@line) {
 		$self->printPV(\@line);
 	} else {
