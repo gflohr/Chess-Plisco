@@ -111,7 +111,7 @@ sub allocateTime {
 		# take.
 		my $delta = $self->{__hertime} - $allocated_time;
 		if ($delta > 0) {
-			$allocated_time += $delta - $delta >> 2;
+			$allocated_time += ($delta - ($delta >> 2));
 		}
 	}
 
