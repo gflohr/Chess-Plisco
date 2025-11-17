@@ -1,0 +1,57 @@
+#! /usr/bin/env perl
+
+# Copyright (C) 2021 Guido Flohr <guido.flohr@cantanea.com>,
+# all rights reserved.
+
+# This program is free software. It comes without any warranty, to
+# the extent permitted by applicable law. You can redistribute it
+# and/or modify it under the terms of the Do What the Fuck You Want
+# to Public License, Version 2, as published by Sam Hocevar. See
+# http://www.wtfpl.net/ for more details.
+
+use strict;
+use v5.10;
+
+use PPI::Document;
+
+my ($source_file) = @ARGV or die;
+
+autoflush STDOUT, 1;
+
+print "Removing DEBUG branches from $source_file...";
+open my $fh, '<', $source_file or die "$source_file: $!";
+my $code = join '', <$fh>;
+
+my $doc = PPI::Document->new(\$code);
+
+my $constants = $doc->find(sub {
+	$_[1]->isa('PPI::Token::Word') && 'DEBUG' eq $_[1]->content;
+});
+
+foreach my $constant (@$constants) {
+	my $expression = $constant->parent or next;
+	next if !$expression->isa('PPI::Statement::Expression');
+
+	my $condition = $expression->parent or next;
+	next if !$condition->isa('PPI::Structure::Condition');
+
+	use Data::Dumper;
+	my $compound = $condition->parent or next;
+	next if !$compound->isa('PPI::Statement::Compound');
+
+	my @children = $compound->children or next;
+	my $if = $children[0];
+	next if !$if->isa('PPI::Token::Word');
+	next if !$if->content eq 'if';
+
+	my $parent = $compound->parent or next;
+	$parent->remove_child($compound);
+}
+
+chmod 0644, $source_file or die $!;
+open my $fh, '>', $source_file or die "$source_file: $!";
+chmod 0444, $source_file or die $!;
+$fh->print($doc) or die "$source_file: $!";
+$fh->close or die "$source_file: $!";
+
+print " done\n";

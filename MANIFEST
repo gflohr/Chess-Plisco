@@ -49,6 +49,7 @@ scripts/gen-positions.pl
 scripts/moves-to-go.pl
 scripts/moves-to-go.py
 scripts/pfathom
+scripts/remove-debugging
 t/00base.t
 t/01expand-placeholders.t
 t/01pre-process.t
@@ -95,6 +96,7 @@ t/20draw-detection.t
 t/20evaluate-pesto.t
 t/20evaluate-update.t
 t/20game-phase.t
+t/20time-management.t
 t/20transposition-table.t
 t/30chessnut1071_dm2.t
 t/30dm1-epd.t
