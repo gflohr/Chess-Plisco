@@ -61,6 +61,13 @@ Reference documentation is available for:
 
 ## Engine
 
+### Features Used
+
+* Negamax search
+* iterative Deepening with aspiration window
+* zero-width window search
+* linear evaluation based on PSTs
+
 ### Running the Engine
 
 The chess engine is started with the command "plisco". You can also run it
