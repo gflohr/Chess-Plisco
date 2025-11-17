@@ -30,15 +30,16 @@ sub new {
 	};
 	bless $self, $class;
 
+	# FIXME! Use local variables!
 	if ($black_to_move) {
-		$params{mytime} = delete $params{btime};
+		$params{mytime} = $self->{__mytime} = delete $params{btime};
 		$params{myinc} = delete $params{binc};
-		$params{hertime} = delete $params{wtime};
+		$params{hertime} = $self->{__hertime} = delete $params{wtime};
 		$params{herinc} = delete $params{winc};
 	} else {
-		$params{mytime} = delete $params{wtime};
+		$params{mytime} = $self->{__mytime} = delete $params{wtime};
 		$params{myinc} = delete $params{winc};
-		$params{hertime} = delete $params{btime};
+		$params{hertime} = $self->{__hertime} = delete $params{btime};
 		$params{herinc} = delete $params{binc};
 	}
 
@@ -97,7 +98,24 @@ sub allocateTime {
 	# FIXME! Depending on the volatility of the position, there should be
 	# a time cushion that can be used if the evaluation changes a lot between      
 	# iterations.
-	$tree->{allocated_time} = int (0.5 + $time_left / $mtg);
+
+	my $allocated_time = int (0.5 + $time_left / $mtg);
+
+	if ($self->{__hertime}) { # We don't get here, if our clock is unknown.
+		# If after the move we have more time on the clock than the opponent,
+		# They will get under time pressure sooner than us.  That is an
+		# extra bonus we can use. We take roughly 3/4 of it for this move,
+		# making sure that our clocks don't deviate too much.
+		#
+		# If we have less time than them, we ignore that and follow our own
+		# take.
+		my $delta = $self->{__hertime} - $allocated_time;
+		if ($delta > 0) {
+			$allocated_time += $delta - $delta >> 2;
+		}
+	}
+
+	$tree->{allocated_time} = $allocated_time;
 }
 
 sub movesToGo {

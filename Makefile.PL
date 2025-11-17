@@ -27,7 +27,7 @@ if ($Config{ivsize} < 8) {
 }
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "Representation of a chess position with move generator, legality checker etc.",
+  "ABSTRACT" => "Ultra-fast chess library with UCI compatible chess engine",
   "AUTHOR" => "Guido Flohr <guido.flohr\@cantanea.com>",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
@@ -73,7 +73,7 @@ my %WriteMakefileArgs = (
     "Test::More" => 0,
     "lib" => 0
   },
-  "VERSION" => "v0.8.0",
+  "VERSION" => "v0.8.1",
   "test" => {
     "TESTS" => "t/*.t"
   }
