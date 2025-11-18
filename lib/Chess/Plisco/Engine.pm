@@ -30,7 +30,7 @@ use Chess::Plisco::Engine::Book;
 use constant MIN_HASH_SIZE => 1;
 use constant DEFAULT_HASH_SIZE => 16;
 use constant MAX_HASH_SIZE => 33554432;
-use constant MAX_MOVE_OVERHEADS => 40; # Worth about one game of chess.
+use constant MAX_MOVE_OVERHEADS => 10; # Worth about a quarter game of chess.
 use constant MIN_MOVE_OVERHEAD => 10; # Stockfish.
 use constant MAX_MOVE_OVERHEAD => 5000; # Stockfish.
 
