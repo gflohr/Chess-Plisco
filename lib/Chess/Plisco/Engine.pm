@@ -31,6 +31,8 @@ use constant MIN_HASH_SIZE => 1;
 use constant DEFAULT_HASH_SIZE => 16;
 use constant MAX_HASH_SIZE => 33554432;
 use constant MAX_MOVE_OVERHEADS => 40; # Worth about one game of chess.
+use constant MIN_MOVE_OVERHEAD => 10; # Stockfish.
+use constant MAX_MOVE_OVERHEAD => 5000; # Stockfish.
 
 use constant UCI_OPTIONS => [
 	{
@@ -77,9 +79,21 @@ use constant UCI_OPTIONS => [
 	{
 		name => 'Move Overhead',
 		type => 'spin',
-		min => 0,
-		max => 5000,
+		min => MIN_MOVE_OVERHEAD,
+		max => MAX_MOVE_OVERHEAD,
 		default => 10,
+	},
+	# lichess-bot only allows setting options, not arbitrary init strings. So
+	# make debugging available with an option, too.
+	{
+		name => 'Debug',
+		type => 'check',
+		default => 'false',
+		callback => sub {
+			my ($self, $arg) = @_;
+
+			$self->{__debug} = $arg eq 'true';
+		},
 	},
 ];
 
@@ -420,8 +434,7 @@ sub __onUciCmdGo {
 		my $lan = $self->{__position}->LAN($bestmove);
 		push @{$self->{__moves}}, $lan;
 	}
-my $new_moves = join ' ', @{$self->{__moves}};
-$self->__debug("moves now: $new_moves");
+
 	$self->__updateMoveOverhead($search_time, %params);
 	$self->{__last_search_time} = $search_time;
 	$self->{__last_go_params} = \%params;
@@ -787,6 +800,8 @@ sub __updateMoveOverhead {
 		my $overhead = $clock_down - $self->{__last_search_time};
 		$self->__debug("last move overhead: $overhead ms");
 		last if $overhead < 0;
+
+		$overhead = MAX_MOVE_OVERHEAD if $overhead > MAX_MOVE_OVERHEAD;
 
 		my $overheads = $self->{__move_overheads};
 		shift @$overheads if @$overheads > MAX_MOVE_OVERHEADS;
