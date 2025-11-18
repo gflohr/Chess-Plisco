@@ -14,8 +14,9 @@ package Chess::Plisco::Engine;
 use strict;
 use integer;
 
-use POSIX qw(:sys_wait_h);
 use Locale::TextDomain qw(Chess-Plisco);
+use POSIX qw(:sys_wait_h);
+use Time::HiRes qw(tv_interval);
 
 use Chess::Plisco qw(:all);
 
@@ -26,10 +27,10 @@ use Chess::Plisco::Engine::InputWatcher;
 use Chess::Plisco::Engine::TranspositionTable;
 use Chess::Plisco::Engine::Book;
 
-# These figures are taken from 
 use constant MIN_HASH_SIZE => 1;
 use constant DEFAULT_HASH_SIZE => 16;
 use constant MAX_HASH_SIZE => 33554432;
+use constant MAX_MOVE_OVERHEADS => 40; # Worth about one game of chess.
 
 use constant UCI_OPTIONS => [
 	{
@@ -87,6 +88,7 @@ sub new {
 		__signatures => [$position->signature],
 		__options => {},
 		__book => Chess::Plisco::Engine::Book->new,
+		__move_overheads => [],
 	};
 
 	my $options = UCI_OPTIONS;
@@ -391,9 +393,27 @@ sub __onUciCmdGo {
 	eval {
 		($bestmove, $ponder) = $tree->think;
 	};
+	my $search_time;
+	{
+		no integer;
+		$search_time = int(0.5 + 1000 * tv_interval($tree->{start_time}));
+	}
 	if ($@) {
 		$self->__output("unexpected exception: $@");
 	}
+
+	$self->__debug("search time: $search_time ms");
+	$self->{__moves} //= [];
+	if ($bestmove) {
+		my $lan = $self->{__position}->LAN($bestmove);
+		push @{$self->{__moves}}, $lan;
+	}
+my $new_moves = join ' ', @{$self->{__moves}};
+$self->__debug("moves now: $new_moves");
+	$self->__updateMoveOverhead($search_time, %params);
+	$self->{__last_search_time} = $search_time;
+	$self->{__last_go_params} = \%params;
+
 	delete $self->{__tree};
 	delete $self->{__tc};
 
@@ -544,6 +564,8 @@ sub __onUciCmdPosition {
 		return;
 	}
 
+	delete $self->{__is_same_game};
+
 	my ($type, @moves) = split /[ \t]+/, $args;
 	my $position;
 	if ('fen' eq lc $type) {
@@ -572,7 +594,7 @@ sub __onUciCmdPosition {
 		return;
 	}
 
-	$self->{__moves} = [];
+	$self->{__same_game} = 0;
 	my @signatures = ($position->signature);
 	if ('moves' eq shift @moves) {
 		for (my $i = 0; $i < @moves; ++$i) {
@@ -587,7 +609,20 @@ sub __onUciCmdPosition {
 			}
 			push @signatures, $position->signature;
 		}
+		if ($self->{__moves} && @{$self->{__moves}} + 1 == @moves) {
+			$self->{__same_game} = 1;
+			for (my $i = 0; $i < $#moves; ++$i) {
+				if ($moves[$i] ne $self->{__moves}->[$i]) {
+					$self->{__same_game} = 0;
+					last;
+				}
+			}
+		} else {
+			$self->{__same_game} = 0;
+		}
 	}
+
+	$self->{__moves} = \@moves;
 
 	$self->{__position} = $position;
 	$self->{__signatures} = \@signatures;
@@ -699,7 +734,7 @@ sub __debug {
 
 	return if !$self->{__debug};
 
-	return $self->__info($msg);
+	return $self->__info("DEBUG $msg");
 }
 
 
@@ -713,32 +748,41 @@ sub __trim {
 }
 
 sub __updateMoveOverhead {
-	my ($self, %params) = @_;
+	my ($self, $search_time, %params) = @_;
 
 	return if $params{ponder};
-
-	if (!$self->__isGameContinuation(%params)) {
-		$self->__debug('new game detected');
-		delete $self->{__last_position};
-		delete $self->{__last_go_params};
-		delete $self->{__last_search_time};
-
-		return;
-	}
-}
-
-sub __isGameContinuation {
-	my ($self, %params) = @_;
-
-	return if !$self->{__last_position};
-	return if !$self->{__last_params};
+	return if !$self->{__same_game};
 	return if !$self->{__last_search_time};
+	return if !$self->{__last_go_params};
 
-	my $last_params = $self->{__last_params};
-
-	foreach my $param (qw(wtime btime winc binc movestogo)) {
-		
+	my $last_params = $self->{__last_go_params};
+	foreach my $param (qw(wtime btime)) {
+		return if ((exists $last_params->{$param}) != (exists $params{$param}));
 	}
+
+	while (1) {
+		my $time_key = $self->{__position}->toMove == CP_WHITE ?
+			'wtime' : 'btime';
+		my $last_params = $self->{__last_go_params};
+		if (!(exists $params{$time_key} && exists $last_params->{$time_key})) {
+			last;
+		}
+
+		my $clock_down = $last_params->{$time_key} - $params{$time_key};
+		last if $clock_down < 0;
+
+		my $overhead = $clock_down - $self->{__last_search_time};
+		$self->__debug("move overhead: $overhead ms");
+		last if $overhead < 0;
+
+		shift @{$self->{__move_overheads}} if @{$self->{__move_moverheads}} > MAX_MOVE_OVERHEADS;
+		push @{$self->{__move_overheads}}, $overhead;
+
+		return $self;
+	}
+
+	delete $self->{__last_go_params};
+	delete $self->{__last_search_time};
 
 	return;
 }

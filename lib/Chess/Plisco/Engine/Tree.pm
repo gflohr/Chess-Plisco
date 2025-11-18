@@ -679,7 +679,7 @@ sub think {
 	$self->{tt_hits} = 0;
 
 	if ($self->{debug}) {
-		$self->{info}->("allocated time: $self->{allocated_time}");
+		$self->{info}->("DEBUG allocated time: $self->{allocated_time}");
 	}
 
 	$self->rootSearch(\@line);
