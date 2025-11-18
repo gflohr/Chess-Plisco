@@ -101,11 +101,6 @@ sub allocateTime {
 
 	my $allocated_time = int (0.5 + $time_left / $mtg);
 
-	# Add some jitter.
-	if ($self->{__hertime} > 400 && $allocated_time > 200) {
-		$allocated_time += -50 + int rand 100;
-	}
-
 	if ($self->{__hertime}) { # We don't get here, if our clock is unknown.
 		# If after the move we have more time on the clock than the opponent,
 		# They will get under time pressure sooner than us.  That is an
@@ -116,7 +111,7 @@ sub allocateTime {
 		# take.
 		my $delta = $self->{__mytime} - $self->{__hertime} - $allocated_time;
 		if ($delta > 0) {
-			$allocated_time += $delta;
+			$allocated_time += ($delta >> 1);
 		}
 	}
 
