@@ -3850,7 +3850,7 @@ foreach my $from (0 .. 63) {
 }
 
 # Zobrist keys.
-my %zk_seen;
+my %zk_seen; # FIXME! Use that!
 for (my $i = 0; $i < 768; ++$i) {
 	push @zk_pieces, RNG();
 }
