@@ -202,6 +202,8 @@ sub cp_bitboard_clear_but_most_set {}
 _define_from_file cp_bitboard_count_isolated_trailing_zbits => '$bb',
 		'countIsolatedTrailingZbits.pm';
 sub cp_bitboard_count_isolated_trailing_zbits {}
+
+# FIXME! Rename that to cp_bitboard_to_shift!
 _define_from_file cp_bitboard_count_trailing_zbits => '$bb', 'countTrailingZbits.pm';
 sub cp_bitboard_count_trailing_zbits {}
 _define cp_bitboard_clear_least_set => '$bb', '(($bb) & (($bb) - 1))';

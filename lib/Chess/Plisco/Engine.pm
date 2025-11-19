@@ -430,9 +430,11 @@ sub __onUciCmdGo {
 
 	$self->__debug("search time: $search_time ms");
 	$self->{__moves} //= [];
+	$self->{__time_allocations} //= [];
 	if ($bestmove) {
 		my $lan = $self->{__position}->LAN($bestmove);
 		push @{$self->{__moves}}, $lan;
+		push @{$self->{__time_allocations}}, $tree->{allocated_time};
 	}
 
 	$self->__updateMoveOverhead($search_time, %params);
