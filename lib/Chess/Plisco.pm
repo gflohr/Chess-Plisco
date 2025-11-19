@@ -2110,6 +2110,31 @@ sub __zobristKeyLookupByIndex {
 	return $zk_pieces[$index];
 }
 
+sub __dumpMove {
+	my ($self, $move) = @_;
+
+	my $bits = sprintf "move (0b%b): $move", $move;
+	my $colour = cp_move_color($move) == CP_WHITE ? 'white' : 'black';
+	$colour = sprintf "turn (0b%b): $colour", cp_move_color $move;
+	my $to = cp_move_to($move);
+	my $from = cp_move_from($move);
+	my $from_bits = sprintf '0b%b', $from;
+	my $to_bits = sprintf '0b%b', $to;
+	my $from_square = "from ($from_bits): " . cp_shift_to_square $from;
+	my $to_square = "to ($to_bits): " . cp_shift_to_square $to;
+	my $piece = cp_move_piece $move;
+	my $piece_bits = sprintf '0b%b', $piece;
+	my $piece_char = "piece ($piece_bits): " . CP_PIECE_CHARS->[0]->[$piece];
+	my $captured = cp_move_captured $move;
+	my $captured_bits = sprintf '0b%b', $captured;
+	my $captured_char = "captured ($captured_bits): " . CP_PIECE_CHARS->[0]->[$captured];
+	my $promote = cp_move_promote $move;
+	my $promote_bits = sprintf '0b%b', $promote;
+	my $promote_char = "promote ($promote_bits): " . CP_PIECE_CHARS->[0]->[$promote];
+
+	return join "\n", $bits, $colour, $to_square, $from_square, $piece_char, $captured_char, $promote_char, '';
+}
+
 sub __zobristKeyDump {
 	my ($self) = @_;
 
