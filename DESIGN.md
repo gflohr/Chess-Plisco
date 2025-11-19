@@ -228,9 +228,6 @@ The entire body of the `move/unmove` methods in the core library should be
 put together with macros. That makes it easy for the engine to override the
 method without an additional invocation.
 
-It will be a challenge to undo the update to the zobrist key but that should
-be feasible. Currently, we just store the old value in the undo information.
-
 ## Engine
 
 ### Commandline Arguments
