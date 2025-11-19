@@ -28,6 +28,7 @@ For version 1, a number of design errors will be fixed.
 		- [Move](#move)
 	- [Move Generation](#move-generation)
 		- [New API (`move/unmove`)](#new-api-moveunmove)
+		- [Skip Legality Check in Engine](#skip-legality-check-in-engine)
 	- [Engine](#engine)
 		- [Commandline Arguments](#commandline-arguments)
 		- [Time Management](#time-management)
@@ -227,6 +228,11 @@ for:
 The entire body of the `move/unmove` methods in the core library should be
 put together with macros. That makes it easy for the engine to override the
 method without an additional invocation.
+
+### Skip Legality Check in Engine
+
+The move generator only generates legal moves. When applying them, there is
+no need to do any legality check.
 
 ## Engine
 
