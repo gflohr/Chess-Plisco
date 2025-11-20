@@ -1363,6 +1363,8 @@ sub doMove {
 	}
 
 	cp_move_set_color($move, $to_move);
+	cp_move_set_en_passant($move, $is_ep);
+
 	$zk_update ^= $zk_color;
 
 	my @undo_info = ($move, $captured_mask, @state);
@@ -1588,6 +1590,20 @@ sub moveSetColor {
 	my (undef, $move, $color) = @_;
 
 	cp_move_set_color $move, $color;
+
+	return $move;
+}
+
+sub moveEnPassant {
+	my (undef, $move) = @_;
+
+	return cp_move_en_passant $move;
+}
+
+sub moveSetEnPassant {
+	my (undef, $move, $flag) = @_;
+
+	cp_move_set_en_passant $move, $flag;
 
 	return $move;
 }
@@ -1911,6 +1927,7 @@ sub parseMove {
 	} elsif ($piece == CP_PAWN && $self->enPassantShift
 	         && (cp_move_to($move)) == $self->enPassantShift) {
 		$captured = CP_PAWN;
+		cp_move_set_en_passant $move, 1;
 	}
 	cp_move_set_captured $move, $captured;
 

@@ -618,6 +618,14 @@ Extracts the color that does the move.
 
 Sets the color in B<MOVE> to B<COLOR> and returns the move.
 
+=item B<moveEnPassant(MOVE)>
+
+Returns 1 if the move is an en passant capture, 0 otherwise.
+
+=item B<moveSetEnPassant(MOVE, FLAG)>
+
+Sets the en passant flag in B<MOVE> to B<COLOR> and returns the move.
+
 =item B<moveLegal(MOVE|NOTATION)>
 
 Returns a truthy value, when the argument is a valid and legal move.  The move

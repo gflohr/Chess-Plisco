@@ -411,6 +411,14 @@ Same as L<Chess::Plisco/moveCaptured>.
 
 Same as L<Chess::Plisco/moveSetColor> but modifies B<MOVE> directly.
 
+=item B<cp_move_en_passant(MOVE)>
+
+Same as L<Chess::Plisco/moveEnPassant>.
+
+=item B<cp_move_set_en_passant(MOVE, FLAG)>
+
+Same as L<Chess::Plisco/moveSetEnPassant> but modifies B<MOVE> directly.
+
 =item B<cp_move_equivalent(MOVE)>
 
 Same as L<Chess::Plisco/moveEquivalent>.
