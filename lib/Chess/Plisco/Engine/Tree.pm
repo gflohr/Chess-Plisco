@@ -296,7 +296,6 @@ sub alphabeta {
 		@$position[CP_POS_PAWNS .. CP_POS_QUEENS];
 	my $pos_info = cp_pos_info $position;
 	my $her_pieces = $position->[CP_POS_WHITE_PIECES + cp_pos_info_to_move $pos_info];
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
 	foreach my $move (@moves) {

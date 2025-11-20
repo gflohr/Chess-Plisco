@@ -394,7 +394,7 @@ sub new {
 	_cp_pos_info_set_black_king_side_castling_right($info, 1);
 	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
 	_cp_pos_info_set_to_move($info, CP_WHITE);
-	_cp_pos_info_set_en_passant_shift($info, 0);
+	_cp_pos_info_set_en_passant($info, 0);
 	cp_pos_info($self) = $info;
 	
 	$self->__updateZobristKey;
@@ -722,16 +722,17 @@ sub __checkEnPassantState {
 	my ($self, $ep_square, $to_move, $pos_info) = @_;
 
 	if ('-' eq $ep_square) {
-		_cp_pos_info_set_en_passant_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant($pos_info, 0);
 	} elsif ($to_move == CP_WHITE) {
 		if ($ep_square !~ /^[a-h]6$/) {
 			die __x("Illegal FEN: White to move and en-passant square '{square}' is not on 6th rank.\n",
 				square => $ep_square);
 		}
+
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			_cp_pos_info_set_en_passant_shift($pos_info, $self->squareToShift($ep_square));
+			_cp_pos_info_set_en_passant $pos_info, ((1 << 4) | ($ep_shift & 0x7))
 		}
 	} elsif ($to_move == CP_BLACK) {
 		if ($ep_square !~ /^[a-h]3$/) {
@@ -741,7 +742,7 @@ sub __checkEnPassantState {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			_cp_pos_info_set_en_passant_shift($pos_info, $self->squareToShift($ep_square));
+			_cp_pos_info_set_en_passant $pos_info, ((1 << 4) | ($ep_shift & 0x7))
 		}
 	}
 
@@ -901,8 +902,15 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
+	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep_shift;
+	my $ep_target_mask;
+	if ($ep) {
+		$ep_shift = cp_en_passant_file_to_shift($ep);
+		$ep_target_mask = 1 << $ep_shift; 
+	} else {
+		$ep_shift = $ep_target_mask = 0;
+	}
 
 	# Pawn single steps and captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
@@ -1042,8 +1050,14 @@ sub pseudoLegalAttacks {
 
 	my $pawn_mask;
 
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	my $ep_target_mask = $ep_shift ? (1 << $ep_shift) : 0; 
+	my $ep = cp_pos_info_en_passant $pos_info;
+	my ($ep_shift, $ep_target_mask);
+	if ($ep) {
+		$ep_shift = cp_en_passant_file_to_shift($ep);
+		$ep_target_mask = 1 << $ep_shift; 
+	} else {
+		$ep_shift = $ep_target_mask = 0;
+	}
 
 	# Pawn captures w/o promotions.
 	$pawn_mask = $my_pieces & $pawns & $regular_mask;
@@ -1119,10 +1133,13 @@ sub moveGivesCheck {
 			& ($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]);
 	my $rsliders = $my_pieces
 			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
-		# Remove the captured piece, as well.
-		$from_mask |= $ep_pawn_masks[$ep_shift];
+	my $ep = cp_pos_info_en_passant $pos_info;
+	if ($ep) {
+		my $ep_shift = cp_en_passant_file_to_shift($ep);
+		if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
+			# Remove the captured piece, as well.
+			$from_mask |= $ep_pawn_masks[$ep_shift];
+		}
 	}
 
 	if (($piece == CP_PAWN)
@@ -1211,8 +1228,10 @@ sub doMove {
 
 	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
 	my $in_check = cp_pos_in_check $self;
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	my $zk_update = $ep_shift ? ($zk_ep_files[$ep_shift & 0x7]) : 0;
+	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, !$to_move) : 0;
+	my $ep_file = $ep_shift & 7;
+	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
 	my $is_castling;
 
 	if ($piece == CP_KING) {
@@ -1305,22 +1324,22 @@ sub doMove {
 		$self->[CP_POS_HALF_MOVE_CLOCK]
 				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			_cp_pos_info_set_en_passant_shift($pos_info, ($from + (($to - $from) >> 1)));
+			_cp_pos_info_set_en_passant($pos_info, 0xf | ($from & 7));
 		} else {
-			_cp_pos_info_set_en_passant_shift($pos_info, 0);
+			_cp_pos_info_set_en_passant($pos_info, 0);
 		}
 	} elsif ($her_pieces & $to_mask) {
 		$self->[CP_POS_HALF_MOVE_CLOCK]
 				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
-		_cp_pos_info_set_en_passant_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant($pos_info, 0);
 	} elsif ($old_castling != $new_castling) {
 		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
-		_cp_pos_info_set_en_passant_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant($pos_info, 0);
 	} else {
 		++$self->[CP_POS_HALF_MOVE_CLOCK];
 		++$self->[CP_POS_REVERSIBLE_CLOCK];
-		_cp_pos_info_set_en_passant_shift($pos_info, 0);
+		_cp_pos_info_set_en_passant($pos_info, 0);
 	}
 
 	# Move all pieces involved.
@@ -1450,10 +1469,10 @@ sub undoMove {
 	my $double_pawn_push = $undo & 0x1;
 	if ($double_pawn_push) {
 		my $ep_file = $to & 0x7;
-		_cp_pos_info_set_en_passant_shift $pos_info, 16 + $to_move * 24 + $ep_file;
+		_cp_pos_info_set_en_passant($pos_info, (0xf | $ep_file));
 		$signature ^= $zk_ep_files[$ep_file];
 	} else {
-		_cp_pos_info_set_en_passant_shift $pos_info, 0;
+		_cp_pos_info_set_en_passant $pos_info, 0;
 	}
 
 	$signature ^= $zk_color;
@@ -1513,10 +1532,10 @@ sub toMove {
 	return cp_pos_to_move($self);
 }
 
-sub enPassantShift {
+sub enPassant {
 	my ($self) = @_;
 
-	return cp_pos_en_passant_shift($self);
+	return cp_pos_en_passant($self);
 }
 
 sub kingShift {
@@ -1952,17 +1971,22 @@ sub parseMove {
 		$captured = CP_QUEEN;
 	} elsif ($to_mask & cp_pos_kings($self)) {
 		$captured = CP_KING;
-	} elsif ($piece == CP_PAWN && $self->enPassantShift
-	         && (cp_move_to($move)) == $self->enPassantShift) {
+	} elsif ($piece == CP_PAWN && $self->enPassant
+	         && (cp_move_to($move) == $self->enPassantFileToShift($self->enPassant, $self->toMove))) {
 		$captured = CP_PAWN;
 		cp_move_set_en_passant $move, 1;
 	}
 	cp_move_set_captured $move, $captured;
-
 	cp_move_set_color $move, $self->toMove;
 
 	if (!$pseudo_legal) {
 		foreach my $candidate ($self->legalMoves) {
+			my $clan = $self->LAN($candidate);
+			my $mlan = $self->LAN($move);
+			if ($clan eq 'e7e5' || $mlan eq 'e7e5') {
+				#warn "candidate: $clan: $candidate";
+				#warn "move: $mlan: $move";
+			}
 			return $move if $candidate == $move;
 		}
 
@@ -2158,10 +2182,12 @@ sub __updateZobristKey {
 	}
 
 	my $pos_info = cp_pos_info $self;
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
-	if ($ep_shift) {
-		$signature ^= $zk_ep_files[$ep_shift & 0x7];
+
+	my $ep = cp_pos_info_en_passant $pos_info;
+	if ($ep) {
+		$signature ^= $zk_ep_files[$ep & 7];
 	}
+
 	my $castling = cp_pos_info_castling_rights $pos_info;
 	$signature ^= $zk_castling[$castling];
 
@@ -2357,6 +2383,12 @@ sub insufficientMaterial {
 
 	# In all other cases, we cannot determine the outcome.
 	return;
+}
+
+sub enPassantFileToShift {
+	my ($whatever, $ep_file, $turn) = @_;
+
+	return cp_en_passant_file_to_shift $ep_file, $turn;
 }
 
 # Do not remove this line!
@@ -2739,8 +2771,9 @@ sub toFEN {
 		$fen .= '- ';
 	}
 
-	if ($self->enPassantShift) {
-		$fen .= $self->shiftToSquare($self->enPassantShift);
+	my $ep = $self->enPassant;
+	if ($ep) {
+		$fen .= $self->shiftToSquare($self->enPassantFileToShift($ep));
 	} else {
 		$fen .= '-';
 	}
@@ -2847,7 +2880,6 @@ sub legalMoves {
 	my ($self) = @_;
 
 	my @legal;
-
 	foreach my $move ($self->pseudoLegalMoves) {
 		# Sets also captured piece and color.
 		my $undo_info = $self->doMove($move) or next;
@@ -2934,7 +2966,8 @@ sub SAN {
 	my $to_mask = 1 << $to;
 	my $to_move = $self->toMove;
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
-	my $ep_shift = $self->enPassantShift;
+	my $ep = $self->enPassant;
+	my $ep_shift = $ep ? $self->enPassantFileToShift($ep) : 0;
 	my @files = ('a' .. 'h');
 	my @ranks = ('1' .. '8');
 	my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
@@ -3093,7 +3126,7 @@ sub __parseSAN {
 		# Leading garbage?
 		if (@san) {
 			require Carp;
-			Carp::Croak(__"Illegal SAN string: leading garbage found!\n");
+			Carp::croak(__"Illegal SAN string: leading garbage found!\n");
 		}
 
 		$pattern = join '', $piece, 
@@ -3600,8 +3633,8 @@ sub dumpInfo {
 	}
 
 	$output .= 'En passant square: ';
-	if ($self->enPassantShift) {
-		$output .= $self->shiftToSquare($self->enPassantShift);
+	if ($self->enPassant) {
+		$output .= $self->shiftToSquare($self->enPassantFileToShift($self->enPassantFile));
 	} else {
 		$output .= '-';
 	}

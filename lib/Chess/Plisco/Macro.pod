@@ -263,9 +263,13 @@ Same as L<Chess::Plisco/reversibleClock>.
 
 Same as L<Chess::Plisco/halfMoves>.
 
-=item B<cp_pos_en_passant_shift(POS)>
+=item B<cp_pos_en_passant(POS)>
 
-Same as L<Chess::Plisco/enPassantShift>.
+Same as L<Chess::Plisco/enPassant>.
+
+=item B<cp_pos_en_passant_file(POS)>
+
+Same as L<Chess::Plisco/enPassantFile>.
 
 =item B<cp_pos_king_shift(POS)>
 
@@ -333,9 +337,14 @@ info B<INFO> as returned by L</cp_pos_info>.
 Same as L</cp_pos_to_move> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
-=item B<cp_pos_info_en_passant_shift(INFO)>
+=item B<cp_pos_info_en_passant(INFO)>
 
-Same as L</cp_pos_en_passant_shift> but work directly on position
+Same as L</cp_pos_en_passant> but work directly on position
+info B<INFO> as returned by L</cp_pos_info>.
+
+=item B<cp_pos_info_en_passant_file(INFO)>
+
+Same as L</cp_pos_en_passant_file> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
 =item B<cp_pos_info_king_shift(INFO)>
@@ -531,6 +540,10 @@ notation ("e4", "c5", ...).
 
 Calculate the square in coordinate notation ("e4", "c5", ...) for the bit shift
 offset B<SHIFT> (0-63).
+
+=item B<cp_ep_file_to_shift(F, C)>
+
+Same as en passant file B<F>, return the shift for colour B<C>.
 
 =item B<cp_abs(INTEGER)>
 

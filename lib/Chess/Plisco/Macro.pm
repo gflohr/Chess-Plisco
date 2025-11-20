@@ -68,13 +68,13 @@ _define cp_pos_info_black_king_side_castling_right => '$i', '$i & (1 << 2)';
 sub cp_pos_info_black_king_side_castling_right {}
 _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
 sub cp_pos_info_black_queen_side_castling_right {}
-_define cp_pos_info_en_passant_shift => '$i', '(($i & (0x3f << 4)) >> 4)';
-sub cp_pos_info_en_passant_shift {}
-_define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 10)) >> 10)';
+_define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
+sub cp_pos_info_en_passant {}
+_define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 8)) >> 8)';
 sub cp_pos_info_king_shift {}
-_define cp_pos_info_evasion => '$i', '(($i & (0x3 << 16)) >> 16)';
+_define cp_pos_info_evasion => '$i', '(($i & (0x3 << 14)) >> 14)';
 sub cp_pos_info_evasion {}
-_define cp_pos_info_to_move => '$i', '(($i & (1 << 18)) >> 18)';
+_define cp_pos_info_to_move => '$i', '(($i & (1 << 16)) >> 16)';
 sub cp_pos_info_to_move {}
 _define cp_pos_info_material => '$i', '($i >> 19)';
 sub cp_pos_info_material {}
@@ -89,14 +89,14 @@ _define _cp_pos_info_set_black_king_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 2)) | ($c << 2))';
 _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | ($c << 3))';
-_define _cp_pos_info_set_en_passant_shift => '$i', '$s',
-	'($i = ($i & ~(0x3f << 4)) | ($s << 4))';
+_define _cp_pos_info_set_en_passant => '$i', '$s',
+	'($i = ($i & ~(0xf << 4)) | ($s << 4))';
 _define _cp_pos_info_set_king_shift => '$i', '$s',
-	'($i = ($i & ~(0x3f << 10)) | ($s << 10))';
+	'($i = ($i & ~(0x3f << 8)) | ($s << 8))';
 _define _cp_pos_info_set_evasion => '$i', '$e',
-	'($i = ($i & ~(0x3 << 16)) | ($e << 16))';
+	'($i = ($i & ~(0x3 << 14)) | ($e << 14))';
 _define _cp_pos_info_set_to_move => '$i', '$c',
-	'($i = ($i & ~(1 << 18)) | ($c << 18))';
+	'($i = ($i & ~(1 << 16)) | ($c << 16))';
 _define _cp_pos_info_set_material => '$i', '$m',
 	'($i = (($i & 0x7fffffff) | ($m << 19)))';
 
@@ -119,8 +119,8 @@ _define cp_pos_black_queen_side_castling_right => '$p',
 sub cp_pos_black_queen_side_castling_right {}
 _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 sub cp_pos_to_move {}
-_define cp_pos_en_passant_shift => '$p', '(cp_pos_info_en_passant_shift(cp_pos_info($p)))';
-sub cp_pos_en_passant_shift {}
+_define cp_pos_en_passant => '$p', '(cp_pos_info_en_passant(cp_pos_info($p)))';
+sub cp_pos_en_passant {}
 _define cp_pos_king_shift => '$p', '(cp_pos_info_king_shift(cp_pos_info($p)))';
 sub cp_pos_king_shift {}
 _define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
@@ -235,6 +235,8 @@ _define cp_square_to_shift => '$s',
 sub cp_square_to_shift {}
 _define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 sub cp_shift_to_square {}
+_define cp_en_passant_file_to_shift => '$f', '$c', '16 + $c * 24 + $f';
+sub cp_en_passant_file_to_shift {}
 
 _define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
 	'movesFromMask.pm';
