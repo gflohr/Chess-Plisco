@@ -1250,19 +1250,20 @@ sub doMove {
 
 	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
 
-	my ($captured, $zk_captured) = (CP_NO_PIECE, CP_NO_PIECE);
+	my $captured = CP_NO_PIECE;
 	my $captured_mask = 0;
+	my $is_ep;
 	if ($to_mask & $her_pieces) {
 		if ($to_mask & cp_pos_pawns($self)) {
-			$captured = $zk_captured = CP_PAWN;
+			$captured = CP_PAWN;
 		} elsif ($to_mask & cp_pos_knights($self)) {
-			$captured = $zk_captured = CP_KNIGHT;
+			$captured = CP_KNIGHT;
 		} elsif ($to_mask & cp_pos_bishops($self)) {
-			$captured = $zk_captured = CP_BISHOP;
+			$captured = CP_BISHOP;
 		} elsif ($to_mask & cp_pos_rooks($self)) {
-			$captured = $zk_captured = CP_ROOK;
+			$captured = CP_ROOK;
 		} else {
-			$captured = $zk_captured = CP_QUEEN;
+			$captured = CP_QUEEN;
 		}
 		$captured_mask = 1 << $to;
 	}
@@ -1284,7 +1285,7 @@ sub doMove {
 			}
 			
 			$captured = CP_PAWN;
-			$zk_captured = CP_KING; # This is interpreted as an ep capture.
+			$is_ep = 1;
 		}
 		$self->[CP_POS_HALF_MOVE_CLOCK]
 				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
@@ -1351,6 +1352,7 @@ sub doMove {
 	# For the signature lookup we have to replace the real captured piece
 	# because it may be a king which is interpreted as a pawn captured en
 	# passant.
+	my $zk_captured = $is_ep ? CP_KING : $captured;
 	$signature ^= $zk_update
 		^ $zk_move_masks[($zk_captured << 18) | ($move & 0x23_ffff)];
 
