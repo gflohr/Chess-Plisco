@@ -37,6 +37,9 @@ For version 1, a number of design errors will be fixed.
 			- [Bishop Pair](#bishop-pair)
 			- [Poisoned Pawn](#poisoned-pawn)
 			- [Encourage Exchange of Pieces](#encourage-exchange-of-pieces)
+	- [Perft Times](#perft-times)
+		- [By Copy Before](#by-copy-before)
+		- [By Undo Before](#by-undo-before)
 
 
 ## General
@@ -291,3 +294,55 @@ increase the bonus proportionally to the static evaluation.
 Maybe, the raw material count is a better indicator for this because a high
 evaluation can also be a sign of a lot of tension that could vanish if the
 position is simplified.
+
+## Perft Times
+
+### By Copy Before
+
+go perft 6
+b1a3: 4856835
+b1c3: 5708064
+g1f3: 5723523
+g1h3: 4877234
+a2a3: 4463267
+b2b3: 5310358
+c2c3: 5417640
+d2d3: 8073082
+e2e3: 9726018
+f2f3: 4404141
+g2g3: 5346260
+h2h3: 4463070
+a2a4: 5363555
+b2b4: 5293555
+c2c4: 5866666
+d2d4: 8879566
+e2e4: 9771632
+f2f4: 4890429
+g2g4: 5239875
+h2h4: 5385554
+info nodes: 119060324 (419.027178 s, nps: 284135)
+
+### By Undo Before
+
+go perft 6
+b1a3: 4856835
+b1c3: 5708064
+g1f3: 5723523
+g1h3: 4877234
+a2a3: 4463267
+b2b3: 5310358
+c2c3: 5417640
+d2d3: 8073082
+e2e3: 9726018
+f2f3: 4404141
+g2g3: 5346260
+h2h3: 4463070
+a2a4: 5363555
+b2b4: 5293555
+c2c4: 5866666
+d2d4: 8879566
+e2e4: 9771632
+f2f4: 4890429
+g2g4: 5239875
+h2h4: 5385554
+info nodes: 119060324 (518.931724 s, nps: 229434)
