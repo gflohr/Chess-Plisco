@@ -1358,8 +1358,11 @@ sub doMove {
 		$zk_update ^= _cp_zk_lookup $promote, $to_move, $to;
 	}
 
+	# Bit 1: double pawn push.
+	my $undo = 0;
 	if ($piece == CP_PAWN && _cp_pawn_double_step $from, $to) {
 		$zk_update ^= $zk_ep_files[$from & 0x7];
+		$undo |= 0x1;
 	}
 
 	cp_move_set_color($move, $to_move);
@@ -1367,7 +1370,7 @@ sub doMove {
 
 	$zk_update ^= $zk_color;
 
-	my @undo_info = ($move, $captured_mask, @state);
+	my @undo_info = ($move, $undo, $captured_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
@@ -1397,7 +1400,9 @@ sub doMove {
 sub undoMove {
 	my ($self, $undo_info) = @_;
 
-	my ($move, $captured_mask, @state) = @$undo_info;
+	my ($move, $undo, $captured_mask, @state) = @$undo_info;
+
+	my $signature = $self->[CP_POS_SIGNATURE];
 
 	my ($from, $to, $promote, $piece, $captured) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1413,6 +1418,7 @@ sub undoMove {
 
 		$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
 		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
+		$signature ^= $castling_rook_zk_updates[$to];
 	}
 
 	$self->[CP_POS_WHITE_PIECES + $to_move ] ^= $move_mask;
@@ -1421,14 +1427,36 @@ sub undoMove {
 		my $remove_mask = 1 << $to;
 		$self->[CP_POS_PAWNS] |= 1 << $from;
 		$self->[$promote] ^= $remove_mask;
+
+		# Remove the promotion piece and replace it with the pawn.
+		$signature ^= _cp_zk_lookup $promote, $to_move, $to;
+		$signature ^= _cp_zk_lookup CP_PAWN, $to_move, $from;
 	} else {
 		$self->[$piece] ^= $move_mask;
+
+		$signature ^= _cp_zk_lookup $piece, $to_move, $to;
+		$signature ^= _cp_zk_lookup $piece, $to_move, $from;
 	}
 
 	if ($captured) {
 		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
 		$self->[$captured] |= $captured_mask;
+
+		$signature ^= _cp_zk_lookup $captured, $to_move, $to;
 	}
+	
+	my $pos_info = $self->[CP_POS_INFO];
+
+	my $double_pawn_push = $undo & 0x1;
+	if ($double_pawn_push) {
+		my $ep_file = $to & 0x7;
+		_cp_pos_info_set_en_passant_shift $pos_info, 16 + $to_move * 24 + $ep_file;
+		$signature ^= $zk_ep_files[$ep_file];
+	} else {
+		_cp_pos_info_set_en_passant_shift $pos_info, 0;
+	}
+
+	$signature ^= $zk_color;
 
 	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
 
