@@ -18,9 +18,9 @@ For version 1, a number of design errors will be fixed.
 			- [Changes](#changes)
 			- [64-Bit Fields](#64-bit-fields)
 			- [Bit Fields](#bit-fields)
+				- [Castling Rights (2 bits)](#castling-rights-2-bits)
 				- [Turn (1 bit)](#turn-1-bit)
 				- [En-Passant File (3 bits)](#en-passant-file-3-bits)
-				- [Castling Rights (2 bits)](#castling-rights-2-bits)
 				- [Halfmove Clock (22 bits)](#halfmove-clock-22-bits)
 				- [Engine: Check Evasion Squares (3 bits)](#engine-check-evasion-squares-3-bits)
 				- [Engine: Check Source Squares (12 bits)](#engine-check-source-squares-12-bits)
@@ -129,6 +129,10 @@ Engine:
 The reversible move clock is removed because it is not necessary for the
 core library.
 
+##### Castling Rights (2 bits)
+
+No change to previous version.
+
 ##### Turn (1 bit)
 
 As before, 0 for white, 1 for black.
@@ -141,10 +145,6 @@ We currently store the shift (6 bits) but is sufficient to store the file:
 
 There are 3 ranks between white's en-passant squares and black's en-passant
 squares. That is why the multiplication with the turn (0 or 1) works.
-
-##### Castling Rights (2 bits)
-
-No change to previous version.
 
 ##### Halfmove Clock (22 bits)
 
