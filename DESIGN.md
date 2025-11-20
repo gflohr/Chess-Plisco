@@ -20,7 +20,7 @@ For version 1, a number of design errors will be fixed.
 			- [Bit Fields](#bit-fields)
 				- [Castling Rights (2 bits)](#castling-rights-2-bits)
 				- [Turn (1 bit)](#turn-1-bit)
-				- [En-Passant File (3 bits)](#en-passant-file-3-bits)
+				- [En-Passant File (4 bits)](#en-passant-file-4-bits)
 				- [Halfmove Clock (22 bits)](#halfmove-clock-22-bits)
 				- [Engine: Check Evasion Squares (3 bits)](#engine-check-evasion-squares-3-bits)
 				- [Engine: Check Source Squares (12 bits)](#engine-check-source-squares-12-bits)
@@ -137,7 +137,7 @@ No change to previous version.
 
 As before, 0 for white, 1 for black.
 
-##### En-Passant File (3 bits)
+##### En-Passant File (4 bits)
 
 We currently store the shift (6 bits) but is sufficient to store the file:
 
