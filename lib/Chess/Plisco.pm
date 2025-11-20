@@ -3119,7 +3119,7 @@ sub perftByUndoWithOutput {
 		my $subnodes;
 
 		if ($depth > 1) {
-			$subnodes = $self->perft($depth - 1);
+			$subnodes = $self->perftByUndo($depth - 1);
 		} else {
 			$subnodes = 1;
 		}
