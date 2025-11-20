@@ -303,6 +303,9 @@ my @pawn_masks;
 # Two-dimensional array for determining common lines (diagonals or files/ranks).
 my @common_lines;
 
+# FIXME! Merge them all into one array with one more level so that we save
+# array lookups.
+
 # Information for castlings, part 1. Lookup by target square of the king, the
 # move mask of the rook and the negative mask for the castling rights.
 my @castling_rook_move_masks;
@@ -314,6 +317,10 @@ my @castling_rights_rook_masks;
 # Information for castlings, part 3. For the king destination squares c1, g1,
 # c8, and g8, where does the rook move? Needed for moveGivesCheck().
 my @castling_rook_to_mask;
+
+# Information for castlings, part 4. The required signature changes for the
+# castlings.
+my @castling_rook_zk_updates;
 
 # Change in material.  Looked up via a combined mask of color to move,
 # captured and promotion piece.
@@ -335,8 +342,6 @@ my @zk_pieces;
 my @zk_castling;
 my @zk_ep_files;
 my $zk_color;
-
-my @zk_move_masks;
 
 my @move_numbers;
 
@@ -1208,6 +1213,7 @@ sub doMove {
 	my $in_check = cp_pos_in_check $self;
 	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
 	my $zk_update = $ep_shift ? ($zk_ep_files[$ep_shift & 0x7]) : 0;
+	my $is_castling;
 
 	if ($piece == CP_KING) {
 		# Does the king move into check?
@@ -1225,6 +1231,8 @@ sub doMove {
 			my $rook_move_mask = $castling_rook_move_masks[$to];
 			$self->[CP_POS_ROOKS] ^= $rook_move_mask;
 			$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
+
+			$is_castling = 1;
 		}
 
 		# Remove the castling rights.
@@ -1247,6 +1255,13 @@ sub doMove {
 	# start or the destination square is a1, h1, a8, or h8.
 	$new_castling &= $castling_rights_rook_masks[$from];
 	$new_castling &= $castling_rights_rook_masks[$to];
+
+	if ($is_castling) {
+		# Update Zobrist key for the rook.
+		my $wanted_to = CP_C1;
+
+		$zk_update ^= $castling_rook_zk_updates[$to];
+	}
 
 	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
 
@@ -1295,8 +1310,6 @@ sub doMove {
 			_cp_pos_info_set_en_passant_shift($pos_info, 0);
 		}
 	} elsif ($her_pieces & $to_mask) {
-		# No need to check for en passant because pawn moves reset the
-		# half-move clock anyway.
 		$self->[CP_POS_HALF_MOVE_CLOCK]
 				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		_cp_pos_info_set_en_passant_shift($pos_info, 0);
@@ -1315,10 +1328,21 @@ sub doMove {
 		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $captured_mask;
 		$self->[$captured] ^= $captured_mask;
 		cp_move_set_captured($move, $captured);
+
+		if ($is_ep) {
+			# The captured piece is not on the to square.
+			my $ep_file = $to & 0x7;
+			my $captured_to = 24 + !$to_move * 8 + $ep_file;
+			$zk_update ^= _cp_zk_lookup CP_PAWN, !$to_move, $captured_to;
+		} else {
+			$zk_update ^= _cp_zk_lookup $captured, !$to_move, $to;
+		}
 	}
 
 	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
 	$self->[$piece] ^= $move_mask;
+	$zk_update ^= _cp_zk_lookup $piece, $to_move, $from;
+	$zk_update ^= _cp_zk_lookup $piece, $to_move, $to;
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -1329,9 +1353,18 @@ sub doMove {
 	if ($promote) {
 		$self->[CP_POS_PAWNS] ^= $to_mask;
 		$self->[$promote] ^= $to_mask;
+
+		$zk_update ^= _cp_zk_lookup CP_PAWN, $to_move, $to;
+		$zk_update ^= _cp_zk_lookup $promote, $to_move, $to;
+	}
+
+	if ($piece == CP_PAWN && _cp_pawn_double_step $from, $to) {
+		$zk_update ^= $zk_ep_files[$from & 0x7];
 	}
 
 	cp_move_set_color($move, $to_move);
+	$zk_update ^= $zk_color;
+
 	my @undo_info = ($move, $captured_mask, @state);
 
 	++$self->[CP_POS_HALF_MOVES];
@@ -1342,6 +1375,7 @@ sub doMove {
 	# simply add it.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
+	# FIXME! Simplify this!
 	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
 
 	if ($old_castling != $new_castling) {
@@ -1349,12 +1383,7 @@ sub doMove {
 			^ $zk_castling[$new_castling];
 	}
 
-	# For the signature lookup we have to replace the real captured piece
-	# because it may be a king which is interpreted as a pawn captured en
-	# passant.
-	my $zk_captured = $is_ep ? CP_KING : $captured;
-	$signature ^= $zk_update
-		^ $zk_move_masks[($zk_captured << 18) | ($move & 0x23_ffff)];
+	$signature ^= $zk_update;
 
 	$self->[CP_POS_SIGNATURE] = $signature;
 
@@ -2921,10 +2950,15 @@ sub equals {
 	return $self;
 }
 
+my %rng_seen;
 sub RNG {
-	$cp_random ^= ($cp_random << 21);
-	$cp_random ^= (($cp_random >> 35) & 0x1fff_ffff);
-	$cp_random ^= ($cp_random << 4);
+	while (1) {
+		$cp_random ^= ($cp_random << 21);
+		$cp_random ^= (($cp_random >> 35) & 0x1fff_ffff);
+		$cp_random ^= ($cp_random << 4);
+
+		last if !$rng_seen{$cp_random}++;
+	}
 
 	return $cp_random;
 }
@@ -3795,6 +3829,25 @@ foreach my $m1 (
 	}
 }
 
+
+# Zobrist keys.
+for (my $i = 0; $i < 768; ++$i) {
+	push @zk_pieces, RNG();
+}
+for (my $i = 0; $i < 16; ++$i) {
+	push @zk_castling, RNG();
+}
+for (my $i = 0; $i < 8; ++$i) {
+	push @zk_ep_files, RNG();
+}
+$zk_color = RNG();
+
+# The indices are the to squares of the king.
+$castling_rook_zk_updates[CP_C1] = $zk_pieces[384] ^ $zk_pieces[387];
+$castling_rook_zk_updates[CP_G1] = $zk_pieces[389] ^ $zk_pieces[391];
+$castling_rook_zk_updates[CP_C8] = $zk_pieces[504] ^ $zk_pieces[507];
+$castling_rook_zk_updates[CP_G8] = $zk_pieces[509] ^ $zk_pieces[511];
+
 # The indices are the target squares of the king.
 $castling_rook_move_masks[CP_C1] = CP_1_MASK & (CP_A_MASK | CP_D_MASK);
 $castling_rook_move_masks[CP_G1] = CP_1_MASK & (CP_H_MASK | CP_F_MASK);
@@ -3847,302 +3900,6 @@ foreach my $from (0 .. 63) {
 			$obscured_masks[$from]->[$to] = $diagonal & ($from_mask - 1);
 		} else {
 			$obscured_masks[$from]->[$to] = $diagonal & ~($from_mask - 1) & ~$from_mask;
-		}
-	}
-}
-
-# Zobrist keys.
-my %zk_seen; # FIXME! Use that!
-for (my $i = 0; $i < 768; ++$i) {
-	push @zk_pieces, RNG();
-}
-for (my $i = 0; $i < 16; ++$i) {
-	push @zk_castling, RNG();
-}
-for (my $i = 0; $i < 8; ++$i) {
-	push @zk_ep_files, RNG();
-}
-$zk_color = RNG();
-
-@zk_move_masks = (0) x 0x40_0000;
-# Moves:
-# 0-5: to
-# 6-11: from
-# 12-14: promote
-# 15-17: piece
-# 18-20: captured
-# 21: color
-my $gen_moves = sub {
-	my ($moves, $piece, $from, $to, $color) = @_;
-	my $move = $to | ($from << 6) | ($piece << 15) | ($color << 21);
-	push @$moves, $move if $piece != CP_PAWN;
-	push @$moves, $move | (CP_PAWN << 18);
-	push @$moves, $move | (CP_KNIGHT << 18);
-	push @$moves, $move | (CP_BISHOP << 18);
-	push @$moves, $move | (CP_ROOK << 18);
-	push @$moves, $move | (CP_QUEEN << 18);
-
-	# En passant.
-	if ($color == CP_WHITE && $piece == CP_PAWN && $to >= CP_A6 && $to <= CP_H6) {
-		push @$moves, $move | (CP_KING << 18);
-	} elsif ($color == CP_BLACK && $piece == CP_PAWN && $to >= CP_A3 && $to <= CP_H3) {
-		push @$moves, $move | (CP_KING << 18);
-	}
-};
-my $gen_promotions = sub {
-	my ($moves, $from, $color) = @_;
-	my $move = ($from << 6) | (CP_PAWN << 15) | ($color << 21);
-	my $to = $color ? $from - 8 : $from + 8;
-	# Normal promotions.
-	push @$moves, $move | (CP_QUEEN << 12) | $to;
-	push @$moves, $move | (CP_ROOK << 12) | $to;
-	push @$moves, $move | (CP_BISHOP << 12) | $to;
-	push @$moves, $move | (CP_KNIGHT << 12) | $to;
-	# Promotions with captures to the left-side.
-	if (($from & 0x7) != CP_FILE_A) {
-		$to = $color ? $from - 9 : $from + 7;
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_QUEEN << 18);
-	}
-	# Promotions with captures to the right-side.
-	if (($from & 0x7) != CP_FILE_H) {
-		$to = $color ? $from - 7 : $from + 9;
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_QUEEN << 18);
-	}
-};
-
-foreach my $file (CP_FILE_A .. CP_FILE_H) {
-	my $mb = 1 << 21;
-	foreach my $rank (CP_RANK_1 .. CP_RANK_8) {
-		my @moves;
-		my $from = coordinatesToShift(undef, $file, $rank);
-		my $move_from = $from << 6;
-
-		# Pawn moves.
-		if ($rank == CP_RANK_2) {
-			# White single step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from + 8);
-			# White double step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from + 16);
-			# White captures.
-			$gen_moves->(\@moves, CP_PAWN, $from, $from + 7, CP_WHITE)
-				if $file != CP_FILE_A;
-			$gen_moves->(\@moves, CP_PAWN, $from, $from + 9, CP_WHITE)
-				if $file != CP_FILE_H;
-			# Black promotions.
-			$gen_promotions->(\@moves, $from, CP_BLACK);
-		} elsif ($rank > CP_RANK_2 && $rank < CP_RANK_7) {
-			# White single steps.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from + 8);
-			# White captures.
-			$gen_moves->(\@moves, CP_PAWN, $from, $from + 7, CP_WHITE)
-				if $file != CP_FILE_A;
-			$gen_moves->(\@moves, CP_PAWN, $from, $from + 9, CP_WHITE)
-				if $file != CP_FILE_H;
-			# Black single steps.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from - 8) | $mb;
-			# Black captures.
-			$gen_moves->(\@moves, CP_PAWN, $from, $from - 9, CP_BLACK)
-				if $file != CP_FILE_A;
-			$gen_moves->(\@moves, CP_PAWN, $from, $from - 7, CP_BLACK)
-				if $file != CP_FILE_H;
-		} elsif ($rank == CP_RANK_7) {
-			# Black single step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from - 8) | $mb;
-			# Black double step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from - 16) | $mb;
-			# Black captures.
-			$gen_moves->(\@moves, CP_PAWN, $from, $from - 9, CP_BLACK)
-				if $file != CP_FILE_A;
-			$gen_moves->(\@moves, CP_PAWN, $from, $from - 7, CP_BLACK)
-				if $file != CP_FILE_H;
-			# White promotions.
-			$gen_promotions->(\@moves, $from, CP_WHITE);
-		}
-
-		# Knight moves.
-		my $attack_mask = $knight_attack_masks[$from];
-		while ($attack_mask) {
-			my $to = bitboardCountTrailingZbits(undef, $attack_mask);
-			$gen_moves->(\@moves, CP_KNIGHT, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_KNIGHT, $from, $to, CP_BLACK);
-			$attack_mask = bitboardClearLeastSet(undef, $attack_mask);
-		}
-
-		# Bishop and bishop-style queen moves.
-		my ($to, $to_file, $to_rank);
-		# North-east.
-		$to = $from;
-		for (my ($to_file, $to_rank) = ($file + 1, $rank + 1);
-				$to_file <= CP_FILE_H && $to_rank <= CP_RANK_8;
-				++$to_file, ++$to_rank) {
-			$to += 9;
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_BLACK);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_BLACK);
-		}
-		# South-east.
-		$to = $from;
-		for (my ($to_file, $to_rank) = ($file + 1, $rank - 1);
-				$to_file <= CP_FILE_H && $to_rank >= CP_RANK_1;
-				++$to_file, --$to_rank) {
-			$to -= 7;
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_BLACK);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_BLACK);
-		}
-		# South-west.
-		$to = $from;
-		for (my ($to_file, $to_rank) = ($file - 1, $rank - 1);
-				$to_file >= CP_FILE_A && $to_rank >= CP_RANK_1;
-				--$to_file, --$to_rank) {
-			$to -= 9;
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_BLACK);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_BLACK);
-		}
-		# North-west.
-		$to = $from;
-		for (my ($to_file, $to_rank) = ($file - 1, $rank + 1);
-				$to_file >= CP_FILE_A && $to_rank <= CP_RANK_8;
-				--$to_file, ++$to_rank) {
-			$to += 7;
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_BISHOP, $from, $to, CP_BLACK);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_BLACK);
-		}
-
-		# Rook and rook-style queen moves.
-		foreach my $dist_to (-7 .. -1, +1 .. +7) {
-			my $to = $from + $dist_to;
-			next if $to < 0 || $to > 63;
-			if (($from & 0x38) == ($to & 0x38)) {
-				$gen_moves->(\@moves, CP_ROOK, $from, $to, CP_WHITE);
-				$gen_moves->(\@moves, CP_ROOK, $from, $to, CP_BLACK);
-				$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_WHITE);
-				$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_BLACK);
-			}
-		}
-		foreach my $dist_to (-7 .. -1, +1 .. +7) {
-			my $to = $from + 8 * $dist_to;
-			next if $to < 0 || $to > 63;
-			if (($from & 0x7) == ($to & 0x7)) {
-				$gen_moves->(\@moves, CP_ROOK, $from, $to, CP_WHITE);
-				$gen_moves->(\@moves, CP_ROOK, $from, $to, CP_BLACK);
-				$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_WHITE);
-				$gen_moves->(\@moves, CP_QUEEN, $from, $to, CP_BLACK);
-			}
-		}
-
-		# King moves.
-		$attack_mask = $king_attack_masks[$from];
-		while ($attack_mask) {
-			my $to = bitboardCountTrailingZbits(undef, $attack_mask);
-			$gen_moves->(\@moves, CP_KING, $from, $to, CP_WHITE);
-			$gen_moves->(\@moves, CP_KING, $from, $to, CP_BLACK);
-			$attack_mask = bitboardClearLeastSet(undef, $attack_mask);
-		}
-
-		# Castlings.
-		if ($from == CP_E1) {
-			push @moves, ((CP_KING << 15) | (CP_E1 << 6) | CP_G1);
-			push @moves, ((CP_KING << 15) | (CP_E1 << 6) | CP_C1);
-		} elsif ($from == CP_E8) {
-			push @moves, ((CP_KING << 15) | (CP_E8 << 6) | CP_G8) | $mb;
-			push @moves, ((CP_KING << 15) | (CP_E8 << 6) | CP_C8) | $mb;
-		}
-
-		push @move_numbers, @moves;
-
-		foreach my $move (@moves) {
-			my $is_ep;
-			my $color = 1 & ($move >> 21);
-			my $captured = 0x7 & ($move >> 18);
-			if ($captured == CP_KING) {
-				$captured = CP_PAWN;
-				$is_ep = 1;
-			}
-			my ($to, $from, $promote, $piece) = (
-				moveTo(undef, $move),
-				moveFrom(undef, $move),
-				movePromote(undef, $move),
-				movePiece(undef, $move),
-			);
-
-			my $zk_update = __zobristKeyLookup(undef, $piece, $color, $from)
-				^ __zobristKeyLookup(undef, $piece, $color, $to);
-
-			$zk_update ^= $zk_color;
-
-			# Castling?
-			if ($piece == CP_KING && (($from - $to) & 0x3) == 0x2) {
-				my ($rook_from, $rook_to);
-				if ($color) {
-					if ($to > $from) {
-						($rook_from, $rook_to) = (CP_H8, CP_F8);
-					} else {
-						($rook_from, $rook_to) = (CP_A8, CP_D8);
-					}
-				} else {
-					if ($to > $from) {
-						($rook_from, $rook_to) = (CP_H1, CP_F1);
-					} else {
-						($rook_from, $rook_to) = (CP_A1, CP_D1);
-					}
-				}
-				$zk_update ^= __zobristKeyLookup(undef, CP_ROOK, $color, $rook_from)
-					^ __zobristKeyLookup(undef, CP_ROOK, $color, $rook_to);
-			} elsif ($is_ep) {
-				my $ep_file = $to & 0x7;
-				my $ep_shift = $color ? $to + 8 : $to - 8;
-				$zk_update ^= __zobristKeyLookup(undef, CP_PAWN, !$color, $ep_shift);
-			} elsif (CP_PAWN == $piece
-					&& (($to - $from == 16) || ($to - $from == -16))) {
-				# Pawn double step?
-				$zk_update ^= $zk_ep_files[$from & 0x7];
-			} elsif ($captured) {
-				$zk_update ^= __zobristKeyLookup(undef, $captured, !$color, $to);
-			}
-
-			if ($promote) {
-				$zk_update ^= __zobristKeyLookup(undef, CP_PAWN, $color, $to);
-				$zk_update ^= __zobristKeyLookup(undef, $promote, $color, $to);
-			}
-
-			$zk_move_masks[$move] = $zk_update;
 		}
 	}
 }
