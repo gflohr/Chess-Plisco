@@ -732,7 +732,7 @@ sub __checkEnPassantState {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			_cp_pos_info_set_en_passant $pos_info, ((1 << 4) | ($ep_shift & 0x7))
+			_cp_pos_info_set_en_passant $pos_info, ((1 << 3) | ($ep_shift & 0x7))
 		}
 	} elsif ($to_move == CP_BLACK) {
 		if ($ep_square !~ /^[a-h]3$/) {
@@ -742,7 +742,7 @@ sub __checkEnPassantState {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			_cp_pos_info_set_en_passant $pos_info, ((1 << 4) | ($ep_shift & 0x7))
+			_cp_pos_info_set_en_passant $pos_info, ((1 << 3) | ($ep_shift & 0x7))
 		}
 	}
 
@@ -1324,7 +1324,7 @@ sub doMove {
 		$self->[CP_POS_HALF_MOVE_CLOCK]
 				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			_cp_pos_info_set_en_passant($pos_info, 0xf | ($from & 7));
+			_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | ($from & 7)));
 		} else {
 			_cp_pos_info_set_en_passant($pos_info, 0);
 		}
@@ -1469,7 +1469,7 @@ sub undoMove {
 	my $double_pawn_push = $undo & 0x1;
 	if ($double_pawn_push) {
 		my $ep_file = $to & 0x7;
-		_cp_pos_info_set_en_passant($pos_info, (0xf | $ep_file));
+		_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | $ep_file));
 		$signature ^= $zk_ep_files[$ep_file];
 	} else {
 		_cp_pos_info_set_en_passant $pos_info, 0;
@@ -2777,7 +2777,9 @@ sub toFEN {
 
 	my $ep = $self->enPassant;
 	if ($ep) {
-		$fen .= $self->shiftToSquare($self->enPassantFileToShift($ep, $self->toMove));
+		my $ep_shift = $self->enPassantFileToShift($ep, $self->toMove);
+		my $square = $self->shiftToSquare($ep_shift);
+		$fen .= $square;
 	} else {
 		$fen .= '-';
 	}

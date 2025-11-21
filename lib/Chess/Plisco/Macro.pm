@@ -235,7 +235,7 @@ _define cp_square_to_shift => '$s',
 sub cp_square_to_shift {}
 _define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 sub cp_shift_to_square {}
-_define cp_en_passant_file_to_shift => '$f', '$c', '16 + !$c * 24 + $f';
+_define cp_en_passant_file_to_shift => '$f', '$c', '16 + !($c) * 24 + ($f & 0x7)';
 sub cp_en_passant_file_to_shift {}
 
 _define_from_file _cp_moves_from_mask => '$t', '@m', '$b',

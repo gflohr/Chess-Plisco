@@ -69,28 +69,29 @@ GAME: while ($pgn->read_game) {
 			last;
 		}
 
+		my $copy = $pos->copy;
 		my $undo_info = $pos->doMove($move);
 		if (!$undo_info) {
 			report_failure $pgn, $pos,
 				"\ncannot apply move '$san'\n", $halfmove;
 			last;
 		} else {
-			ok $undo_info, "do move $san for position $pos";
+			ok $undo_info, "do move $san for position $copy";
 		}
 		push @undo_infos, $undo_info;
 		my $fen = $pos->toFEN;
-		push @fen, $pos->toFEN;
+		push @fen, $fen;
 
 		my $signature = $pos->signature;
 		push @signatures, $pos->signature;
 		
 		$signatures{$signature}->{significant_for_repetition $fen} = 1;
 
-		my $copy_from_fen = Chess::Plisco->new($fen[-1]);
+		my $copy_from_fen = Chess::Plisco->new($fen);
 		if ($pos->signature != $copy_from_fen->signature) {
 			my $sig_from_pos = $copy_from_fen->signature;
 			my $sig_from_move = $pos->signature;
-			report_failure $pgn, $pos,
+			report_failure $pgn, $copy,
 				"\nsignatures differ after move '$san':"
 				. " $sig_from_pos(from position)"
 				. " != $sig_from_move(from move)\n", $halfmove;
