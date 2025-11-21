@@ -2240,7 +2240,7 @@ sub __dumpMove {
 	my $ep = (cp_move_en_passant $move) ? 'en passant: yes' : 'en passant no';
 	my $ep_file;
 	if ($ep) {
-		my $file = chr(ord('a') + $ep & 0x3);
+		my $file = chr(ord('a') + ($ep & 0x3));
 		$ep_file = "en passant file: $file";
 	} else {
 		$ep_file = "en passant file: -";
@@ -2471,7 +2471,7 @@ sub checkPseudoLegalMove {
 			$captured = CP_QUEEN;
 		}
 	} elsif ($ep_shift && $ep_shift == $to) {
-		cp_move_set_en_passant $move, ((1 << 4) | ($to & 0x3));
+		cp_move_set_en_passant $move, 1;
 		$captured = CP_PAWN;
 	}
 

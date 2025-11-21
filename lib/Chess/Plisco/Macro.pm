@@ -183,7 +183,7 @@ _define cp_move_set_color => '$m', '$c',
 _define cp_move_en_passant => '$m', '(($m >> 22) & 0x1)';
 sub cp_move_en_passant {}
 _define cp_move_set_en_passant => '$m', '$c',
-		'(($m) = (($m) & ~0x40_0000) | (($c) & 0xf) << 22)';
+		'(($m) = (($m) & ~0x40_0000) | (($c) & 0x1) << 22)';
 sub cp_move_set_captured {}
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 sub cp_move_coordinate_notation {}
