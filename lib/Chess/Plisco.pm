@@ -906,7 +906,7 @@ sub pseudoLegalMoves {
 	my $ep_shift;
 	my $ep_target_mask;
 	if ($ep) {
-		$ep_shift = cp_en_passant_file_to_shift($ep);
+		$ep_shift = cp_en_passant_file_to_shift($ep, $to_move);
 		$ep_target_mask = 1 << $ep_shift; 
 	} else {
 		$ep_shift = $ep_target_mask = 0;
@@ -1053,7 +1053,7 @@ sub pseudoLegalAttacks {
 	my $ep = cp_pos_info_en_passant $pos_info;
 	my ($ep_shift, $ep_target_mask);
 	if ($ep) {
-		$ep_shift = cp_en_passant_file_to_shift($ep);
+		$ep_shift = cp_en_passant_file_to_shift($ep, $to_move);
 		$ep_target_mask = 1 << $ep_shift; 
 	} else {
 		$ep_shift = $ep_target_mask = 0;
@@ -1135,7 +1135,7 @@ sub moveGivesCheck {
 			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
 	my $ep = cp_pos_info_en_passant $pos_info;
 	if ($ep) {
-		my $ep_shift = cp_en_passant_file_to_shift($ep);
+		my $ep_shift = cp_en_passant_file_to_shift($ep, $to_move);
 		if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
 			# Remove the captured piece, as well.
 			$from_mask |= $ep_pawn_masks[$ep_shift];
@@ -1229,7 +1229,7 @@ sub doMove {
 	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
 	my $in_check = cp_pos_in_check $self;
 	my $ep = cp_pos_info_en_passant $pos_info;
-	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, !$to_move) : 0;
+	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
 	my $ep_file = $ep_shift & 7;
 	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
 	my $is_castling;
@@ -1981,12 +1981,6 @@ sub parseMove {
 
 	if (!$pseudo_legal) {
 		foreach my $candidate ($self->legalMoves) {
-			my $clan = $self->LAN($candidate);
-			my $mlan = $self->LAN($move);
-			if ($clan eq 'e7e5' || $mlan eq 'e7e5') {
-				#warn "candidate: $clan: $candidate";
-				#warn "move: $mlan: $move";
-			}
 			return $move if $candidate == $move;
 		}
 
@@ -2773,7 +2767,7 @@ sub toFEN {
 
 	my $ep = $self->enPassant;
 	if ($ep) {
-		$fen .= $self->shiftToSquare($self->enPassantFileToShift($ep));
+		$fen .= $self->shiftToSquare($self->enPassantFileToShift($ep, $self->toMove));
 	} else {
 		$fen .= '-';
 	}
@@ -2967,7 +2961,7 @@ sub SAN {
 	my $to_move = $self->toMove;
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $ep = $self->enPassant;
-	my $ep_shift = $ep ? $self->enPassantFileToShift($ep) : 0;
+	my $ep_shift = $ep ? $self->enPassantFileToShift($ep, $to_move) : 0;
 	my @files = ('a' .. 'h');
 	my @ranks = ('1' .. '8');
 	my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
@@ -3634,7 +3628,7 @@ sub dumpInfo {
 
 	$output .= 'En passant square: ';
 	if ($self->enPassant) {
-		$output .= $self->shiftToSquare($self->enPassantFileToShift($self->enPassantFile));
+		$output .= $self->shiftToSquare($self->enPassantFileToShift($self->enPassantFile, $self->toMove));
 	} else {
 		$output .= '-';
 	}
