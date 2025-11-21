@@ -436,6 +436,13 @@ The normal pattern is therefore:
 However, there is no need to mask out the highest bit because the library
 does that for you wherever an en passant file is expected.
 
+=item B<enPassantShift>
+
+If en-passant is possible, returns the shift of the square where the capturing
+pawn has to move. If en-passant is not possible, 0 is returned. 0 happens to be
+the shift of "a1" but "a1" is not a valid en-passant square. It is therefore
+safe to use this method in boolean context.
+
 =item B<material>
 
 Gives the material balance from the perspective of the white player.  That

@@ -1538,6 +1538,14 @@ sub enPassant {
 	return cp_pos_en_passant($self);
 }
 
+sub enPassantShift {
+	my ($self) = @_;
+
+	my $ep = cp_pos_en_passant($self);
+
+	return $ep ? cp_en_passant_file_to_shift($ep, $self->toMove) : 0;
+}
+
 sub kingShift {
 	my ($self) = @_;
 
@@ -1672,7 +1680,9 @@ sub SEE {
 	my $from = cp_move_from $move;
 	my $not_from_mask = ~(1 << ($from));
 	my $pos_info = cp_pos_info($self);
-	my $ep_shift = cp_pos_info_en_passant_shift($pos_info);
+	my $to_move = cp_pos_info_to_move($pos_info);
+	my $ep = cp_pos_info_en_passant($pos_info);
+	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
 		&& cp_move_piece($move) == CP_PAWN);
 	my $white = cp_pos_white_pieces($self);
@@ -1830,7 +1840,7 @@ sub SEE {
 		$captured = CP_NO_PIECE;
 	}
 
-	my $side_to_move = !cp_pos_to_move($self);
+	my $side_to_move = !$to_move;
 	my @gain = ($piece_values[$captured]);
 	my $attacker_value = $piece_values[cp_move_piece($move)];
 	if ($promote) {
