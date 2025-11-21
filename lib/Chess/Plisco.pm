@@ -1260,7 +1260,7 @@ sub doMove {
 		# Early exits for check.  First handle the case that the piece is
 		# a pawn that gets captured en passant.
 		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
-			# Exception: En passant capture if the capture pawn is the one
+			# Exception: En passant capture if the captured pawn is the one
 			# that gives check.
 			if (!($piece == CP_PAWN && $to == $ep_shift
 			      && ($ep_pawn_masks[$ep_shift] & $in_check))) {
@@ -2429,6 +2429,7 @@ sub checkPseudoLegalMove {
 	my $in_check = cp_pos_in_check $self;
 	my $ep = cp_pos_info_en_passant $pos_info;
 	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+	my $is_ep;
 	my $to_mask = 1 << $to;
 
 	if ($piece == CP_KING) {
@@ -2444,13 +2445,33 @@ sub checkPseudoLegalMove {
 			return if _cp_pos_color_attacked $self, $to_move, ($from + $to) >> 1;
 		}
 	} elsif ($in_check) {
-		# First handle the case that the piece is a pawn that gets captured
-		# en passant.
+		# We are in check but the piece that moves is not a king. We must
+		# either capture the piece giving check or block it.
 		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
 			# Exception: En passant capture if the capture pawn is the one
 			# that gives check.
 			if (!($piece == CP_PAWN && $to == $ep_shift
 			      && ($ep_pawn_masks[$ep_shift] & $in_check))) {
+				return;
+			}
+		}
+	}
+
+	if ($piece == CP_PAWN) {
+		if ($ep_shift && $to == $ep_shift) {
+			$is_ep = 1;
+
+			# Removing the pawn may discover a check.
+			my $move_mask = (1 << $from) | $to_mask;
+			my $captured_mask = $ep_pawn_masks[$ep_shift];
+
+			my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self))
+					& ((~$move_mask) ^ $captured_mask);
+			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
+				& (cp_pos_bishops($self) | cp_pos_queens($self))) {
+				return;
+			} elsif (cp_mm_rmagic($king_shift, $occupancy) & $her_pieces
+				& (cp_pos_rooks($self) | cp_pos_queens($self))) {
 				return;
 			}
 		}
@@ -2470,7 +2491,7 @@ sub checkPseudoLegalMove {
 		} else {
 			$captured = CP_QUEEN;
 		}
-	} elsif ($ep_shift && $ep_shift == $to) {
+	} elsif ($is_ep) {
 		cp_move_set_en_passant $move, 1;
 		$captured = CP_PAWN;
 	}
