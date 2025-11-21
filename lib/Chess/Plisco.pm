@@ -1198,6 +1198,235 @@ sub moveSignificant {
 	return cp_move_significant $move;
 }
 
+
+sub move {
+	my ($self, $move) = @_;
+
+	my $pos_info = cp_pos_info $self;
+	my ($from, $to, $promote, $piece) =
+		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
+		 cp_move_piece($move));
+
+	my $to_move = cp_pos_info_to_move($pos_info);
+	my $to_mask = 1 << $to;
+	my $move_mask = (1 << $from) | $to_mask;
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
+
+	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
+	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+	my $ep_file = $ep_shift & 7;
+	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
+
+	if ($piece == CP_KING) {
+		# Castling?
+		if ((($from - $to) & 0x3) == 0x2) {
+			# Move the rook.
+			my $rook_move_mask = $castling_rook_move_masks[$to];
+			$self->[CP_POS_ROOKS] ^= $rook_move_mask;
+			$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
+
+			$zk_update ^= $castling_rook_zk_updates[$to];
+		}
+
+		# Remove the castling rights.
+		$new_castling &= ~(0x3 << ($to_move << 1));
+	}
+
+	# Remove castling rights if a rook moves from its original square or it
+	# gets captured.  We simplify that by simply checking whether either the
+	# start or the destination square is a1, h1, a8, or h8.
+	$new_castling &= $castling_rights_rook_masks[$from];
+	$new_castling &= $castling_rights_rook_masks[$to];
+
+	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
+
+	my $captured = CP_NO_PIECE;
+	my $captured_mask = 0;
+	my $is_ep;
+	if ($to_mask & $her_pieces) {
+		if ($to_mask & cp_pos_pawns($self)) {
+			$captured = CP_PAWN;
+		} elsif ($to_mask & cp_pos_knights($self)) {
+			$captured = CP_KNIGHT;
+		} elsif ($to_mask & cp_pos_bishops($self)) {
+			$captured = CP_BISHOP;
+		} elsif ($to_mask & cp_pos_rooks($self)) {
+			$captured = CP_ROOK;
+		} else {
+			$captured = CP_QUEEN;
+		}
+		$captured_mask = 1 << $to;
+	}
+
+	if ($piece == CP_PAWN) {
+		# Check en passant.
+		if ($ep_shift && $to == $ep_shift) {
+			$captured = CP_PAWN;
+			$is_ep = 1;
+		}
+		$self->[CP_POS_HALF_MOVE_CLOCK]
+				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
+		if (_cp_pawn_double_step $from, $to) {
+			_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | ($from & 7)));
+		} else {
+			_cp_pos_info_set_en_passant($pos_info, 0);
+		}
+	} elsif ($her_pieces & $to_mask) {
+		$self->[CP_POS_HALF_MOVE_CLOCK]
+				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
+		_cp_pos_info_set_en_passant($pos_info, 0);
+	} elsif ($old_castling != $new_castling) {
+		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
+		++$self->[CP_POS_HALF_MOVE_CLOCK];
+		_cp_pos_info_set_en_passant($pos_info, 0);
+	} else {
+		++$self->[CP_POS_HALF_MOVE_CLOCK];
+		++$self->[CP_POS_REVERSIBLE_CLOCK];
+		_cp_pos_info_set_en_passant($pos_info, 0);
+	}
+
+	# Move all pieces involved.
+	if ($captured != CP_NO_PIECE) {
+		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $captured_mask;
+		$self->[$captured] ^= $captured_mask;
+		cp_move_set_captured($move, $captured);
+
+		if ($is_ep) {
+			# The captured piece is not on the to square.
+			my $ep_file = $to & 0x7;
+			my $captured_to = 24 + !$to_move * 8 + $ep_file;
+			$zk_update ^= _cp_zk_lookup CP_PAWN, !$to_move, $captured_to;
+		} else {
+			$zk_update ^= _cp_zk_lookup $captured, !$to_move, $to;
+		}
+	}
+
+	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
+	$self->[$piece] ^= $move_mask;
+	$zk_update ^= _cp_zk_lookup $piece, $to_move, $from;
+	$zk_update ^= _cp_zk_lookup $piece, $to_move, $to;
+
+	# It is better to overwrite the castling rights unconditionally because
+	# it safes branches.  There is one edge case, where a pawn captures a
+	# rook that is on its initial position.  In that case, the castling
+	# rights may have to be updated.
+	_cp_pos_info_set_castling $pos_info, $new_castling;
+
+	if ($promote) {
+		$self->[CP_POS_PAWNS] ^= $to_mask;
+		$self->[$promote] ^= $to_mask;
+
+		$zk_update ^= _cp_zk_lookup CP_PAWN, $to_move, $to;
+		$zk_update ^= _cp_zk_lookup $promote, $to_move, $to;
+	}
+
+	# Bit 1: double pawn push.
+	my $undo = 0;
+	if ($piece == CP_PAWN && _cp_pawn_double_step $from, $to) {
+		$zk_update ^= $zk_ep_files[$from & 0x7];
+		$undo |= 0x1;
+	}
+
+	cp_move_set_color($move, $to_move);
+	cp_move_set_en_passant($move, $is_ep);
+
+	$zk_update ^= $zk_color;
+
+	my @undo_info = ($move, $undo, $captured_mask, @state);
+
+	++$self->[CP_POS_HALF_MOVES];
+	_cp_pos_info_set_to_move($pos_info, !$to_move);
+
+	# The material balance is stored in the most signicant bits.  It is
+	# already left-shifted 19 bit in the lookup table so that we can
+	# simply add it.
+	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
+
+	# FIXME! Simplify this!
+	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
+
+	if ($old_castling != $new_castling) {
+		$zk_update ^= $zk_castling[$old_castling]
+			^ $zk_castling[$new_castling];
+	}
+
+	$signature ^= $zk_update;
+
+	$self->[CP_POS_SIGNATURE] = $signature;
+
+	_cp_pos_info_update $self, $pos_info;
+
+	return \@undo_info;
+}
+
+sub unmove {
+	my ($self, $undo_info) = @_;
+
+	my ($move, $undo, $captured_mask, @state) = @$undo_info;
+
+	my $signature = $self->[CP_POS_SIGNATURE];
+
+	my ($from, $to, $promote, $piece, $captured) =
+		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
+		 cp_move_piece($move), cp_move_captured($move));
+
+	my $move_mask = (1 << $from) | (1 << $to);
+	my $to_move = !cp_pos_to_move $self;
+
+	# Castling?
+	if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
+		# Restore the rook.
+		my $rook_move_mask = $castling_rook_move_masks[$to];
+
+		$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
+		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
+		$signature ^= $castling_rook_zk_updates[$to];
+	}
+
+	$self->[CP_POS_WHITE_PIECES + $to_move ] ^= $move_mask;
+
+	if ($promote) {
+		my $remove_mask = 1 << $to;
+		$self->[CP_POS_PAWNS] |= 1 << $from;
+		$self->[$promote] ^= $remove_mask;
+
+		# Remove the promotion piece and replace it with the pawn.
+		$signature ^= _cp_zk_lookup $promote, $to_move, $to;
+		$signature ^= _cp_zk_lookup CP_PAWN, $to_move, $from;
+	} else {
+		$self->[$piece] ^= $move_mask;
+
+		$signature ^= _cp_zk_lookup $piece, $to_move, $to;
+		$signature ^= _cp_zk_lookup $piece, $to_move, $from;
+	}
+
+	if ($captured) {
+		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
+		$self->[$captured] |= $captured_mask;
+
+		$signature ^= _cp_zk_lookup $captured, $to_move, $to;
+	}
+	
+	my $pos_info = $self->[CP_POS_INFO];
+
+	my $double_pawn_push = $undo & 0x1;
+	if ($double_pawn_push) {
+		my $ep_file = $to & 0x7;
+		_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | $ep_file));
+		$signature ^= $zk_ep_files[$ep_file];
+	} else {
+		_cp_pos_info_set_en_passant $pos_info, 0;
+	}
+
+	$signature ^= $zk_color;
+
+	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
+
+	# FIXME! Copy as well?
+	--(cp_pos_half_moves($self));
+}
+
 sub doMove {
 	my ($self, $move) = @_;
 
@@ -3288,9 +3517,9 @@ sub perftByUndo {
 	my ($self, $depth) = @_;
 
 	my $nodes = 0;
-	my @moves = $self->pseudoLegalMoves;
+	my @moves = $self->legalMoves;
 	foreach my $move (@moves) {
-		my $undo_info = $self->doMove($move) or next;
+		my $undo_info = $self->move($move);
 
 		if ($depth > 1) {
 			$nodes += $self->perftByUndo($depth - 1);
@@ -3298,7 +3527,7 @@ sub perftByUndo {
 			++$nodes;
 		}
 
-		$self->undoMove($undo_info);
+		$self->unmove($undo_info);
 	}
 
 	return $nodes;
@@ -3308,10 +3537,10 @@ sub perftByCopy {
 	my ($class, $pos, $depth) = @_;
 
 	my $nodes = 0;
-	my @moves = $pos->pseudoLegalMoves;
+	my @moves = $pos->legalMoves;
 	foreach my $move (@moves) {
 		my $copy = bless [@$pos], 'Chess::Plisco';
-		$copy->doMove($move) or next;
+		$copy->move($move);
 
 		if ($depth > 1) {
 			$nodes += $class->perftByCopy($copy, $depth - 1);
@@ -3333,9 +3562,9 @@ sub perftByUndoWithOutput {
 
 	my $nodes = 0;
 
-	my @moves = $self->pseudoLegalMoves;
+	my @moves = $self->legalMoves;
 	foreach my $move (@moves) {
-		my $undo_info = $self->doMove($move) or next;
+		my $undo_info = $self->move($move);
 
 		my $movestr = $self->moveCoordinateNotation($move);
 
@@ -3353,7 +3582,7 @@ sub perftByUndoWithOutput {
 
 		$fh->print("$subnodes\n");
 
-		$self->undoMove($undo_info);
+		$self->unmove($undo_info);
 	}
 
 	no integer;
@@ -3379,10 +3608,10 @@ sub perftByCopyWithOutput {
 
 	my $nodes = 0;
 
-	my @moves = $self->pseudoLegalMoves;
+	my @moves = $self->legalMoves;
 	foreach my $move (@moves) {
 		my $copy = bless [@$self], 'Chess::Plisco';
-		$copy->doMove($move) or next;
+		$copy->move($move);
 
 		my $movestr = $copy->moveCoordinateNotation($move);
 

@@ -381,7 +381,7 @@ sub new {
 	return $self;
 }
 
-sub doMove {
+sub move {
 	my ($self, $move) = @_;
 
 	my $state = $self->SUPER::doMove($move) or return;
