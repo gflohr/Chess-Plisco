@@ -2237,8 +2237,15 @@ sub __dumpMove {
 	my $promote = cp_move_promote $move;
 	my $promote_bits = sprintf '0b%b', $promote;
 	my $promote_char = "promote ($promote_bits): " . CP_PIECE_CHARS->[0]->[$promote];
-
-	return join "\n", $bits, $colour, $to_square, $from_square, $piece_char, $captured_char, $promote_char, '';
+	my $ep = (cp_move_en_passant $move) ? 'en passant: yes' : 'en passant no';
+	my $ep_file;
+	if ($ep) {
+		my $file = chr(ord('a') + $ep & 0x3);
+		$ep_file = "en passant file: $file";
+	} else {
+		$ep_file = "en passant file: -";
+	}
+	return join "\n", $bits, $colour, $to_square, $from_square, $piece_char, $captured_char, $promote_char, $ep, $ep_file, '';
 }
 
 sub __zobristKeyDump {
@@ -2393,6 +2400,85 @@ sub enPassantFileToShift {
 	my ($whatever, $ep_file, $turn) = @_;
 
 	return cp_en_passant_file_to_shift $ep_file, $turn;
+}
+
+sub checkPseudoLegalMove {
+	my ($self, $move) = @_;
+
+	my $from = cp_move_from $move;
+	my $to = cp_move_to $move;
+	my $piece = cp_move_piece $move;
+	my $pos_info = cp_pos_info $self;
+	my $king_shift = cp_pos_info_king_shift($pos_info);
+	my $to_move = cp_pos_info_to_move($pos_info);
+	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
+	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
+
+	# A pseudo-legal move can be illegal for these reasons:
+	#
+	# 1. The moving piece is pinned by a sliding piece and would expose our
+	#    king to check.
+	# 2. The king moves into check.
+	# 3. The king crosses an attacked square while castling.
+	# 4. A pawn captured en passant discovers a check.
+	#
+	# Checks number two and three are done below, and only for king moves.
+	# Check number 4 is done below for en passant moves.
+	return if _cp_pos_move_pinned $self, $from, $to, $king_shift, $my_pieces, $her_pieces;
+
+	my $in_check = cp_pos_in_check $self;
+	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+	my $to_mask = 1 << $to;
+
+	if ($piece == CP_KING) {
+		# Does the king move into check?
+		return if _cp_pos_move_attacked $self, $from, $to;
+
+		# Castling?
+		if ((($from - $to) & 0x3) == 0x2) {
+			# Are we checked?
+			return if $in_check;
+
+			# Is the field that the king has to cross attacked?
+			return if _cp_pos_color_attacked $self, $to_move, ($from + $to) >> 1;
+		}
+	} elsif ($in_check) {
+		# First handle the case that the piece is a pawn that gets captured
+		# en passant.
+		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
+			# Exception: En passant capture if the capture pawn is the one
+			# that gives check.
+			if (!($piece == CP_PAWN && $to == $ep_shift
+			      && ($ep_pawn_masks[$ep_shift] & $in_check))) {
+				return;
+			}
+		}
+	}
+
+	my $capture_mask = $to_mask & $her_pieces;
+	my $captured = CP_NO_PIECE;
+	if ($capture_mask) {
+		if ($capture_mask & cp_pos_pawns $self) {
+			$captured = CP_PAWN;
+		} elsif ($capture_mask & cp_pos_knights $self) {
+			$captured = CP_KNIGHT;
+		} elsif ($capture_mask & cp_pos_bishops $self) {
+			$captured = CP_BISHOP;
+		} elsif ($capture_mask & cp_pos_rooks $self) {
+			$captured = CP_ROOK;
+		} else {
+			$captured = CP_QUEEN;
+		}
+	} elsif ($ep_shift && $ep_shift == $to) {
+		cp_move_set_en_passant $move, ((1 << 4) | ($to & 0x3));
+		$captured = CP_PAWN;
+	}
+
+	cp_move_set_captured $move, $captured;
+	cp_move_set_color $move, $to_move;
+
+	return $move;
 }
 
 # Do not remove this line!
@@ -2887,10 +2973,8 @@ sub legalMoves {
 
 	my @legal;
 	foreach my $move ($self->pseudoLegalMoves) {
-		# Sets also captured piece and color.
-		my $undo_info = $self->doMove($move) or next;
-		push @legal, $undo_info->[0];
-		$self->undoMove($undo_info);
+		$move = $self->checkPseudoLegalMove($move) or next;
+		push @legal, $move;
 	}
 
 	return @legal;

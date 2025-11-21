@@ -646,6 +646,16 @@ Returns 1 if the move is an en passant capture, 0 otherwise.
 
 Sets the en passant flag in B<MOVE> to B<COLOR> and returns the move.
 
+=item B<checkPseudoLegalMove(MOVE)>
+
+Checks the legality of B<MOVE> (integer).  The method only makes sense if you
+pass it a move that was produced by B<pseudoLegalMoves>. Otherwise, the
+behaviour is undefined.
+
+The return value is falsy, if the legality check failed. Otherwise the modified
+move is returned. The difference to the original move is that the captured
+piece, the colour, and possible the en passant flag are set.
+
 =item B<moveLegal(MOVE|NOTATION)>
 
 Returns a truthy value, when the argument is a valid and legal move.  The move
