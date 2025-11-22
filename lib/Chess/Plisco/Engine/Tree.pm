@@ -317,9 +317,10 @@ sub alphabeta {
 	my $best_move = 0;
 	my $print_current_move = $ply == 1 && $self->{print_current_move};
 	my $signature_slot = $self->{history_length} + $ply;
+	my @check_info = $position->inCheck;
 	foreach my $move (@moves) {
+		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
-		next if !$position->checkPseudoLegalMove($move);
 		my $state = $position->move($move);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
@@ -356,7 +357,7 @@ sub alphabeta {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value $val");
 		}
-		$position->undoMove($state);
+		$position->unmove($state);
 		if (DEBUG) {
 			pop @{$self->{line}};
 		}
@@ -499,10 +500,12 @@ sub quiesce {
 	my (@moves);
 	my $signatures = $self->{signatures};
 	my $signature_slot = $self->{history_length} + $ply;
+	my @check_info = $position->inCheck;
 	foreach my $move (@pseudo_legal) {
-		my $state = $position->doMove($move) or next;
+		next if !$position->checkPseudoLegalMove($move, @check_info);
+		my $state = $position->move($move);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
-		$position->undoMove($state);
+		$position->unmove($state);
 		my $see = $position->SEE($move);
 
 		# A marginal difference can occur if bishops and knights have different
@@ -538,7 +541,7 @@ sub quiesce {
 			$self->indent($ply, "move $cn: value: $val");
 			pop @{$self->{line}};
 		}
-		$position->undoMove($state);
+		$position->unmove($state);
 		if ($val >= $beta) {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
