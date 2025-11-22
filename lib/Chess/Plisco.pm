@@ -1262,6 +1262,7 @@ sub move {
 	if ($piece == CP_PAWN) {
 		# Check en passant.
 		if ($ep_shift && $to == $ep_shift) {
+			$captured_mask = $ep_pawn_masks[$ep_shift];
 			$captured = CP_PAWN;
 			$is_ep = 1;
 		}
