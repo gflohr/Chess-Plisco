@@ -31,7 +31,7 @@ $pos = eval {
 	Chess::Plisco->newFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w');
 };
 ok $pos;
-ok !$pos->enPassantShift;
+ok !$pos->enPassant;
 ok !$pos->castlingRights;
 
 eval {

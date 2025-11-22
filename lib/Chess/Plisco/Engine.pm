@@ -357,7 +357,7 @@ sub __onUciCmdGo {
 	};
 
 	if ($params{perft}) {
-		$self->{__position}->perftByCopyWithOutput($params{perft},
+		$self->{__position}->perftByUndoWithOutput($params{perft},
 		                                           $self->{__out});
 		return $self;
 	}

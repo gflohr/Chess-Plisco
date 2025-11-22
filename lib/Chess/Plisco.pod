@@ -197,6 +197,32 @@ use the object as a string:
 Returns a list of legal moves for the current position.  A move is just an
 integer.
 
+=item B<inCheck>
+
+Returns false if the side to move is not in check, a truthy value otherwise.
+The truthy value returned is a bitboard of all pieces giving check.
+
+In array context, the method returns extended information about the check
+that is required by checkPseudoLegalMove, see below. In detail, this is
+the bitboard of all pieces giving check,  the position of the king (0-63),
+and a so-called evasion bitboard (64 bits).  To understand the evasion
+bitboard, you have to recall how a check can be defended:
+
+1. The king moves out of check, eventually capturing the attacker.
+2. Another piece captures the attacker.
+3. Another piece moves between the piece giving check and the king.
+
+Option 1 will always work. In this case, the evasion bitboard will be 0 (and
+can be ignored).
+
+Option 2 only works if there is just one piece giving check. In this case,
+the evasion bitboard is identical to the bitboard of the pieces giving check.
+
+Option 3 only works if a sliding piece (queen, rook, or bishop) gives check.
+Knights jump over other pieces and a pawn can only give check from an adjacent
+square. In this case, the evasion bitboard includes all squares between the
+king and the piece giving check, including the square of the attacking piece.
+
 =item B<pseudoLegalMoves>
 
 Generates all pseudo-legal moves for the current position.
@@ -211,6 +237,32 @@ If you also need the captured piece and the color, you either have to call
 L</legalMoves> or you must use the state information returned from L</doMove>
 to retrieve the enriched move.  The first element of the state array is the
 enriched move.
+
+The only reason why you want to call pseudoLegalMoves is performance because
+filtering out those moves that will leave the king in check is somewhat
+expensive. In a search with alpha beta pruning, it is more efficient to delay
+that check because the engine may decide to prune that move and not try it
+out.
+
+For a concrete implementation, it is helpful to know how B<legalMoves()> is
+implemented:
+
+    sub legalMoves {
+        my ($self) = @_;
+
+        my @check_info = $self->inCheck($self);
+
+        my @legal;
+        foreach my $move ($self->pseudoLegalMoves) {
+            $move = $self->checkPseudoLegalMove($move, @check_info) or next;
+            push @legal, $move;
+        }
+
+        return @legal;
+    }
+
+The method calls B<inCheck()> in list context and passes that information to
+the legality checker.
 
 =item B<pseudoLegalAttacks>
 
@@ -383,45 +435,32 @@ seed L</CP_RANDOM_SEED>.  If you turn the constant L</CP_RANDOM_SEED> into
 a non-constant subroutine, you can also get different signatures, whenever
 you re-load the library.
 
-=item B<inCheck>
+=item B<enPassant>
 
-Returns false if the side to move is not in check, a truthy value otherwise.
-The truthy value returned is a bitboard of all pieces giving check.
+Return a 4-bit value. The highest bit signals whether en passant is possible.
+The lower 3 bit give the en passant file.
 
-=item B<evasion>
+There is no method B<enPassantFile> and that is by design.  If en passant is
+possible on the a file, the method would return 0 which is the a file encoded.
+The normal pattern is therefore:
 
-If the side to move is in check, returns the required check evasion strategy:
-
-=over 4
-
-=item L</CP_EVASION_KING_MOVE>
-
-The king must move.  This is the case, when multiple pieces give check.
-
-=item L</CP_EVASION_CAPTURE>
-
-Either the king must move or the piece giving check must be captured.
-
-=item L</CP_EVASION_ALL>
-
-Either the king must move, the piece giving check must be captured, or another
-piece must be moved between the king and the attacking piece.
-
+=over 8
+    my $ep = $pos->enPassant;
+    if ($ep) {
+        my $ep_file = $ep & 7;
+        my $ep_square = $pos->enPassantFileToShift($ep);
+    }
 =back
 
-=item B<evasionSquares>
-
-If a check can be evaded by moving a piece between the king and the attacking
-piece of the opponent, this bitboard gives all squares where the check can be
-blocked.  These are all squares between the king and the attacking piece,
-including the square where the attacker is standing.
+However, there is no need to mask out the highest bit because the library
+does that for you wherever an en passant file is expected.
 
 =item B<enPassantShift>
 
 If en-passant is possible, returns the shift of the square where the capturing
-pawn has to move.  If en-passant is not possible, 0 is returned.  0 happens to
-be the shift of "a1" but "a1" is not a valid en-passant square.  It is
-therefore safe to use this method in boolean context.
+pawn has to move. If en-passant is not possible, 0 is returned. 0 happens to be
+the shift of "a1" but "a1" is not a valid en-passant square. It is therefore
+safe to use this method in boolean context.
 
 =item B<material>
 
@@ -617,6 +656,24 @@ Extracts the color that does the move.
 =item B<moveSetColor(MOVE, COLOR)>
 
 Sets the color in B<MOVE> to B<COLOR> and returns the move.
+
+=item B<moveEnPassant(MOVE)>
+
+Returns 1 if the move is an en passant capture, 0 otherwise.
+
+=item B<moveSetEnPassant(MOVE, FLAG)>
+
+Sets the en passant flag in B<MOVE> to B<COLOR> and returns the move.
+
+=item B<checkPseudoLegalMove(MOVE)>
+
+Checks the legality of B<MOVE> (integer).  The method only makes sense if you
+pass it a move that was produced by B<pseudoLegalMoves>. Otherwise, the
+behaviour is undefined.
+
+The return value is falsy, if the legality check failed. Otherwise the modified
+move is returned. The difference to the original move is that the captured
+piece, the colour, and possible the en passant flag are set.
 
 =item B<moveLegal(MOVE|NOTATION)>
 
@@ -1228,6 +1285,12 @@ signatures.
 
 If you want a different seed, you should override the constant
 L</CP_RANDOM_SEED>.
+
+=item B<enPassantFileToShift(FILE, COLOUR)>
+
+Given an en passant file B<FILE> return the shift of the en passant square
+for colour B<C>. Instead of a file (0-8) you can also pass a complete
+en passant info (0-16) where bit 4 is set.
 
 =back
 
