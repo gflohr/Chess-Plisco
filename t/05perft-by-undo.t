@@ -148,7 +148,7 @@ foreach my $test (@tests) {
 				if ($eta > $seconds_per_test) {
 					my $skipped = @perfts - $depth;
 					$depth = @perfts;
-					skip "set environment variable CP_SECONDS_PER_TEST to a "
+					skip "set environment variable CP_STRESS_TEST to a "
 						. "value > $seconds_per_test to run more tests",
 						$skipped;
 				}
