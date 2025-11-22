@@ -2631,14 +2631,76 @@ sub enPassantFileToShift {
 	return cp_en_passant_file_to_shift $ep_file, $turn;
 }
 
+
+sub inCheck {
+	my ($self) = @_;
+
+	my $turn = cp_pos_to_move($self);
+	my $kings_bb = cp_pos_kings($self)
+		& ($turn ? cp_pos_black_pieces($self) : cp_pos_white_pieces($self));
+	my $king_shift = cp_bitboard_count_isolated_trailing_zbits($kings_bb);
+
+	my $checkers = _cp_pos_color_attacked $self, $turn, $king_shift;
+
+	if (wantarray) {
+		my $evasion_bb;
+
+		# Additionally return king_shift and ?
+		if ($checkers) {
+			# Check evasion strategy.  If in-check, the options are:
+			#
+			# 1. Move the king.
+			# 2. Hit the piece that gives check unless multiple pieces give
+			#.   check.
+			# 3. Move a piece in front of the king for protection unless a
+			#    knight gives check or two pieces give check simultaneously.
+			#
+			# That leads to 3 different levels for the evasion strategy.
+			# Option 1 is always valid. Option 2 only if only one piece gives
+			# check.  Option 3 if only one piece gives check and the piece is
+			# a queen, bishop or rook.
+			#
+			# Pawn checks can be treated like knight checks because the pawn
+			# always has direct contact with the king.
+			#
+			# For both options 2 and 3 we define an evasion bitboard of valid
+			# target squares.  This information is then used in the legality
+			# check for non-king moves to see whether the move prevents a check.
+			# There is no need to distinguish between the two cases in the
+			# legality check. The difference is just the popcount of the
+			# evasion bitboard.
+			if ($checkers & ($checkers - 1)) {
+				# More than one piece giving check.  The king has to move.
+				# In this case, the evasion bitboard can be ignored.
+				$evasion_bb = 0;
+			} elsif ($checkers & (cp_pos_knights($self) | (cp_pos_pawns($self)))) {
+				$evasion_bb = $checkers;
+			} else {
+				my $piece_shift = cp_bitboard_count_isolated_trailing_zbits $checkers;
+				my ($attack_type, undef, $attack_ray) =
+					@{$common_lines[$king_shift]->[$piece_shift]};
+				if ($attack_ray) {
+					$evasion_bb = $attack_ray;
+				} else {
+					$evasion_bb = $checkers;
+				}
+			}
+		}
+
+		return $checkers, $king_shift, $evasion_bb;
+	} else {
+		# Old version.
+		return $checkers;
+	}
+}
+
 sub checkPseudoLegalMove {
-	my ($self, $move) = @_;
+	my ($self, $move, $in_check, $king_shift, $evasion_bb) = @_;
 
 	my $from = cp_move_from $move;
 	my $to = cp_move_to $move;
 	my $piece = cp_move_piece $move;
 	my $pos_info = cp_pos_info $self;
-	my $king_shift = cp_pos_info_king_shift($pos_info);
 	my $to_move = cp_pos_info_to_move($pos_info);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
@@ -2655,7 +2717,6 @@ sub checkPseudoLegalMove {
 	# Check number 4 is done below for en passant moves.
 	return if _cp_pos_move_pinned $self, $from, $to, $king_shift, $my_pieces, $her_pieces;
 
-	my $in_check = cp_pos_in_check $self;
 	my $ep = cp_pos_info_en_passant $pos_info;
 	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
 	my $is_ep;
@@ -2676,7 +2737,7 @@ sub checkPseudoLegalMove {
 	} elsif ($in_check) {
 		# We are in check but the piece that moves is not a king. We must
 		# either capture the piece giving check or block it.
-		if (!(cp_pos_evasion_squares($self) & $to_mask)) {
+		if (!($evasion_bb & $to_mask)) {
 			# Exception: En passant capture if the capture pawn is the one
 			# that gives check.
 			if (!($piece == CP_PAWN && $to == $ep_shift
@@ -2729,6 +2790,21 @@ sub checkPseudoLegalMove {
 	cp_move_set_color $move, $to_move;
 
 	return $move;
+}
+
+sub legalMoves {
+	my ($self) = @_;
+
+	# Normal subroutine invocations are faster than method calls.
+	my @check_state = inCheck($self);
+
+	my @legal;
+	foreach my $move (pseudoLegalMoves($self)) {
+		$move = checkPseudoLegalMove($self, $move, @check_state) or next;
+		push @legal, $move;
+	}
+
+	return @legal;
 }
 
 # Do not remove this line!
@@ -3021,10 +3097,6 @@ sub signature {
 	shift->[CP_POS_SIGNATURE];
 }
 
-sub inCheck {
-	shift->[CP_POS_IN_CHECK];
-}
-
 sub toFEN {
 	my ($self) = @_;
 
@@ -3216,18 +3288,6 @@ sub board {
 	}
 
 	return $board;
-}
-
-sub legalMoves {
-	my ($self) = @_;
-
-	my @legal;
-	foreach my $move ($self->pseudoLegalMoves) {
-		$move = $self->checkPseudoLegalMove($move) or next;
-		push @legal, $move;
-	}
-
-	return @legal;
 }
 
 sub dumpBitboard {
