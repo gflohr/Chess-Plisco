@@ -41,7 +41,7 @@ ok $move, 'parse b1c3';
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($undo_info);
-is $pos->toFEN, "$before";
+is $pos->toFEN, $before->toFEN;
 ok $pos->equals($before);
 
 # Queen moves were not undone correctly.
@@ -52,7 +52,7 @@ ok $move, 'parse d1e2';
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($undo_info);
-is $pos->toFEN, "$before";
+is $pos->toFEN, $before->toFEN;
 ok $pos->equals($before);
 
 # 2. ...Bxh3 is not undone correctly.
@@ -64,7 +64,7 @@ is(cp_move_piece($move), CP_BISHOP);
 $undo_info = $pos->doMove($move);
 ok $undo_info;
 ok $pos->undoMove($undo_info);
-is $pos->toFEN, "$before";
+is $pos->toFEN, $before->toFEN;
 ok $pos->equals($before);
 
 done_testing;
