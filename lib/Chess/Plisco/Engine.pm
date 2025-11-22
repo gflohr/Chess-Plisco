@@ -245,7 +245,7 @@ sub __onUciInput {
 sub __onUciCmdFen {
 	my ($self) = @_;
 
-	$self->{__out}->print("$self->{__position}\n");
+	$self->{__out}->print($self->{__position}->toFEN);
 
 	return $self;
 }
