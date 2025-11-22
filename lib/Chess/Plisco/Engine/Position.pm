@@ -396,6 +396,11 @@ sub move {
 	return $state;
 }
 
+# This is only needed for tests that call doMove() or applyMove().
+sub doMove {
+	&move;
+}
+
 sub evaluate {
 	my ($self) = @_;
 
