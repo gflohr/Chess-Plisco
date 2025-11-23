@@ -438,7 +438,7 @@ sub quiesce {
 	}
 
 	# Expand the search, when in check.
-	if (cp_pos_in_check($position)) {
+	if ($position->inCheck) {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
 		}
@@ -582,7 +582,6 @@ sub quiesce {
 sub rootSearch {
 	my ($self, $pline) = @_;
 
-$DB::single = 1;
 	$self->{nodes} = 0;
 
 	my $position = $self->{position};
