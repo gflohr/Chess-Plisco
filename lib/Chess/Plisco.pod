@@ -689,14 +689,14 @@ the move as an integer as returned by L</parseMove>.
 The method returns state information that can later be used to undo the move
 and reset the position to the state it had before the move was applied.
 
-Engines should use the method L</doMove> instead because it is faster.
+Engines should use the method L</move> instead because it is faster.
 
 =item B<unapplyMove(STATE)>
 
 If B<STATE> is state information returned by L</applyMove>, takes back the
 move that was given as an argument to L</applyMove>.
 
-Engines should use the method L</undoMove> instead because it is faster.
+Engines should use the method L</unmove> instead because it is faster.
 
 =item B<doMove(MOVE)>
 
@@ -714,12 +714,14 @@ The state information returned is an array of various bits of information.
 The first one is the move itself but the captured piece is set in that
 move.
 
+Engines should use the method L</move> instead because it is faster.
+
 =item B<undoMove(STATE)>
 
 If B<STATE> is state information returned by L</doMove>, takes back the
 move that was given as an argument to L</doMove>.
 
-This method is fast and is the one that should be used by engines.
+Engines should use the method L</unmove> instead because it is faster.
 
 =item B<SEE(MOVE)>
 

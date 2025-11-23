@@ -384,7 +384,7 @@ sub new {
 sub move {
 	my ($self, $move) = @_;
 
-	my $state = $self->SUPER::doMove($move) or return;
+	my $state = $self->SUPER::move($move) or return;
 	($move) = @$state;
 	$self->[CP_POS_GAME_PHASE] += $move_phase_deltas[
 		(cp_move_captured($move) << 3) | cp_move_promote($move)
@@ -394,11 +394,6 @@ sub move {
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
 
 	return $state;
-}
-
-# This is only needed for tests that call doMove() or applyMove().
-sub doMove {
-	&move;
 }
 
 sub evaluate {
