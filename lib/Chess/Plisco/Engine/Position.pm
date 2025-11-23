@@ -20,9 +20,9 @@ use Chess::Plisco::Engine::Tree;
 
 use base qw(Chess::Plisco);
 
-use constant CP_POS_GAME_PHASE => 14;
-use constant CP_POS_OPENING_SCORE => 15;
-use constant CP_POS_ENDGAME_SCORE => 16;
+use constant CP_POS_GAME_PHASE => 12;
+use constant CP_POS_OPENING_SCORE => 13;
+use constant CP_POS_ENDGAME_SCORE => 14;
 
 use constant PAWN_PHASE => 0;
 use constant KNIGHT_PHASE => 1;

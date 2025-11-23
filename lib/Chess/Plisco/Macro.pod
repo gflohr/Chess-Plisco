@@ -271,22 +271,6 @@ Same as L<Chess::Plisco/enPassant>.
 
 Same as L<Chess::Plisco/enPassantFile>.
 
-=item B<cp_pos_king_shift(POS)>
-
-Same as L<Chess::Plisco/kingShift>.
-
-=item B<cp_pos_in_check(POS)>
-
-Same as L<Chess::Plisco/inCheck>.
-
-=item B<cp_pos_evasion(POS)>
-
-Same as L<Chess::Plisco/evasion>.
-
-=item B<cp_pos_evasion_squares(POS)>
-
-Same as L<Chess::Plisco/evasionSquares>.
-
 =item B<cp_pos_signature(POS)>
 
 Same as L<Chess::Plisco/signature>.
@@ -345,16 +329,6 @@ info B<INFO> as returned by L</cp_pos_info>.
 =item B<cp_pos_info_en_passant_file(INFO)>
 
 Same as L</cp_pos_en_passant_file> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_king_shift(INFO)>
-
-Same as L</cp_pos_king_shift> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_evasion(INFO)>
-
-Same as L</cp_pos_evasion> but work directly on position
 info B<INFO> as returned by L</cp_pos_info>.
 
 =item B<cp_pos_info_material(INFO)>

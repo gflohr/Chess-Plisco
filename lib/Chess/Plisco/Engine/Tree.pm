@@ -582,6 +582,7 @@ sub quiesce {
 sub rootSearch {
 	my ($self, $pline) = @_;
 
+$DB::single = 1;
 	$self->{nodes} = 0;
 
 	my $position = $self->{position};

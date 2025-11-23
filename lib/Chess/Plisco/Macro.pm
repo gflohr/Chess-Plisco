@@ -47,8 +47,6 @@ _define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 sub cp_pos_kings {}
 _define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
 sub cp_pos_half_move_clock {}
-_define cp_pos_in_check => '$p', '$p->[CP_POS_IN_CHECK]';
-sub cp_pos_in_check {}
 _define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
 sub cp_pos_half_moves {}
 _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
@@ -70,10 +68,6 @@ _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
 sub cp_pos_info_black_queen_side_castling_right {}
 _define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
 sub cp_pos_info_en_passant {}
-_define cp_pos_info_king_shift => '$i', '(($i & (0x3f << 8)) >> 8)';
-sub cp_pos_info_king_shift {}
-_define cp_pos_info_evasion => '$i', '(($i & (0x3 << 14)) >> 14)';
-sub cp_pos_info_evasion {}
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 16)) >> 16)';
 sub cp_pos_info_to_move {}
 _define cp_pos_info_material => '$i', '($i >> 19)';
@@ -91,16 +85,10 @@ _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | ($c << 3))';
 _define _cp_pos_info_set_en_passant => '$i', '$s',
 	'($i = ($i & ~(0xf << 4)) | ($s << 4))';
-_define _cp_pos_info_set_king_shift => '$i', '$s',
-	'($i = ($i & ~(0x3f << 8)) | ($s << 8))';
-_define _cp_pos_info_set_evasion => '$i', '$e',
-	'($i = ($i & ~(0x3 << 14)) | ($e << 14))';
 _define _cp_pos_info_set_to_move => '$i', '$c',
 	'($i = ($i & ~(1 << 16)) | ($c << 16))';
 _define _cp_pos_info_set_material => '$i', '$m',
 	'($i = (($i & 0x7fffffff) | ($m << 19)))';
-
-_define_from_file _cp_pos_info_update => '$p', '$i' => 'infoUpdate.pm';
 
 _define cp_pos_castling_rights => '$p',
 		'(cp_pos_info_castling_rights(cp_pos_info($p)))';
@@ -121,10 +109,6 @@ _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 sub cp_pos_to_move {}
 _define cp_pos_en_passant => '$p', '(cp_pos_info_en_passant(cp_pos_info($p)))';
 sub cp_pos_en_passant {}
-_define cp_pos_king_shift => '$p', '(cp_pos_info_king_shift(cp_pos_info($p)))';
-sub cp_pos_king_shift {}
-_define cp_pos_evasion => '$p', '(cp_pos_info_evasion(cp_pos_info($p)))';
-sub cp_pos_evasion {}
 _define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
 sub cp_pos_material {}
 
@@ -142,15 +126,8 @@ _define _cp_pos_set_to_move => '$p', '$c',
 	'(_cp_pos_info_set_to_move(cp_pos_info($p), $c))';
 _define _cp_pos_set_en_passant_shift => '$p', '$s',
 	'(_cp_pos_info_set_en_passant_shift(cp_pos_info($p), $s))';
-_define _cp_pos_set_king_shift => '$p', '$s',
-	'(_cp_pos_info_set_king_shift(cp_pos_info($p), $s))';
-_define _cp_pos_set_evasion => '$p', '$e',
-	'(_cp_pos_info_set_evasion(cp_pos_info($p), $e))';
 _define _cp_pos_set_material => '$p', '$m',
 	'(_cp_pos_info_set_material(cp_pos_info($p), $m))';
-
-_define cp_pos_evasion_squares => '$p', '$p->[CP_POS_EVASION_SQUARES]';
-sub cp_pos_evasion_squares {}
 
 _define cp_move_to => '$m', '(($m) & 0x3f)';
 sub cp_move_to {}

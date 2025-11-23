@@ -85,11 +85,10 @@ use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_HALF_MOVE_CLOCK => 9;
 use constant CP_POS_INFO => 10;
-use constant CP_POS_EVASION_SQUARES => 11;
-use constant CP_POS_SIGNATURE => 12;
-use constant CP_POS_REVERSIBLE_CLOCK => 13;
+use constant CP_POS_SIGNATURE => 11;
 # 3 reserved slots.
-use constant CP_POS_IN_CHECK => 17;
+use constant CP_POS_REVERSIBLE_CLOCK => 15;
+use constant CP_POS_LAST_FIELD => 15;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -395,7 +394,6 @@ sub new {
 	cp_pos_info($self) = $info;
 	
 	$self->__updateZobristKey;
-	_cp_pos_info_update $self, $info;
 
 	return $self;
 }
@@ -574,7 +572,6 @@ sub newFromFEN {
 	$self->__checkIllegalCheck($to_move) if !$relaxed;
 
 	$self->__updateZobristKey;
-	_cp_pos_info_update $self, $pos_info;
 
 	return $self;
 }
@@ -798,9 +795,6 @@ sub pseudoLegalMoves {
 	$target_mask = ~$my_pieces & $king_attack_masks[$from];
 
 	_cp_moves_from_mask $target_mask, @moves, $base_move;
-
-	my $in_check = cp_pos_in_check $self;
-	return @moves if $in_check && CP_EVASION_KING_MOVE == cp_pos_info_evasion($pos_info);
 
 	# Generate castlings.
 	# Mask out the castling rights for the side to move.
@@ -1180,7 +1174,11 @@ sub movePinned {
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
 
-	return _cp_pos_move_pinned $self, $from, $to, cp_pos_king_shift($self), $my_pieces, $her_pieces;
+	my $kings_bb = cp_pos_kings($self)
+		& ($to_move ? cp_pos_black_pieces($self) : cp_pos_white_pieces($self));
+	my $king_shift = cp_bitboard_count_isolated_trailing_zbits($kings_bb);
+
+	return _cp_pos_move_pinned $self, $from, $to, $king_shift, $my_pieces, $her_pieces;
 }
 
 sub moveEquivalent {
@@ -1236,7 +1234,7 @@ sub move {
 	$new_castling &= $castling_rights_rook_masks[$from];
 	$new_castling &= $castling_rights_rook_masks[$to];
 
-	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK];
+	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_LAST_FIELD];
 
 	my $captured = CP_NO_PIECE;
 	my $captured_mask = 0;
@@ -1352,8 +1350,7 @@ sub move {
 	$signature ^= $zk_update;
 
 	$self->[CP_POS_SIGNATURE] = $signature;
-
-	_cp_pos_info_update $self, $pos_info;
+	$self->[CP_POS_INFO] = $pos_info;
 
 	return \@undo_info;
 }
@@ -1419,7 +1416,7 @@ sub unmove {
 
 	$signature ^= $zk_color;
 
-	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
+	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_LAST_FIELD] = @state;
 
 	# FIXME! Copy as well?
 	--(cp_pos_half_moves($self));
@@ -1495,7 +1492,7 @@ sub undoMove {
 
 	$signature ^= $zk_color;
 
-	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_IN_CHECK] = @state;
+	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_LAST_FIELD] = @state;
 
 	# FIXME! Copy as well?
 	--(cp_pos_half_moves($self));
@@ -1562,18 +1559,6 @@ sub enPassantShift {
 	my $ep = cp_pos_en_passant($self);
 
 	return $ep ? cp_en_passant_file_to_shift($ep, $self->toMove) : 0;
-}
-
-sub kingShift {
-	my ($self) = @_;
-
-	return cp_pos_king_shift($self);
-}
-
-sub evasion {
-	my ($self) = @_;
-
-	return cp_pos_evasion($self);
 }
 
 sub material {
@@ -2092,7 +2077,7 @@ sub gameOver {
 	my @legal = $self->legalMoves;
 	if (!@legal) {
 		$state |= CP_GAME_OVER;
-		if (cp_pos_in_check $self) {
+		if ($self->inCheck) {
 			if (CP_WHITE == cp_pos_to_move $self) {
 				$state |= CP_GAME_BLACK_WINS;
 			} else {
@@ -2432,9 +2417,9 @@ sub inCheck {
 	my $checkers = _cp_pos_color_attacked $self, $turn, $king_shift;
 
 	if (wantarray) {
-		my $evasion_bb;
+		my $defence_bb;
 
-		# Additionally return king_shift and evasion bitboard.
+		# Additionally return king_shift and defence bitboard.
 		if ($checkers) {
 			# Check evasion strategy.  If in-check, the options are:
 			#
@@ -2452,31 +2437,31 @@ sub inCheck {
 			# Pawn checks can be treated like knight checks because the pawn
 			# always has direct contact with the king.
 			#
-			# For both options 2 and 3 we define an evasion bitboard of valid
+			# For both options 2 and 3 we define a defence bitboard of valid
 			# target squares.  This information is then used in the legality
 			# check for non-king moves to see whether the move prevents a check.
 			# There is no need to distinguish between the two cases in the
 			# legality check. The difference is just the popcount of the
-			# evasion bitboard.
+			# defence bitboard.
 			if ($checkers & ($checkers - 1)) {
 				# More than one piece giving check.  The king has to move.
-				# In this case, the evasion bitboard can be ignored.
-				$evasion_bb = 0;
+				# In this case, the defence bitboard can be ignored.
+				$defence_bb = 0;
 			} elsif ($checkers & (cp_pos_knights($self) | (cp_pos_pawns($self)))) {
-				$evasion_bb = $checkers;
+				$defence_bb = $checkers;
 			} else {
 				my $piece_shift = cp_bitboard_count_isolated_trailing_zbits $checkers;
 				my ($attack_type, undef, $attack_ray) =
 					@{$common_lines[$king_shift]->[$piece_shift]};
 				if ($attack_ray) {
-					$evasion_bb = $attack_ray;
+					$defence_bb = $attack_ray;
 				} else {
-					$evasion_bb = $checkers;
+					$defence_bb = $checkers;
 				}
 			}
 		}
 
-		return $checkers, $king_shift, $evasion_bb;
+		return $checkers, $king_shift, $defence_bb;
 	} else {
 		# Old version.
 		return $checkers;
@@ -2484,7 +2469,7 @@ sub inCheck {
 }
 
 sub checkPseudoLegalMove {
-	my ($self, $move, $in_check, $king_shift, $evasion_bb) = @_;
+	my ($self, $move, $in_check, $king_shift, $defence_bb) = @_;
 
 	my $from = cp_move_from $move;
 	my $to = cp_move_to $move;
@@ -2526,7 +2511,7 @@ sub checkPseudoLegalMove {
 	} elsif ($in_check) {
 		# We are in check but the piece that moves is not a king. We must
 		# either capture the piece giving check or block it.
-		if (!($evasion_bb & $to_mask)) {
+		if (!($defence_bb & $to_mask)) {
 			# Exception: En passant capture if the capture pawn is the one
 			# that gives check.
 			if (!($piece == CP_PAWN && $to == $ep_shift
@@ -2605,7 +2590,6 @@ my @export_accessors = qw(
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALF_MOVE_CLOCK CP_POS_REVERSIBLE_CLOCK CP_POS_HALF_MOVES
 	CP_POS_INFO CP_POS_SIGNATURE
-	CP_POS_IN_CHECK CP_POS_EVASION_SQUARES
 );
 
 my @export_board = qw(
@@ -2876,10 +2860,6 @@ sub reversibleClock {
 
 sub info {
 	shift->[CP_POS_INFO];
-}
-
-sub evasionSquares {
-	shift->[CP_POS_EVASION_SQUARES];
 }
 
 sub signature {
@@ -3210,7 +3190,6 @@ sub equals {
 	return if @$self != @$other;
 
 	for (my $i = 0; $i < @$self; ++$i) {
-		next if $i == CP_POS_EVASION_SQUARES && !$self->[CP_POS_IN_CHECK];
 		return if $self->[$i] != $other->[$i];
 	}
 
@@ -3832,27 +3811,24 @@ sub dumpInfo {
 	$output .= $self->shiftToSquare($self->kingShift);
 	$output .= "\n";
 
-	my $checkers = $self->[CP_POS_IN_CHECK];
+	my ($checkers, $king_shift, $defence_bb) = $self->inCheck;
 	if ($checkers) {
 		$output .= "In check: yes\n";
 
-		my $evasion_strategy = $self->evasion;
 		$output .= 'Check evasion strategies: ';
-		if ($evasion_strategy == CP_EVASION_ALL) {
-			$output .= "king move, capture, block\n";
-		} elsif ($evasion_strategy == CP_EVASION_CAPTURE) {
-			$output .= "king move, capture\n";
-		} elsif ($evasion_strategy == CP_EVASION_KING_MOVE) {
-			$output .= "king move\n";
+		if (!$defence_bb) {
+			$output .= "king move only\n";
+		} elsif ($checkers == $defence_bb) {
+			$output .= "king move or capture\n";
 		} else {
-			$output .= "$evasion_strategy (?)\n";
+			$output .= "king move, capture, or block\n";
 		}
 
-		$output .= "Check evasion squares:\n";
-		$output .= $self->dumpBitboard($self->[CP_POS_EVASION_SQUARES]);
+		$output .= "Check defence squares:\n";
+		$output .= $self->dumpBitboard($defence_bb);
 
 		$output .= "Checkers:\n";
-		$output .= $self->dumpBitboard($self->[CP_POS_IN_CHECK]);
+		$output .= $self->dumpBitboard($checkers);
 	} else {
 		$output .= "In check: no\n";
 	}
