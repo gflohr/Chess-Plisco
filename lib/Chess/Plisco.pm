@@ -1335,8 +1335,11 @@ sub move {
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
 	# The material balance is stored in the most signicant bits.  It is
-	# already left-shifted 19 bit in the lookup table so that we can
-	# simply add it.
+	# already left-shifted 19 bits in the lookup table so that we can simply
+	# add it.
+	#
+	# FIXME! Assemble the position info all at once instead of setting
+	# individual fields.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
 	# FIXME! Simplify this!

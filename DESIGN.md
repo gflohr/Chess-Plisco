@@ -18,7 +18,7 @@ For version 1, a number of design errors will be fixed.
 			- [Changes](#changes)
 			- [64-Bit Fields](#64-bit-fields)
 			- [Bit Fields](#bit-fields)
-				- [Castling Rights (2 bits)](#castling-rights-2-bits)
+				- [Castling Rights (4 bits)](#castling-rights-4-bits)
 				- [Turn (1 bit)](#turn-1-bit)
 				- [En-Passant File (4 bits)](#en-passant-file-4-bits)
 				- [Halfmove Clock (22 bits)](#halfmove-clock-22-bits)
@@ -128,7 +128,7 @@ Engine:
 The reversible move clock is removed because it is not necessary for the
 core library.
 
-##### Castling Rights (2 bits)
+##### Castling Rights (4 bits)
 
 No change to previous version.
 
@@ -161,19 +161,20 @@ material by 10) or 14 if we omit the multiplication.
 
 Absolutely needed:
 
-- castling rights (2 bits)
+- castling rights (4 bits)
 - turn (1 bit)
 - en passant file (4 bits)
 - halfmove clock (22 bits)
 
-That are 29 bits so far.
+That are 31 bits so far.
 
 Nice to have:
 
-- raw material balance: 7-14 bits
 - reversible clock: 22 bits
+- raw material balance: 7-14 bits
 
-That is enough even if the material is accurate to the centipawn.
+That are three bits too much. So we have to divide the raw material balance by
+10 which saves us 3 bits and we have exactly 64 bits.
 
 ### Move
 

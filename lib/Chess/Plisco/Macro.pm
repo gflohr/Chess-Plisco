@@ -56,6 +56,13 @@ sub cp_pos_info {}
 _define cp_pos_reversible_clock => '$p', '$p->[CP_POS_REVERSIBLE_CLOCK]';
 sub cp_pos_reversible_clock {}
 
+# Structure of a position info (in the future):
+#
+# castling:         offset  0,  4 bits
+# ep file:          offset  4,  4 bits
+# turn:             offset  8,  1 bit
+# halfmove clock:   offset  9, 22 bits
+# material balance: offset 31, 14 bits
 _define cp_pos_info_castling_rights => '$i', '$i & 0xf';
 sub cp_pos_info_castling_rights {}
 _define cp_pos_info_white_king_side_castling_right => '$i', '$i & (1 << 0)';
