@@ -68,7 +68,7 @@ _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
 sub cp_pos_info_black_queen_side_castling_right {}
 _define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
 sub cp_pos_info_en_passant {}
-_define cp_pos_info_to_move => '$i', '(($i & (1 << 16)) >> 16)';
+_define cp_pos_info_to_move => '$i', '(($i & (1 << 8)) >> 8)';
 sub cp_pos_info_to_move {}
 _define cp_pos_info_material => '$i', '($i >> 19)';
 sub cp_pos_info_material {}
@@ -86,7 +86,7 @@ _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
 _define _cp_pos_info_set_en_passant => '$i', '$s',
 	'($i = ($i & ~(0xf << 4)) | ($s << 4))';
 _define _cp_pos_info_set_to_move => '$i', '$c',
-	'($i = ($i & ~(1 << 16)) | ($c << 16))';
+	'($i = ($i & ~(1 << 8)) | ($c << 8))';
 _define _cp_pos_info_set_material => '$i', '$m',
 	'($i = (($i & 0x7fffffff) | ($m << 19)))';
 
