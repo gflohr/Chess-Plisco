@@ -51,7 +51,7 @@ sub new {
 	my $position = $options{position};
 	my $signatures = $options{signatures};
 
-	# Make sure that the reversible clock does not look beyond the know
+	# Make sure that the reversible clock does not look beyond the known
 	# positions.  This will simplify the detection of a draw by repetition.
 	if ($position->[CP_POS_REVERSIBLE_CLOCK] >= @$signatures) {
 		$position->[CP_POS_REVERSIBLE_CLOCK] = @$signatures - 1;
@@ -236,7 +236,7 @@ sub alphabeta {
 	my $signatures = $self->{signatures};
 	my $signature = $position->[CP_POS_SIGNATURE];
 	if ($ply > 1) {
-		my $rc = $position->reversibleClock; # FIXME! Use this!!!
+		my $rc = $position->reversibleClock;
 		my $history_length = $self->{history_length};
 		my $signature_slot = $history_length + $ply;
 		my $max_back = $signature_slot - $rc - 1;
@@ -322,6 +322,7 @@ sub alphabeta {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
 		my $state = $position->move($move);
+		# FIXME! Update that on the fly.
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;

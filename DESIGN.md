@@ -22,9 +22,8 @@ For version 1, a number of design errors will be fixed.
 				- [Turn (1 bit)](#turn-1-bit)
 				- [En-Passant File (4 bits)](#en-passant-file-4-bits)
 				- [Halfmove Clock (22 bits)](#halfmove-clock-22-bits)
-				- [Engine: Check Evasion Squares (3 bits)](#engine-check-evasion-squares-3-bits)
-				- [Engine: Check Source Squares (12 bits)](#engine-check-source-squares-12-bits)
-				- [Engine: Raw Material Balance (7 bits)](#engine-raw-material-balance-7-bits)
+				- [Engine: Raw Material Balance (7-14 bits)](#engine-raw-material-balance-7-14-bits)
+				- [Space Requirements](#space-requirements)
 		- [Move](#move)
 	- [Move Generation](#move-generation)
 		- [New API (`move/unmove`)](#new-api-moveunmove)
@@ -150,34 +149,31 @@ squares. That is why the multiplication with the turn (0 or 1) works.
 
 This is only 22 bits. There is no need to put that into a bitboard of its own.
 
-##### Engine: Check Evasion Squares (3 bits)
-
-This used to be 64 buts but can be dramatically reduced. The king can move to
-at most 8 squares. We can always encode these eight squares into a 3-bit
-bitmask relative to the current location of the king.
-
-This can be precomputed into a lookup table:
-
-	evasion_bb = evasions[king_shift][evasion_mask]
-
-##### Engine: Check Source Squares (12 bits)
-
-This used to be 64 bits but can be easily compressed to just 12 bits. At most
-two pieces can give check simultaneously. Instead of storing the bitmask, we
-store the shift (6 bits) of both pieces in 2 x 6 = 12 bits.
-
-This field combined with the field above (check evasion squares) is the
-indicator that the current side is in check. We need the lookups and bit
-shifting only in the relatively rare case of a check, and even then we
-only use relatively cheap operations to restore the full information.
-
-We have find out whether it is cheaper to compute the bitboard on-the-fly or
-precompute it into a lookup table with the 12-bit bitmask as the index.
-
-##### Engine: Raw Material Balance (7 bits)
+##### Engine: Raw Material Balance (7-14 bits)
 
 The maximum material advantage is 103 (2 rooks, 2 bishops, 2 knights, 9 queens).
 That fits into 7 bits.
+
+If we count a knight as 320 and a bishop as 330 we need 11 bits (multiply
+material by 10) or 14 if we omit the multiplication.
+
+##### Space Requirements
+
+Absolutely needed:
+
+- castling rights (2 bits)
+- turn (1 bit)
+- en passant file (4 bits)
+- halfmove clock (22 bits)
+
+That are 29 bits so far.
+
+Nice to have:
+
+- raw material balance: 7-14 bits
+- reversible clock: 22 bits
+
+That is enough even if the material is accurate to the centipawn.
 
 ### Move
 
