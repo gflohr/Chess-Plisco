@@ -77,7 +77,7 @@ _define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
 sub cp_pos_info_en_passant {}
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 8)) >> 8)';
 sub cp_pos_info_to_move {}
-_define cp_pos_info_material => '$i', '($i >> 19)';
+_define cp_pos_info_material => '$i', '($i >> 31)';
 sub cp_pos_info_material {}
 
 _define _cp_pos_info_set_castling => '$i', '$c',
@@ -95,7 +95,7 @@ _define _cp_pos_info_set_en_passant => '$i', '$s',
 _define _cp_pos_info_set_to_move => '$i', '$c',
 	'($i = ($i & ~(1 << 8)) | ($c << 8))';
 _define _cp_pos_info_set_material => '$i', '$m',
-	'($i = (($i & 0x7fffffff) | ($m << 19)))';
+	'($i = (($i & 0x7fffffff) | ($m << 31)))';
 
 _define cp_pos_castling_rights => '$p',
 		'(cp_pos_info_castling_rights(cp_pos_info($p)))';

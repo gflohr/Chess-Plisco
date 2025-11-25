@@ -4116,13 +4116,13 @@ my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
 @material_deltas = (0) x (1 + (1 | (CP_QUEEN << 1) | (CP_QUEEN << 4)));
 foreach my $captured (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
-	$material_deltas[CP_WHITE | ($captured << 4)] = ($piece_values[$captured] << 19);
-	$material_deltas[CP_BLACK | ($captured << 4)] = (-$piece_values[$captured] << 19);
+	$material_deltas[CP_WHITE | ($captured << 4)] = ($piece_values[$captured] << 31);
+	$material_deltas[CP_BLACK | ($captured << 4)] = (-$piece_values[$captured] << 31);
 	foreach my $promote (CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
 		$material_deltas[CP_WHITE | ($promote << 1) | ($captured << 4)] =
-			($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
+			($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 31;
 		$material_deltas[CP_BLACK | ($promote << 1) | ($captured << 4)] =
-			-($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 19;
+			-($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 31;
 	}
 }
 
