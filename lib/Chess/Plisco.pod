@@ -362,7 +362,7 @@ Returns the bitboard of all pawns (black and white).
 
 Returns the side to move, either L</CP_BLACK> or L</CP_WHITE>.
 
-=item B<halfMoves>
+=item B<halfmoves>
 
 Returns the number of half-moves made.  Initially, this is 0.  After white has
 made their first move, it is 1. After black has made their first move, it is
@@ -401,7 +401,7 @@ the fact that they are necessarily the first king move.
 The half-move-clock is important because both players can claim a draw, when
 the half-move clock has reached 100.
 
-=item B<halfMoveClock>
+=item B<halfmoveClock>
 
 Like L</irreversibleClock> but only captures and pawn moves are considered
 irreversible. Changes to the castling state are ignored.  This is the value
@@ -1381,13 +1381,9 @@ A bitboard of all knights (black and white) on the board.  See also L</knights>.
 
 A bitboard of all pawns (black and white) on the board.  See also L</pawns>.
 
-=item B<POS-E<gt>[CP_POS_HALF_MOVES]>
+=item B<POS-E<gt>[CP_POS_HALFMOVES]>
 
-The number of half-moves made.  See also L</halfMoves>.
-
-=item B<POS-E<gt>[CP_POS_HALF_MOVE_CLOCK]>
-
-The current value of the half-move clock.  See also L</halfMoveClock>.
+The number of half-moves made.  See also L</halfmoves>.
 
 =item B<POS-E<gt>[CP_POS_IRREVERSIBLE_CLOCK]>
 

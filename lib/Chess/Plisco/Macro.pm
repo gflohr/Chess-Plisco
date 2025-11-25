@@ -45,10 +45,8 @@ _define cp_pos_rooks => '$p', '$p->[CP_POS_ROOKS]';
 sub cp_pos_rooks {}
 _define cp_pos_kings => '$p', '$p->[CP_POS_KINGS]';
 sub cp_pos_kings {}
-_define cp_pos_half_move_clock => '$p', '$p->[CP_POS_HALF_MOVE_CLOCK]';
-sub cp_pos_half_move_clock {}
-_define cp_pos_half_moves => '$p', '$p->[CP_POS_HALF_MOVES]';
-sub cp_pos_half_moves {}
+_define cp_pos_halfmoves => '$p', '$p->[CP_POS_HALFMOVES]';
+sub cp_pos_halfmoves {}
 _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
 sub cp_pos_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
@@ -77,25 +75,29 @@ _define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
 sub cp_pos_info_en_passant {}
 _define cp_pos_info_to_move => '$i', '(($i & (1 << 8)) >> 8)';
 sub cp_pos_info_to_move {}
+_define cp_pos_info_halfmove_clock => '$i', '(($i & (0x3f_ffff << 9)) >> 9)';
+sub cp_pos_info_halfmove_clock {}
 _define cp_pos_info_material => '$i', '($i >> 31)';
 sub cp_pos_info_material {}
 
 _define _cp_pos_info_set_castling => '$i', '$c',
-	'($i = ($i & ~0xf) | $c)';
+	'($i = ($i & ~0xf) | ($c))';
 _define _cp_pos_info_set_white_king_side_castling_right => '$i', '$c',
-	'($i = ($i & ~(1 << 0)) | ($c << 0))';
+	'($i = ($i & ~(1 << 0)) | (($c) << 0))';
 _define _cp_pos_info_set_white_queen_side_castling_right => '$i', '$c',
-	'($i = ($i & ~(1 << 1)) | ($c << 1))';
+	'($i = ($i & ~(1 << 1)) | (($c) << 1))';
 _define _cp_pos_info_set_black_king_side_castling_right => '$i', '$c',
-	'($i = ($i & ~(1 << 2)) | ($c << 2))';
+	'($i = ($i & ~(1 << 2)) | (($c) << 2))';
 _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
-	'($i = ($i & ~(1 << 3)) | ($c << 3))';
+	'($i = ($i & ~(1 << 3)) | (($c) << 3))';
 _define _cp_pos_info_set_en_passant => '$i', '$s',
-	'($i = ($i & ~(0xf << 4)) | ($s << 4))';
+	'($i = ($i & ~(0xf << 4)) | (($s) << 4))';
 _define _cp_pos_info_set_to_move => '$i', '$c',
-	'($i = ($i & ~(1 << 8)) | ($c << 8))';
+	'($i = ($i & ~(1 << 8)) | (($c) << 8))';
+_define _cp_pos_info_set_halfmove_clock => '$i', '$c',
+	'($i = ($i & ~(0x3f_ffff << 9)) | (($c) << 9))';
 _define _cp_pos_info_set_material => '$i', '$m',
-	'($i = (($i & 0x7fffffff) | ($m << 31)))';
+	'($i = (($i & 0x7fffffff) | (($m) << 31)))';
 
 _define cp_pos_castling_rights => '$p',
 		'(cp_pos_info_castling_rights(cp_pos_info($p)))';
@@ -116,6 +118,8 @@ _define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
 sub cp_pos_to_move {}
 _define cp_pos_en_passant => '$p', '(cp_pos_info_en_passant(cp_pos_info($p)))';
 sub cp_pos_en_passant {}
+_define cp_pos_halfmove_clock => '$p', '(cp_pos_info_halfmove_clock(cp_pos_info($p)))';
+sub cp_pos_halfmove_clock {}
 _define cp_pos_material => '$p', '(cp_pos_info_material(cp_pos_info($p)))';
 sub cp_pos_material {}
 

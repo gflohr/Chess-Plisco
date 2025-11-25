@@ -74,7 +74,7 @@ use constant CP_QUEEN_VALUE => 900;
 # and getting the pieces for the side to move and the side not to move can
 # be simplified by just adding the color or the negated color to the index
 # of the white pieces.  This must not change in future versions!
-use constant CP_POS_HALF_MOVES => 0;
+use constant CP_POS_HALFMOVES => 0;
 use constant CP_POS_PAWNS => CP_PAWN;
 use constant CP_POS_KNIGHTS => CP_KNIGHT;
 use constant CP_POS_BISHOPS => CP_BISHOP;
@@ -83,9 +83,8 @@ use constant CP_POS_QUEENS => CP_QUEEN;
 use constant CP_POS_KINGS => CP_KING;
 use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
-use constant CP_POS_HALF_MOVE_CLOCK => 9;
-use constant CP_POS_INFO => 10;
-use constant CP_POS_SIGNATURE => 11;
+use constant CP_POS_INFO => 9;
+use constant CP_POS_SIGNATURE => 10;
 # 3 reserved slots.
 use constant CP_POS_REVERSIBLE_CLOCK => 15;
 use constant CP_POS_LAST_FIELD => 15;
@@ -380,9 +379,8 @@ sub new {
 	cp_pos_knights($self) = ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK);
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
-	cp_pos_half_move_clock($self) = 0;
 	cp_pos_reversible_clock($self) = 0;
-	cp_pos_half_moves($self) = 0;
+	cp_pos_halfmoves($self) = 0;
 
 	my $info = 0;
 	_cp_pos_info_set_white_king_side_castling_right($info, 1);
@@ -391,6 +389,7 @@ sub new {
 	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
 	_cp_pos_info_set_to_move($info, CP_WHITE);
 	_cp_pos_info_set_en_passant($info, 0);
+	_cp_pos_info_set_halfmove_clock($info, 0);
 	cp_pos_info($self) = $info;
 	
 	$self->__updateZobristKey;
@@ -550,23 +549,24 @@ sub newFromFEN {
 	my $to_move = cp_pos_info_to_move($pos_info);
 	$pos_info = $self->__checkEnPassantState($ep_square, $to_move, $pos_info);
 
-	# This is not redundant! Without it, the Zobrist key does not get calculated
-	# correctly.
-	cp_pos_info($self) = $pos_info;
-
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
 	}
-	$self->[CP_POS_HALF_MOVE_CLOCK] = $self->[CP_POS_REVERSIBLE_CLOCK] = $hmc;
+	$self->[CP_POS_REVERSIBLE_CLOCK] = $hmc;
+	_cp_pos_info_set_halfmove_clock($pos_info, $hmc);
+
+	# This is not redundant! Without it, the Zobrist key does not get calculated
+	# correctly.
+	cp_pos_info($self) = $pos_info;
 
 	if ($moveno !~ /^[1-9][0-9]*$/) {
 		$moveno = 1;
 	}
 
 	if ($to_move == CP_WHITE) {
-			$self->[CP_POS_HALF_MOVES] = ($moveno - 1) << 1;
+			$self->[CP_POS_HALFMOVES] = ($moveno - 1) << 1;
 	} else {
-			$self->[CP_POS_HALF_MOVES] = (($moveno - 1) << 1) + 1;
+			$self->[CP_POS_HALFMOVES] = (($moveno - 1) << 1) + 1;
 	}
 
 	$self->__checkIllegalCheck($to_move) if !$relaxed;
@@ -1234,7 +1234,7 @@ sub move {
 	$new_castling &= $castling_rights_rook_masks[$from];
 	$new_castling &= $castling_rights_rook_masks[$to];
 
-	my @state = @$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_LAST_FIELD];
+	my @state = @$self[CP_POS_INFO .. CP_POS_LAST_FIELD];
 
 	my $captured = CP_NO_PIECE;
 	my $captured_mask = 0;
@@ -1261,23 +1261,25 @@ sub move {
 			$captured = CP_PAWN;
 			$is_ep = 1;
 		}
-		$self->[CP_POS_HALF_MOVE_CLOCK]
-				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
+		_cp_pos_info_set_halfmove_clock($pos_info, 0);
+		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
 			_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | ($from & 7)));
 		} else {
 			_cp_pos_info_set_en_passant($pos_info, 0);
 		}
 	} elsif ($her_pieces & $to_mask) {
-		$self->[CP_POS_HALF_MOVE_CLOCK]
-				= $self->[CP_POS_REVERSIBLE_CLOCK] = 0;
+		_cp_pos_info_set_halfmove_clock($pos_info, 0);
+		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	} elsif ($old_castling != $new_castling) {
+		my $hmc = cp_pos_info_halfmove_clock($pos_info);
+		_cp_pos_info_set_halfmove_clock($pos_info, $hmc + 1);
 		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
-		++$self->[CP_POS_HALF_MOVE_CLOCK];
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	} else {
-		++$self->[CP_POS_HALF_MOVE_CLOCK];
+		my $hmc = cp_pos_info_halfmove_clock($pos_info);
+		_cp_pos_info_set_halfmove_clock($pos_info, $hmc + 1);
 		++$self->[CP_POS_REVERSIBLE_CLOCK];
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	}
@@ -1331,7 +1333,7 @@ sub move {
 
 	my @undo_info = ($move, $undo, $captured_mask, @state);
 
-	++$self->[CP_POS_HALF_MOVES];
+	++$self->[CP_POS_HALFMOVES];
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
 	# The material balance is stored in the most signicant bits.  It is
@@ -1343,7 +1345,7 @@ sub move {
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
 	# FIXME! Simplify this!
-	my $signature = $state[CP_POS_SIGNATURE - CP_POS_HALF_MOVE_CLOCK];
+	my $signature = $state[CP_POS_SIGNATURE - CP_POS_INFO];
 
 	if ($old_castling != $new_castling) {
 		$zk_update ^= $zk_castling[$old_castling]
@@ -1419,10 +1421,10 @@ sub unmove {
 
 	$signature ^= $zk_color;
 
-	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_LAST_FIELD] = @state;
+	@$self[CP_POS_INFO .. CP_POS_LAST_FIELD] = @state;
 
 	# FIXME! Copy as well?
-	--(cp_pos_half_moves($self));
+	--(cp_pos_halfmoves($self));
 }
 
 sub doMove {
@@ -1495,10 +1497,10 @@ sub undoMove {
 
 	$signature ^= $zk_color;
 
-	@$self[CP_POS_HALF_MOVE_CLOCK .. CP_POS_LAST_FIELD] = @state;
+	@$self[CP_POS_INFO .. CP_POS_LAST_FIELD] = @state;
 
 	# FIXME! Copy as well?
-	--(cp_pos_half_moves($self));
+	--(cp_pos_halfmoves($self));
 }
 
 sub bMagic {
@@ -2089,7 +2091,7 @@ sub gameOver {
 		} else {
 			$state |= CP_GAME_STALEMATE;
 		}
-	} elsif (100 <= cp_pos_half_move_clock $self) {
+	} elsif (100 <= cp_pos_halfmove_clock $self) {
 		$state |= CP_GAME_OVER | CP_GAME_FIFTY_MOVES;
 	} elsif ($self->insufficientMaterial($forcible)) {
 		$state |= CP_GAME_OVER | CP_GAME_INSUFFICIENT_MATERIAL;
@@ -2584,6 +2586,12 @@ sub legalMoves {
 	return @legal;
 }
 
+sub halfmoveClock {
+	my ($self) = @_;
+
+	return cp_pos_halfmove_clock($self);
+}
+
 # Do not remove this line!
 # __END_MACROS__
 
@@ -2591,7 +2599,7 @@ my @export_accessors = qw(
 	CP_POS_WHITE_PIECES CP_POS_BLACK_PIECES
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
-	CP_POS_HALF_MOVE_CLOCK CP_POS_REVERSIBLE_CLOCK CP_POS_HALF_MOVES
+	CP_POS_HALFMOVE_CLOCK CP_POS_REVERSIBLE_CLOCK CP_POS_HALFMOVES
 	CP_POS_INFO CP_POS_SIGNATURE
 );
 
@@ -2849,12 +2857,8 @@ sub vacant {
 	return ~($self->[CP_POS_WHITE_PIECES] | $self->[CP_POS_BLACK_PIECES]);
 }
 
-sub halfMoves {
-	shift->[CP_POS_HALF_MOVES];
-}
-
-sub halfMoveClock {
-	shift->[CP_POS_HALF_MOVE_CLOCK];
+sub halfmoves {
+	shift->[CP_POS_HALFMOVES];
 }
 
 sub reversibleClock {
@@ -2964,8 +2968,8 @@ sub toFEN {
 		$fen .= '-';
 	}
 
-	$fen .= sprintf ' %u %u', $self->[CP_POS_HALF_MOVE_CLOCK],
-			1 + ($self->[CP_POS_HALF_MOVES] >> 1);
+	$fen .= sprintf ' %u %u', $self->halfmoveClock,
+			1 + ($self->[CP_POS_HALFMOVES] >> 1);
 
 	return $fen;
 }

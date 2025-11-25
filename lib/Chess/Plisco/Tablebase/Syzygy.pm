@@ -2028,7 +2028,7 @@ sub __probeDtzNoEP {
 
 			my $v;
 			eval {
-				if (!cp_pos_half_move_clock($pos)) {
+				if (!cp_pos_halfmove_clock($pos)) {
 					if ($wdl == -2) {
 						$v = -1;
 					} else {

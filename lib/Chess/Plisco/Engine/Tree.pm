@@ -221,7 +221,7 @@ sub alphabeta {
 			. " depth: $depth, sig: $hex_signature $position");
 	}
 
-	if (cp_pos_half_move_clock($position) >= 100) {
+	if (cp_pos_halfmove_clock($position) >= 100) {
 		if (DEBUG) {
 			$self->indent($ply, "draw detected");
 		}
