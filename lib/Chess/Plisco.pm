@@ -87,7 +87,6 @@ use constant CP_POS_LAST_MOVE => 9;
 # 5 reserved slots.
 # FIXME! Define CP_POS_USR1, ...
 use constant CP_POS_INFO => 15;
-use constant CP_POS_LAST_FIELD => 15;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
