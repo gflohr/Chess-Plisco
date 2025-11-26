@@ -433,7 +433,7 @@ sub move {
 	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
 
 	my $state = $self->SUPER::move($move) or return;
-	($move) = @$state;
+	$move = $state->[0];
 
 	my $piece = cp_move_piece $move;
 	my $from = cp_move_from $move;

@@ -1186,9 +1186,10 @@ sub moveSignificant {
 	return cp_move_significant $move;
 }
 
-
 sub move {
 	my ($self, $move) = @_;
+
+	my @backup = @$self;
 
 	my $pos_info = cp_pos_info $self;
 	my ($from, $to, $promote, $piece) =
@@ -1294,8 +1295,6 @@ sub move {
 	cp_move_set_color($move, $to_move);
 	cp_move_set_en_passant($move, $is_ep);
 
-	my @undo_info = ($move, $captured_mask, @state);
-
 	++$self->[CP_POS_HALFMOVES];
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
@@ -1309,49 +1308,18 @@ sub move {
 
 	$self->[CP_POS_INFO] = $pos_info;
 
-	return \@undo_info;
+	unshift @backup, $move;
+
+	return \@backup;
 }
 
 sub unmove {
-	my ($self, $undo_info) = @_;
+	my ($self, $backup) = @_;
 
-	my ($move, $captured_mask, @state) = @$undo_info;
+	shift @$backup; # The move.
+	@$self = @$backup;
 
-	my ($from, $to, $promote, $piece, $captured) =
-		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
-		 cp_move_piece($move), cp_move_captured($move));
-
-	my $move_mask = (1 << $from) | (1 << $to);
-	my $to_move = !cp_pos_to_move $self;
-
-	# Castling?
-	if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
-		# Restore the rook.
-		my $rook_move_mask = $castling_rook_move_masks[$to];
-
-		$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
-		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
-	}
-
-	$self->[CP_POS_WHITE_PIECES + $to_move ] ^= $move_mask;
-
-	if ($promote) {
-		my $remove_mask = 1 << $to;
-		$self->[CP_POS_PAWNS] |= 1 << $from;
-		$self->[$promote] ^= $remove_mask;
-	} else {
-		$self->[$piece] ^= $move_mask;
-	}
-
-	if ($captured) {
-		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
-		$self->[$captured] |= $captured_mask;
-	}
-
-	@$self[CP_POS_BLACK_PIECES + 1 .. CP_POS_LAST_FIELD] = @state;
-
-	# FIXME! Copy as well?
-	--(cp_pos_halfmoves($self));
+	return $self;
 }
 
 sub doMove {
@@ -3683,10 +3651,6 @@ sub dumpInfo {
 	} else {
 		$output .= '-';
 	}
-
-	$output .= "\nKing to move: ";
-	$output .= $self->shiftToSquare($self->kingShift);
-	$output .= "\n";
 
 	my ($checkers, $king_shift, $defence_bb) = $self->inCheck;
 	if ($checkers) {
