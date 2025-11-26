@@ -126,11 +126,11 @@ Remember that the macros are expanded by a rather dumb search and replace.  That
 can lead to problems with parentheses. Say you have a line like this in a test
 written with L<Test::More>
 
-    is cp_pos_material($pos), 0, "material test";
+    is cp_pos_white_king_side_castling_right($pos), 0, "castling test";
 
 But this may be expanded into something like:
 
-    is (($pos->[CP_POS_INFO]) >> 19), 0, "material test";
+    is (($pos->[CP_POS_CASTLING_RIGHTS]) & 0x1), 0, "castling test";
 
 And this is not what you meant.  Now, C<is()> is called with just one
 argument instead of 3 like you expected.
@@ -275,66 +275,9 @@ Same as L<Chess::Plisco/signature>.
 
 Same as L<Chess::Plisco/material>.
 
-=item B<cp_pos_info(POS)>
-
-Same as L<Chess::Plisco/info>.  See also L</Position Info Macros> below!
-
 =item B<cp_pos_last_move(POS)>
 
 Same as L<Chess::Plisco/lastMove>.
-
-=back
-
-=head2 Position Info Macros
-
-All these work directly on a position info as returned by L</cp_pos_info>.
-
-=over 4
-
-=item B<cp_pos_info_castling_rights(INFO)>
-
-Same as L</cp_pos_castling_rights> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_white_king_side_castling_right(INFO)>
-
-Same as L</cp_pos_white_king_side_castling_right> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_white_queen_side_castling_right(INFO)>
-
-Same as L</cp_pos_white_queen_side_castling_right> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_black_king_side_castling_right(INFO)>
-
-Same as L</cp_pos_black_king_side_castling_right> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_black_queen_side_castling_right(INFO)>
-
-Same as L</cp_pos_black_queen_side_castling_right> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_to_move(INFO)>
-
-Same as L</cp_pos_to_move> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_en_passant(INFO)>
-
-Same as L</cp_pos_en_passant> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_en_passant_file(INFO)>
-
-Same as L</cp_pos_en_passant_file> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
-
-=item B<cp_pos_info_material(INFO)>
-
-Same as L</cp_pos_material> but work directly on position
-info B<INFO> as returned by L</cp_pos_info>.
 
 =back
 

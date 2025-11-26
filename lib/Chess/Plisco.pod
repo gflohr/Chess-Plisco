@@ -521,14 +521,7 @@ Returns a bitmap of castling rights for the current position:
 
 =item B<kingShift>
 
-Return the shift of the square of the king of the side to move.  This
-information is needed internally.
-
-=item B<info>
-
-Returns an integer encoding various other aspects of the position.  You do not
-need this because there are dedicated methods available for all these
-properties.
+Return the shift of the square of the king of the side to move.
 
 =item B<lastMove>
 
