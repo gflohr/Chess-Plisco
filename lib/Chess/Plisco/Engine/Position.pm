@@ -502,7 +502,7 @@ sub move {
 sub evaluate {
 	my ($self) = @_;
 
-	my $material = cp_pos_material $self;
+	my $material = $self->[CP_POS_MATERIAL];
 	my $white_pieces = $self->[CP_POS_WHITE_PIECES];
 	my $black_pieces = $self->[CP_POS_BLACK_PIECES];
 	my $pawns = $self->[CP_POS_PAWNS];

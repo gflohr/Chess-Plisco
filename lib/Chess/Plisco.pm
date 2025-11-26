@@ -84,13 +84,14 @@ use constant CP_POS_KINGS => CP_KING;
 use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_LAST_MOVE => 9;
+use constant CP_POS_MATERIAL => 10;
 # 5 reserved slots.
-use constant CP_POS_USR1 => 10;
-use constant CP_POS_USR2 => 11;
-use constant CP_POS_USR3 => 12;
-use constant CP_POS_USR4 => 13;
-use constant CP_POS_USR5 => 14;
-use constant CP_POS_INFO => 15;
+use constant CP_POS_USR1 => 11;
+use constant CP_POS_USR2 => 12;
+use constant CP_POS_USR3 => 13;
+use constant CP_POS_USR4 => 14;
+use constant CP_POS_USR5 => 15;
+use constant CP_POS_INFO => 16;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -368,6 +369,7 @@ sub new {
 	return $class->newFromFEN($fen, $relaxed) if defined $fen && length $fen;
 
 	my $self = bless [], $class;
+	cp_pos_halfmoves($self) = 0;
 	cp_pos_white_pieces($self) = CP_1_MASK | CP_2_MASK;
 	cp_pos_black_pieces($self) = CP_8_MASK | CP_7_MASK,
 	cp_pos_kings($self) = (CP_1_MASK | CP_8_MASK) & CP_E_MASK;
@@ -380,8 +382,7 @@ sub new {
 	cp_pos_knights($self) = ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK);
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
-
-	cp_pos_halfmoves($self) = 0;
+	cp_pos_material($self) = 0;
 
 	my $info = 0;
 	_cp_pos_info_set_white_king_side_castling_right($info, 1);
@@ -506,9 +507,9 @@ sub newFromFEN {
 	$self->[CP_POS_BISHOPS] = $bishops;
 	$self->[CP_POS_KNIGHTS] = $knights;
 	$self->[CP_POS_PAWNS] = $pawns;
+	$self->[CP_POS_MATERIAL] = $material;
 
 	my $pos_info = 0;
-	_cp_pos_info_set_material($pos_info, $material);
 
 	if ('w' eq lc $color) {
 		_cp_pos_info_set_to_move($pos_info, CP_WHITE);
@@ -1302,14 +1303,7 @@ sub move {
 	++$self->[CP_POS_HALFMOVES];
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
 
-	# The material balance is stored in the most signicant bits.  It is
-	# already left-shifted 19 bits in the lookup table so that we can simply
-	# add it.
-	#
-	# FIXME! Assemble the position info all at once instead of setting
-	# individual fields.
-	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
-
+	$self->[CP_POS_MATERIAL] += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 	$self->[CP_POS_INFO] = $pos_info;
 	$self->[CP_POS_LAST_MOVE] = $move;
 
@@ -2446,7 +2440,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_LAST_MOVE
+	CP_POS_LAST_MOVE CP_POS_MATERIAL
 	CP_POS_USR1 CP_POS_USR2 CP_POS_USR3 CP_POS_USR4 CP_POS_USR5
 	CP_POS_INFO
 );
@@ -3959,13 +3953,13 @@ my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
 @material_deltas = (0) x (1 + (1 | (CP_QUEEN << 1) | (CP_QUEEN << 4)));
 foreach my $captured (CP_NO_PIECE, CP_PAWN, CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
-	$material_deltas[CP_WHITE | ($captured << 4)] = ($piece_values[$captured] << 31);
-	$material_deltas[CP_BLACK | ($captured << 4)] = (-$piece_values[$captured] << 31);
+	$material_deltas[CP_WHITE | ($captured << 4)] = $piece_values[$captured];
+	$material_deltas[CP_BLACK | ($captured << 4)] = -$piece_values[$captured];
 	foreach my $promote (CP_KNIGHT, CP_BISHOP, CP_ROOK, CP_QUEEN) {
 		$material_deltas[CP_WHITE | ($promote << 1) | ($captured << 4)] =
-			($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 31;
+			$piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE;
 		$material_deltas[CP_BLACK | ($promote << 1) | ($captured << 4)] =
-			-($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE) << 31;
+			-($piece_values[$captured] + $piece_values[$promote] - CP_PAWN_VALUE);
 	}
 }
 
