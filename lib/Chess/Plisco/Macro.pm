@@ -51,6 +51,8 @@ _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
 sub cp_pos_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 sub cp_pos_info {}
+_define cp_pos_last_move => '$p', '$p->[CP_POS_LAST_MOVE]';
+sub cp_pos_info {}
 
 # Structure of a position info (in the future):
 #

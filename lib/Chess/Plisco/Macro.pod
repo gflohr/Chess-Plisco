@@ -279,6 +279,10 @@ Same as L<Chess::Plisco/material>.
 
 Same as L<Chess::Plisco/info>.  See also L</Position Info Macros> below!
 
+=item B<cp_pos_last_move(POS)>
+
+Same as L<Chess::Plisco/lastMove>.
+
 =back
 
 =head2 Position Info Macros

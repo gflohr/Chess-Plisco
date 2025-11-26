@@ -20,11 +20,11 @@ use Chess::Plisco::Macro;
 use base qw(Chess::Plisco Exporter);
 
 # Additional fields.
-use constant CP_POS_SIGNATURE => 9;
-use constant CP_POS_REVERSIBLE_CLOCK => 10;
-use constant CP_POS_GAME_PHASE => 11;
-use constant CP_POS_OPENING_SCORE => 12;
-use constant CP_POS_ENDGAME_SCORE => 13;
+use constant CP_POS_SIGNATURE => 10;
+use constant CP_POS_REVERSIBLE_CLOCK => 11;
+use constant CP_POS_GAME_PHASE => 12;
+use constant CP_POS_OPENING_SCORE => 13;
+use constant CP_POS_ENDGAME_SCORE => 14;
 
 our @EXPORT_OK = qw(CP_POS_REVERSIBLE_CLOCK);
 
@@ -433,7 +433,7 @@ sub move {
 	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
 
 	my $state = $self->SUPER::move($move) or return;
-	$move = $state->[0];
+	$move = $self->[CP_POS_LAST_MOVE];
 
 	my $piece = cp_move_piece $move;
 	my $from = cp_move_from $move;

@@ -83,10 +83,11 @@ use constant CP_POS_QUEENS => CP_QUEEN;
 use constant CP_POS_KINGS => CP_KING;
 use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
+use constant CP_POS_LAST_MOVE => 9;
 # 5 reserved slots.
 # FIXME! Define CP_POS_USR1, ...
-use constant CP_POS_INFO => 14;
-use constant CP_POS_LAST_FIELD => 14;
+use constant CP_POS_INFO => 15;
+use constant CP_POS_LAST_FIELD => 15;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -1199,7 +1200,9 @@ sub move {
 	my $to_move = cp_pos_info_to_move($pos_info);
 	my $to_mask = 1 << $to;
 	my $move_mask = (1 << $from) | $to_mask;
-	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
+	my $my_idx = CP_POS_WHITE_PIECES + $to_move;
+	my $her_idx = CP_POS_WHITE_PIECES + !$to_move;
+	my $her_pieces = $self->[$her_idx];
 
 	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
 
@@ -1209,7 +1212,7 @@ sub move {
 			# Move the rook.
 			my $rook_move_mask = $castling_rook_move_masks[$to];
 			$self->[CP_POS_ROOKS] ^= $rook_move_mask;
-			$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
+			$self->[$my_idx] ^= $rook_move_mask;
 		}
 
 		# Remove the castling rights.
@@ -1270,13 +1273,13 @@ sub move {
 
 	# Move all pieces involved.
 	if ($captured != CP_NO_PIECE) {
-		$self->[CP_POS_WHITE_PIECES + !$to_move] ^= $captured_mask;
+		$self->[$her_idx] ^= $captured_mask;
 		$self->[$captured] ^= $captured_mask;
 		cp_move_set_captured($move, $captured);
 
 	}
 
-	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
+	$self->[$my_idx] ^= $move_mask;
 	$self->[$piece] ^= $move_mask;
 
 	# It is better to overwrite the castling rights unconditionally because
@@ -1305,8 +1308,7 @@ sub move {
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
 	$self->[CP_POS_INFO] = $pos_info;
-
-	unshift @backup, $move;
+	$self->[CP_POS_LAST_MOVE] = $move;
 
 	return \@backup;
 }
@@ -1314,10 +1316,7 @@ sub move {
 sub unmove {
 	my ($self, $backup) = @_;
 
-	shift @$backup; # The move.
 	@$self = @$backup;
-
-	return $self;
 }
 
 sub doMove {
@@ -2444,7 +2443,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_INFO
+	CP_POS_INFO CP_POS_LAST_MOVE
 );
 
 my @export_board = qw(
@@ -2707,6 +2706,10 @@ sub halfmoves {
 
 sub info {
 	shift->[CP_POS_INFO];
+}
+
+sub lastMove {
+	shift->[CP_POS_LAST_MOVE];
 }
 
 sub toFEN {

@@ -530,6 +530,11 @@ Returns an integer encoding various other aspects of the position.  You do not
 need this because there are dedicated methods available for all these
 properties.
 
+=item B<lastMove>
+
+Returns the move (as an integer) that has led to the position.  This is only
+defined, after one of B<applyMove()>, B<doMove()>, or B<move()> has been called.
+
 =back
 
 =head2 Move Methods
