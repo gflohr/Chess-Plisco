@@ -16,6 +16,7 @@ use File::Basename qw(dirname);
 use File::Spec;
 
 use Chess::Plisco qw(:all);
+use Chess::Plisco::Engine::Position;
 
 sub report_failure;
 sub significant_for_repetition;
@@ -47,7 +48,7 @@ my $started = time;
 my $done_tests = 0;
 my %signatures;
 GAME: while ($pgn->read_game) {
-	my $pos = Chess::Plisco->new;
+	my $pos = Chess::Plisco::Engine::Position->new;
 
 	$pgn->parse_game;
 
@@ -87,7 +88,7 @@ GAME: while ($pgn->read_game) {
 		
 		$signatures{$signature}->{significant_for_repetition $fen} = 1;
 
-		my $copy_from_fen = Chess::Plisco->new($fen);
+		my $copy_from_fen = Chess::Plisco::Engine::Position->new($fen);
 		if ($pos->signature != $copy_from_fen->signature) {
 			my $sig_from_pos = $copy_from_fen->signature;
 			my $sig_from_move = $pos->signature;

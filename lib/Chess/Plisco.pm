@@ -83,9 +83,9 @@ use constant CP_POS_QUEENS => CP_QUEEN;
 use constant CP_POS_KINGS => CP_KING;
 use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
-use constant CP_POS_INFO => 9;
-# 3 reserved slots.
-use constant CP_POS_SIGNATURE => 14;
+# 5 reserved slots.
+# FIXME! Define CP_POS_USR1, ...
+use constant CP_POS_INFO => 14;
 use constant CP_POS_LAST_FIELD => 14;
 
 # How to evade a check?
@@ -312,8 +312,6 @@ my @castling_rights_rook_masks;
 # c8, and g8, where does the rook move? Needed for moveGivesCheck().
 my @castling_rook_to_mask;
 
-# Information for castlings, part 4. The required signature changes for the
-# castlings.
 my @castling_rook_zk_updates;
 
 # Change in material.  Looked up via a combined mask of color to move,
@@ -391,8 +389,6 @@ sub new {
 	_cp_pos_info_set_halfmove_clock($info, 0);
 	cp_pos_info($self) = $info;
 	
-	$self->__updateZobristKey;
-
 	return $self;
 }
 
@@ -569,8 +565,6 @@ sub newFromFEN {
 	}
 
 	$self->__checkIllegalCheck($to_move) if !$relaxed;
-
-	$self->__updateZobristKey;
 
 	return $self;
 }
@@ -1233,7 +1227,7 @@ sub move {
 	$new_castling &= $castling_rights_rook_masks[$from];
 	$new_castling &= $castling_rights_rook_masks[$to];
 
-	my @state = @$self[CP_POS_INFO .. CP_POS_LAST_FIELD];
+	my @state = @$self[CP_POS_BLACK_PIECES + 1 .. CP_POS_LAST_FIELD];
 
 	my $captured = CP_NO_PIECE;
 	my $captured_mask = 0;
@@ -1335,17 +1329,11 @@ sub move {
 	# individual fields.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
-	# FIXME! Simplify this!
-	my $signature = $state[CP_POS_SIGNATURE - CP_POS_INFO];
-
 	if ($old_castling != $new_castling) {
 		$zk_update ^= $zk_castling[$old_castling]
 			^ $zk_castling[$new_castling];
 	}
 
-	$signature ^= $zk_update;
-
-	$self->[CP_POS_SIGNATURE] = $signature;
 	$self->[CP_POS_INFO] = $pos_info;
 
 	return \@undo_info;
@@ -1355,8 +1343,6 @@ sub unmove {
 	my ($self, $undo_info) = @_;
 
 	my ($move, $undo, $captured_mask, @state) = @$undo_info;
-
-	my $signature = $self->[CP_POS_SIGNATURE];
 
 	my ($from, $to, $promote, $piece, $captured) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1372,7 +1358,6 @@ sub unmove {
 
 		$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
 		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
-		$signature ^= $castling_rook_zk_updates[$to];
 	}
 
 	$self->[CP_POS_WHITE_PIECES + $to_move ] ^= $move_mask;
@@ -1381,22 +1366,13 @@ sub unmove {
 		my $remove_mask = 1 << $to;
 		$self->[CP_POS_PAWNS] |= 1 << $from;
 		$self->[$promote] ^= $remove_mask;
-
-		# Remove the promotion piece and replace it with the pawn.
-		$signature ^= _cp_zk_lookup $promote, $to_move, $to;
-		$signature ^= _cp_zk_lookup CP_PAWN, $to_move, $from;
 	} else {
 		$self->[$piece] ^= $move_mask;
-
-		$signature ^= _cp_zk_lookup $piece, $to_move, $to;
-		$signature ^= _cp_zk_lookup $piece, $to_move, $from;
 	}
 
 	if ($captured) {
 		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
 		$self->[$captured] |= $captured_mask;
-
-		$signature ^= _cp_zk_lookup $captured, $to_move, $to;
 	}
 	
 	my $pos_info = $self->[CP_POS_INFO];
@@ -1405,14 +1381,11 @@ sub unmove {
 	if ($double_pawn_push) {
 		my $ep_file = $to & 0x7;
 		_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | $ep_file));
-		$signature ^= $zk_ep_files[$ep_file];
 	} else {
 		_cp_pos_info_set_en_passant $pos_info, 0;
 	}
 
-	$signature ^= $zk_color;
-
-	@$self[CP_POS_INFO .. CP_POS_LAST_FIELD] = @state;
+	@$self[CP_POS_BLACK_PIECES + 1 .. CP_POS_LAST_FIELD] = @state;
 
 	# FIXME! Copy as well?
 	--(cp_pos_halfmoves($self));
@@ -2028,7 +2001,7 @@ sub gameOver {
 	return $state;
 }
 
-sub __updateZobristKey {
+sub signature {
 	my ($self) = @_;
 
 	my $signature = 0;
@@ -2135,9 +2108,23 @@ sub __updateZobristKey {
 		$signature ^= $zk_color;
 	}
 
-	$self->[CP_POS_SIGNATURE] = $signature;
-
 	return $signature;
+}
+
+sub _zkPieces {
+	return @zk_pieces;
+}
+
+sub _zkEpFiles {
+	return @zk_ep_files;
+}
+
+sub _zkCastling {
+	return @zk_castling
+}
+
+sub _zkColor {
+	return $zk_color;
 }
 
 sub __zobristKeyLookup {
@@ -2528,7 +2515,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_INFO CP_POS_SIGNATURE
+	CP_POS_INFO
 );
 
 my @export_board = qw(
@@ -2791,10 +2778,6 @@ sub halfmoves {
 
 sub info {
 	shift->[CP_POS_INFO];
-}
-
-sub signature {
-	shift->[CP_POS_SIGNATURE];
 }
 
 sub toFEN {
@@ -3733,7 +3716,7 @@ sub dumpInfo {
 
 	$output .= 'En passant square: ';
 	if ($self->enPassant) {
-		$output .= $self->shiftToSquare($self->enPassantFileToShift($self->enPassantFile, $self->toMove));
+		$output .= $self->shiftToSquare($self->enPassanShift);
 	} else {
 		$output .= '-';
 	}
@@ -4016,7 +3999,6 @@ for (my $i = 0; $i < 8; ++$i) {
 }
 $zk_color = RNG();
 
-# The indices are the to squares of the king.
 $castling_rook_zk_updates[CP_C1] = $zk_pieces[384] ^ $zk_pieces[387];
 $castling_rook_zk_updates[CP_G1] = $zk_pieces[389] ^ $zk_pieces[391];
 $castling_rook_zk_updates[CP_C8] = $zk_pieces[504] ^ $zk_pieces[507];

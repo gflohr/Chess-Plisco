@@ -20,6 +20,7 @@ use Chess::Plisco::Macro;
 use base qw(Chess::Plisco Exporter);
 
 # Additional fields.
+use constant CP_POS_SIGNATURE => 9;
 use constant CP_POS_REVERSIBLE_CLOCK => 10;
 use constant CP_POS_GAME_PHASE => 11;
 use constant CP_POS_OPENING_SCORE => 12;
@@ -208,6 +209,20 @@ my @eg_pesto_table = (
 my @op_table;
 my @eg_table;
 
+# The required signature changes for the castlings.
+my @castling_rook_zk_updates;
+
+# The indices are the to squares of the king.
+my @zk_pieces = Chess::Plisco->_zkPieces;
+$castling_rook_zk_updates[CP_C1] = $zk_pieces[384] ^ $zk_pieces[387];
+$castling_rook_zk_updates[CP_G1] = $zk_pieces[389] ^ $zk_pieces[391];
+$castling_rook_zk_updates[CP_C8] = $zk_pieces[504] ^ $zk_pieces[507];
+$castling_rook_zk_updates[CP_G8] = $zk_pieces[509] ^ $zk_pieces[511];
+
+my @zk_ep_files = Chess::Plisco->_zkEpFiles;
+my @zk_castling = Chess::Plisco->_zkCastling;
+my $zk_color = Chess::Plisco->_zkColor;
+
 # Init tables.
 for (my $piece = CP_PAWN; $piece <= CP_KING; ++$piece) {
 	for (my $shift = 0; $shift < 64; ++$shift) {
@@ -395,6 +410,8 @@ sub __init {
 		}
 	}
 
+	$self->[CP_POS_SIGNATURE] = $self->SUPER::signature();
+
 	$self->[CP_POS_OPENING_SCORE] = $op_score;
 	$self->[CP_POS_ENDGAME_SCORE] = $eg_score;
 
@@ -409,9 +426,51 @@ sub move {
 
 	my $pos_info = cp_pos_info $self;
 	my $castling = cp_pos_info_castling_rights $pos_info;
+	my $to_move = cp_pos_info_to_move($pos_info);
+	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+	my $ep_file = $ep_shift & 7;
+	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
 
 	my $state = $self->SUPER::move($move) or return;
 	($move) = @$state;
+
+	my $piece = cp_move_piece $move;
+	my $from = cp_move_from $move;
+	my $to = cp_move_to $move;
+	if ($piece == CP_KING) {
+		if ((($from - $to) & 0x3) == 0x2) {
+			# Castling. FIXME! Maybe use a lookup table instead.
+			$zk_update ^= $castling_rook_zk_updates[$to];
+		}
+	}
+
+	my $captured = cp_move_captured $move;
+	if ($captured != CP_NO_PIECE) {
+		if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
+			# En passant. The captured piece is not on the to square.
+			my $ep_file = $to & 0x7;
+			my $captured_to = 24 + !$to_move * 8 + $ep_file;
+			$zk_update ^= _cp_zk_lookup CP_PAWN, !$to_move, $captured_to;
+		} else {
+			$zk_update ^= _cp_zk_lookup $captured, !$to_move, $to;
+		}
+	}
+
+	$zk_update ^= _cp_zk_lookup $piece, $to_move, $from;
+	$zk_update ^= _cp_zk_lookup $piece, $to_move, $to;
+
+	my $promote = cp_move_promote $move;
+	if ($promote) {
+		$zk_update ^= _cp_zk_lookup CP_PAWN, $to_move, $to;
+		$zk_update ^= _cp_zk_lookup $promote, $to_move, $to;
+	}
+
+	if ($piece == CP_PAWN && _cp_pawn_double_step $from, $to) {
+		$zk_update ^= $zk_ep_files[$from & 0x7];
+	}
+
+	$zk_update ^= $zk_color;
 
 	$self->[CP_POS_GAME_PHASE] += $move_phase_deltas[
 		(cp_move_captured($move) << 3) | cp_move_promote($move)
@@ -421,8 +480,17 @@ sub move {
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
 
 	$pos_info = cp_pos_info $self;
+	my $new_castling =  cp_pos_info_castling_rights $pos_info;
+	my $castling_changed = $new_castling != $castling;
+	if ($castling_changed) {
+		$zk_update ^= $zk_castling[$castling]
+			^ $zk_castling[$new_castling];
+	}
+
+	$self->[CP_POS_SIGNATURE] ^= $zk_update;
+
 	if (!cp_pos_info_halfmove_clock $pos_info
-	    || $castling != cp_pos_info_castling_rights $pos_info) {
+	    || $castling_changed) {
 		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 	} else {
 		++$self->[CP_POS_REVERSIBLE_CLOCK];
@@ -502,6 +570,11 @@ sub formatMoves {
 	}
 
 	return @formatted;
+}
+
+# And this is only implemented for testing.
+sub signature {
+	shift->[CP_POS_SIGNATURE];
 }
 
 1;

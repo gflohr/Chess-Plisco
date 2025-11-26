@@ -24,6 +24,7 @@ use Time::HiRes qw(tv_interval);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
+use constant CP_POS_SIGNATURE => Chess::Plisco::Engine::Position::CP_POS_SIGNATURE();
 use constant CP_POS_REVERSIBLE_CLOCK => Chess::Plisco::Engine::Position::CP_POS_REVERSIBLE_CLOCK();
 
 use constant MATE => -15000;
