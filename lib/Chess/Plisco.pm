@@ -1222,8 +1222,6 @@ sub move {
 	$new_castling &= $castling_rights_rook_masks[$from];
 	$new_castling &= $castling_rights_rook_masks[$to];
 
-	my @state = @$self[CP_POS_BLACK_PIECES + 1 .. CP_POS_LAST_FIELD];
-
 	my $captured = CP_NO_PIECE;
 	my $captured_mask = 0;
 	if ($to_mask & $her_pieces) {
