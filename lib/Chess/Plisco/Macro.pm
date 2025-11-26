@@ -52,7 +52,7 @@ sub cp_pos_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 sub cp_pos_info {}
 _define cp_pos_last_move => '$p', '$p->[CP_POS_LAST_MOVE]';
-sub cp_pos_info {}
+sub cp_pos_last_move {}
 
 # Structure of a position info (in the future):
 #
@@ -71,8 +71,6 @@ _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
 sub cp_pos_info_black_queen_side_castling_right {}
 _define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
 sub cp_pos_info_en_passant {}
-_define cp_pos_info_to_move => '$i', '(($i & (1 << 8)) >> 8)';
-sub cp_pos_info_to_move {}
 
 _define _cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | ($c))';
@@ -86,8 +84,6 @@ _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | (($c) << 3))';
 _define _cp_pos_info_set_en_passant => '$i', '$s',
 	'($i = ($i & ~(0xf << 4)) | (($s) << 4))';
-_define _cp_pos_info_set_to_move => '$i', '$c',
-	'($i = ($i & ~(1 << 8)) | (($c) << 8))';
 
 _define cp_pos_castling_rights => '$p',
 		'(cp_pos_info_castling_rights(cp_pos_info($p)))';
@@ -104,7 +100,7 @@ sub cp_pos_black_king_side_castling_right {}
 _define cp_pos_black_queen_side_castling_right => '$p',
 		'(cp_pos_info_black_queen_side_castling_right(cp_pos_info($p)))';
 sub cp_pos_black_queen_side_castling_right {}
-_define cp_pos_to_move => '$p', '(cp_pos_info_to_move(cp_pos_info($p)))';
+_define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
 sub cp_pos_to_move {}
 _define cp_pos_en_passant => '$p', '(cp_pos_info_en_passant(cp_pos_info($p)))';
 sub cp_pos_en_passant {}
@@ -123,10 +119,6 @@ _define _cp_pos_set_black_king_side_castling_right => '$p', '$c',
 	'(_cp_pos_info_set_black_king_side_castling_right(cp_pos_info($p), $c))';
 _define _cp_pos_set_black_queen_side_castling_right => '$p', '$c',
 	'(_cp_pos_info_set_black_queen_side_castling_right(cp_pos_info($p), $c))';
-_define _cp_pos_set_to_move => '$p', '$c',
-	'(_cp_pos_info_set_to_move(cp_pos_info($p), $c))';
-_define _cp_pos_set_en_passant_shift => '$p', '$s',
-	'(_cp_pos_info_set_en_passant_shift(cp_pos_info($p), $s))';
 
 _define cp_move_to => '$m', '(($m) & 0x3f)';
 sub cp_move_to {}

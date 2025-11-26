@@ -1829,7 +1829,7 @@ sub probeWdl {
 	# It is also possible that the only legal moves in a position are en
 	# passant captures. Example: K7/3n1P2/1k6/pP6/8/8/8/8 w - a6 0 1. In this
 	# case, the best of the captures have to be played.
-	my $ep_shift = cp_en_passant_file_to_shift($ep, cp_pos_info_to_move $pos_info);
+	my $ep_shift = cp_en_passant_file_to_shift($ep, cp_pos_to_move $pos);
 	my $v1 = -3;
 	my @legal_moves = $pos->legalMoves;
 	my @ep_captures;
@@ -1882,7 +1882,7 @@ sub probeDtz {
 	my $pos_info = cp_pos_info $pos;
 	my $ep = cp_pos_info_en_passant $pos_info;
 	my $ep_shift = $ep
-		? cp_en_passant_file_to_shift($ep, cp_pos_info_to_move($pos_info))
+		? cp_en_passant_file_to_shift($ep, cp_pos_to_move($pos))
 		: 0;
 
 	return $value if !$ep_shift;

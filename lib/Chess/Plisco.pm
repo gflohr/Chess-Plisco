@@ -86,13 +86,14 @@ use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_LAST_MOVE => 9;
 use constant CP_POS_MATERIAL => 10;
 use constant CP_POS_HALFMOVE_CLOCK => 11;
+use constant CP_POS_TO_MOVE => 12;
 # 5 reserved slots.
-use constant CP_POS_USR1 => 12;
-use constant CP_POS_USR2 => 13;
-use constant CP_POS_USR3 => 14;
-use constant CP_POS_USR4 => 15;
-use constant CP_POS_USR5 => 16;
-use constant CP_POS_INFO => 17;
+use constant CP_POS_USR1 => 13;
+use constant CP_POS_USR2 => 14;
+use constant CP_POS_USR3 => 15;
+use constant CP_POS_USR4 => 16;
+use constant CP_POS_USR5 => 17;
+use constant CP_POS_INFO => 18;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -385,13 +386,13 @@ sub new {
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
 	cp_pos_material($self) = 0;
 	cp_pos_halfmove_clock($self) = 0;
+	cp_pos_to_move($self) = CP_WHITE;
 
 	my $info = 0;
 	_cp_pos_info_set_white_king_side_castling_right($info, 1);
 	_cp_pos_info_set_white_queen_side_castling_right($info, 1);
 	_cp_pos_info_set_black_king_side_castling_right($info, 1);
 	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
-	_cp_pos_info_set_to_move($info, CP_WHITE);
 	_cp_pos_info_set_en_passant($info, 0);
 	cp_pos_info($self) = $info;
 	
@@ -513,9 +514,9 @@ sub newFromFEN {
 	my $pos_info = 0;
 
 	if ('w' eq lc $color) {
-		_cp_pos_info_set_to_move($pos_info, CP_WHITE);
+		$self->[CP_POS_TO_MOVE] = CP_WHITE;
 	} elsif ('b' eq lc $color) {
-		_cp_pos_info_set_to_move($pos_info, CP_BLACK);
+		$self->[CP_POS_TO_MOVE] = CP_BLACK;
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
@@ -547,7 +548,9 @@ sub newFromFEN {
 
 	cp_pos_info($self) = $pos_info;
 
-	my $to_move = cp_pos_info_to_move($pos_info);
+	my $to_move = cp_pos_to_move($self);
+
+	# FIXME! is this correct?
 	$pos_info = $self->__checkEnPassantState($ep_square, $to_move, $pos_info);
 
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
@@ -597,9 +600,9 @@ sub __checkIllegalCheck {
 }
 
 sub __checkPieceCounts {
-	my ($self, $pos_info) = @_;
+	my ($self) = @_;
 
-	my $to_move = cp_pos_info_to_move $pos_info;
+	my $to_move = cp_pos_to_move $self;
 
 	my $kings = $self->[CP_POS_KINGS];
 	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
@@ -774,7 +777,7 @@ sub pseudoLegalMoves {
 	my ($self) = @_;
 
 	my $pos_info = cp_pos_info $self;
-	my $to_move = cp_pos_info_to_move $pos_info;
+	my $to_move = cp_pos_to_move $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
@@ -949,7 +952,7 @@ sub pseudoLegalAttacks {
 	my ($self) = @_;
 
 	my $pos_info = cp_pos_info $self;
-	my $to_move = cp_pos_info_to_move $pos_info;
+	my $to_move = cp_pos_to_move $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
@@ -1088,7 +1091,9 @@ sub __update {
 sub attacked {
 	my ($self, $shift) = @_;
 
-	return _cp_pos_color_attacked $self, cp_pos_to_move($self), $shift;
+my $c = $self->[CP_POS_TO_MOVE];
+
+	return _cp_pos_color_attacked $self, $self->[CP_POS_TO_MOVE], $shift;
 }
 
 sub moveAttacked {
@@ -1113,7 +1118,7 @@ sub moveGivesCheck {
 	my $to_mask = 1 << $to;
 
 	my $piece = cp_move_piece $move;
-	my $to_move = cp_pos_info_to_move $pos_info;
+	my $to_move = cp_pos_to_move $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $her_king_mask = $self->[CP_POS_KINGS] & $her_pieces;
@@ -1202,7 +1207,7 @@ sub move {
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_piece($move));
 
-	my $to_move = cp_pos_info_to_move($pos_info);
+	my $to_move = cp_pos_to_move $self;
 	my $to_mask = 1 << $to;
 	my $move_mask = (1 << $from) | $to_mask;
 	my $my_idx = CP_POS_WHITE_PIECES + $to_move;
@@ -1301,7 +1306,7 @@ sub move {
 	cp_move_set_en_passant($move, $is_ep);
 
 	++$self->[CP_POS_HALFMOVES];
-	_cp_pos_info_set_to_move($pos_info, !$to_move);
+	$self->[CP_POS_TO_MOVE] = !$to_move;
 
 	$self->[CP_POS_MATERIAL] += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 	$self->[CP_POS_INFO] = $pos_info;
@@ -1514,7 +1519,7 @@ sub SEE {
 	my $from = cp_move_from $move;
 	my $not_from_mask = ~(1 << ($from));
 	my $pos_info = cp_pos_info($self);
-	my $to_move = cp_pos_info_to_move($pos_info);
+	my $to_move = cp_pos_to_move $self;
 	my $ep = cp_pos_info_en_passant($pos_info);
 	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
@@ -2029,7 +2034,7 @@ sub signature {
 	my $castling = cp_pos_info_castling_rights $pos_info;
 	$signature ^= $zk_castling[$castling];
 
-	if (cp_pos_info_to_move $pos_info) {
+	if (cp_pos_to_move $self) {
 		$signature ^= $zk_color;
 	}
 
@@ -2320,7 +2325,7 @@ sub checkPseudoLegalMove {
 	my $to = cp_move_to $move;
 	my $piece = cp_move_piece $move;
 	my $pos_info = cp_pos_info $self;
-	my $to_move = cp_pos_info_to_move($pos_info);
+	my $to_move = cp_pos_to_move($self);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
@@ -2440,7 +2445,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_LAST_MOVE CP_POS_MATERIAL
+	CP_POS_LAST_MOVE CP_POS_MATERIAL CP_POS_TO_MOVE
 	CP_POS_USR1 CP_POS_USR2 CP_POS_USR3 CP_POS_USR4 CP_POS_USR5
 	CP_POS_INFO
 );

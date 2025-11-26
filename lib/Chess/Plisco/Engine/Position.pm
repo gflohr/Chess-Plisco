@@ -426,7 +426,7 @@ sub move {
 
 	my $pos_info = cp_pos_info $self;
 	my $castling = cp_pos_info_castling_rights $pos_info;
-	my $to_move = cp_pos_info_to_move($pos_info);
+	my $to_move = cp_pos_to_move($self);
 	my $ep = cp_pos_info_en_passant $pos_info;
 	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
 	my $ep_file = $ep_shift & 7;
