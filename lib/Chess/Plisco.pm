@@ -1201,10 +1201,6 @@ sub move {
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
 	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
-	my $ep = cp_pos_info_en_passant $pos_info;
-	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
-	my $ep_file = $ep_shift & 7;
-	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
 
 	if ($piece == CP_KING) {
 		# Castling?
@@ -1213,8 +1209,6 @@ sub move {
 			my $rook_move_mask = $castling_rook_move_masks[$to];
 			$self->[CP_POS_ROOKS] ^= $rook_move_mask;
 			$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
-
-			$zk_update ^= $castling_rook_zk_updates[$to];
 		}
 
 		# Remove the castling rights.
@@ -1231,7 +1225,6 @@ sub move {
 
 	my $captured = CP_NO_PIECE;
 	my $captured_mask = 0;
-	my $is_ep;
 	if ($to_mask & $her_pieces) {
 		if ($to_mask & cp_pos_pawns($self)) {
 			$captured = CP_PAWN;
@@ -1247,12 +1240,19 @@ sub move {
 		$captured_mask = 1 << $to;
 	}
 
+	my $is_ep;
 	if ($piece == CP_PAWN) {
+		my $ep = cp_pos_info_en_passant $pos_info;
+
 		# Check en passant.
-		if ($ep_shift && $to == $ep_shift) {
-			$captured_mask = $ep_pawn_masks[$ep_shift];
-			$captured = CP_PAWN;
-			$is_ep = 1;
+		if ($ep) {
+			my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+
+			if ($ep_shift && $to == $ep_shift) {
+				$captured_mask = $ep_pawn_masks[$ep_shift];
+				$captured = CP_PAWN;
+				$is_ep = 1;
+			}
 		}
 		_cp_pos_info_set_halfmove_clock($pos_info, 0);
 		if (_cp_pawn_double_step $from, $to) {
@@ -1275,20 +1275,10 @@ sub move {
 		$self->[$captured] ^= $captured_mask;
 		cp_move_set_captured($move, $captured);
 
-		if ($is_ep) {
-			# The captured piece is not on the to square.
-			my $ep_file = $to & 0x7;
-			my $captured_to = 24 + !$to_move * 8 + $ep_file;
-			$zk_update ^= _cp_zk_lookup CP_PAWN, !$to_move, $captured_to;
-		} else {
-			$zk_update ^= _cp_zk_lookup $captured, !$to_move, $to;
-		}
 	}
 
 	$self->[CP_POS_WHITE_PIECES + $to_move] ^= $move_mask;
 	$self->[$piece] ^= $move_mask;
-	$zk_update ^= _cp_zk_lookup $piece, $to_move, $from;
-	$zk_update ^= _cp_zk_lookup $piece, $to_move, $to;
 
 	# It is better to overwrite the castling rights unconditionally because
 	# it safes branches.  There is one edge case, where a pawn captures a
@@ -1299,24 +1289,12 @@ sub move {
 	if ($promote) {
 		$self->[CP_POS_PAWNS] ^= $to_mask;
 		$self->[$promote] ^= $to_mask;
-
-		$zk_update ^= _cp_zk_lookup CP_PAWN, $to_move, $to;
-		$zk_update ^= _cp_zk_lookup $promote, $to_move, $to;
-	}
-
-	# Bit 1: double pawn push.
-	my $undo = 0;
-	if ($piece == CP_PAWN && _cp_pawn_double_step $from, $to) {
-		$zk_update ^= $zk_ep_files[$from & 0x7];
-		$undo |= 0x1;
 	}
 
 	cp_move_set_color($move, $to_move);
 	cp_move_set_en_passant($move, $is_ep);
 
-	$zk_update ^= $zk_color;
-
-	my @undo_info = ($move, $undo, $captured_mask, @state);
+	my @undo_info = ($move, $captured_mask, @state);
 
 	++$self->[CP_POS_HALFMOVES];
 	_cp_pos_info_set_to_move($pos_info, !$to_move);
@@ -1329,11 +1307,6 @@ sub move {
 	# individual fields.
 	$pos_info += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 
-	if ($old_castling != $new_castling) {
-		$zk_update ^= $zk_castling[$old_castling]
-			^ $zk_castling[$new_castling];
-	}
-
 	$self->[CP_POS_INFO] = $pos_info;
 
 	return \@undo_info;
@@ -1342,7 +1315,7 @@ sub move {
 sub unmove {
 	my ($self, $undo_info) = @_;
 
-	my ($move, $undo, $captured_mask, @state) = @$undo_info;
+	my ($move, $captured_mask, @state) = @$undo_info;
 
 	my ($from, $to, $promote, $piece, $captured) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1373,16 +1346,6 @@ sub unmove {
 	if ($captured) {
 		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
 		$self->[$captured] |= $captured_mask;
-	}
-	
-	my $pos_info = $self->[CP_POS_INFO];
-
-	my $double_pawn_push = $undo & 0x1;
-	if ($double_pawn_push) {
-		my $ep_file = $to & 0x7;
-		_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | $ep_file));
-	} else {
-		_cp_pos_info_set_en_passant $pos_info, 0;
 	}
 
 	@$self[CP_POS_BLACK_PIECES + 1 .. CP_POS_LAST_FIELD] = @state;
