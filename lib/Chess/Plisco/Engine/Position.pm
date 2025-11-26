@@ -20,11 +20,11 @@ use Chess::Plisco::Macro;
 use base qw(Chess::Plisco Exporter);
 
 # Additional fields.
-use constant CP_POS_SIGNATURE => 10;
-use constant CP_POS_REVERSIBLE_CLOCK => 11;
-use constant CP_POS_GAME_PHASE => 12;
-use constant CP_POS_OPENING_SCORE => 13;
-use constant CP_POS_ENDGAME_SCORE => 14;
+use constant CP_POS_SIGNATURE => CP_POS_USR1;
+use constant CP_POS_REVERSIBLE_CLOCK => CP_POS_USR2;
+use constant CP_POS_GAME_PHASE => CP_POS_USR3;
+use constant CP_POS_OPENING_SCORE => CP_POS_USR4;
+use constant CP_POS_ENDGAME_SCORE => CP_POS_USR5;
 
 our @EXPORT_OK = qw(CP_POS_REVERSIBLE_CLOCK);
 

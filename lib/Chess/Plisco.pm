@@ -85,7 +85,11 @@ use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_LAST_MOVE => 9;
 # 5 reserved slots.
-# FIXME! Define CP_POS_USR1, ...
+use constant CP_POS_USR1 => 10;
+use constant CP_POS_USR2 => 11;
+use constant CP_POS_USR3 => 12;
+use constant CP_POS_USR4 => 13;
+use constant CP_POS_USR5 => 14;
 use constant CP_POS_INFO => 15;
 
 # How to evade a check?
@@ -2442,7 +2446,9 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_INFO CP_POS_LAST_MOVE
+	CP_POS_LAST_MOVE
+	CP_POS_USR1 CP_POS_USR2 CP_POS_USR3 CP_POS_USR4 CP_POS_USR5
+	CP_POS_INFO
 );
 
 my @export_board = qw(
