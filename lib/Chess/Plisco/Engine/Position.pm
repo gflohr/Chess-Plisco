@@ -16,13 +16,16 @@ use integer;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::Tree;
 
-use base qw(Chess::Plisco);
+use base qw(Chess::Plisco Exporter);
 
-use constant CP_POS_GAME_PHASE => 12;
-use constant CP_POS_OPENING_SCORE => 13;
-use constant CP_POS_ENDGAME_SCORE => 14;
+# Additional fields.
+use constant CP_POS_REVERSIBLE_CLOCK => 10;
+use constant CP_POS_GAME_PHASE => 11;
+use constant CP_POS_OPENING_SCORE => 12;
+use constant CP_POS_ENDGAME_SCORE => 13;
+
+our @EXPORT_OK = qw(CP_POS_REVERSIBLE_CLOCK);
 
 use constant PAWN_PHASE => 0;
 use constant KNIGHT_PHASE => 1;
@@ -342,6 +345,25 @@ sub new {
 
 	my $self = $class->SUPER::new(@args);
 
+	$self->__init;
+
+	return $self;
+}
+
+sub newFromFEN {
+	my ($class, @args) = @_;
+
+	my $self = $class->SUPER::newFromFEN(@args);
+
+	$self->__init;
+
+	return $self;
+}
+
+sub __init {
+	my ($self) = @_;
+
+
 	my $op_phase = 0;
 
 	my $op_score = 0;
@@ -377,6 +399,7 @@ sub new {
 	$self->[CP_POS_ENDGAME_SCORE] = $eg_score;
 
 	$self->[CP_POS_GAME_PHASE] = $op_phase;
+	$self->[CP_POS_REVERSIBLE_CLOCK] = cp_pos_halfmove_clock $self;
 
 	return $self;
 }
@@ -384,14 +407,26 @@ sub new {
 sub move {
 	my ($self, $move) = @_;
 
+	my $pos_info = cp_pos_info $self;
+	my $castling = cp_pos_info_castling_rights $pos_info;
+
 	my $state = $self->SUPER::move($move) or return;
 	($move) = @$state;
+
 	$self->[CP_POS_GAME_PHASE] += $move_phase_deltas[
 		(cp_move_captured($move) << 3) | cp_move_promote($move)
 	];
 	my $score_index = ($move & 0x1fffff) | (!(cp_pos_to_move($self)) << 21);
 	$self->[CP_POS_OPENING_SCORE] += $opening_deltas[$score_index];
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
+
+	$pos_info = cp_pos_info $self;
+	if (!cp_pos_info_halfmove_clock $pos_info
+	    || $castling != cp_pos_info_castling_rights $pos_info) {
+		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
+	} else {
+		++$self->[CP_POS_REVERSIBLE_CLOCK];
+	}
 
 	return $state;
 }
@@ -419,6 +454,8 @@ sub evaluate {
 	# than two knights or bishops for one side on the board but in the
 	# exceptional case that this happens, the result would be close enough
 	# anyway.
+	#
+	# FIXME! Just call insufficientMaterial?
 	if (!$pawns) {
 		my $delta = cp_abs($material);
 		if ($delta < CP_PAWN_VALUE
@@ -426,7 +463,7 @@ sub evaluate {
 		        && (($delta <= CP_BISHOP_VALUE)
 		            || ($delta == 2 * CP_KNIGHT_VALUE)
 			        || ($delta == CP_KNIGHT_VALUE + CP_BISHOP_VALUE)))) {
-			return Chess::Plisco::Engine::Tree::DRAW();
+			return 0;
 		}
 	}
 

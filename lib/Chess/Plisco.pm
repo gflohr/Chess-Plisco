@@ -84,10 +84,9 @@ use constant CP_POS_KINGS => CP_KING;
 use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_INFO => 9;
-use constant CP_POS_SIGNATURE => 10;
 # 3 reserved slots.
-use constant CP_POS_REVERSIBLE_CLOCK => 15;
-use constant CP_POS_LAST_FIELD => 15;
+use constant CP_POS_SIGNATURE => 14;
+use constant CP_POS_LAST_FIELD => 14;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -379,7 +378,7 @@ sub new {
 	cp_pos_knights($self) = ((CP_B_MASK | CP_G_MASK) & CP_1_MASK)
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK);
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
-	cp_pos_reversible_clock($self) = 0;
+
 	cp_pos_halfmoves($self) = 0;
 
 	my $info = 0;
@@ -552,7 +551,7 @@ sub newFromFEN {
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
 	}
-	$self->[CP_POS_REVERSIBLE_CLOCK] = $hmc;
+
 	_cp_pos_info_set_halfmove_clock($pos_info, $hmc);
 
 	# This is not redundant! Without it, the Zobrist key does not get calculated
@@ -1262,7 +1261,6 @@ sub move {
 			$is_ep = 1;
 		}
 		_cp_pos_info_set_halfmove_clock($pos_info, 0);
-		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
 			_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | ($from & 7)));
 		} else {
@@ -1270,17 +1268,10 @@ sub move {
 		}
 	} elsif ($her_pieces & $to_mask) {
 		_cp_pos_info_set_halfmove_clock($pos_info, 0);
-		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
-		_cp_pos_info_set_en_passant($pos_info, 0);
-	} elsif ($old_castling != $new_castling) {
-		my $hmc = cp_pos_info_halfmove_clock($pos_info);
-		_cp_pos_info_set_halfmove_clock($pos_info, $hmc + 1);
-		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	} else {
 		my $hmc = cp_pos_info_halfmove_clock($pos_info);
 		_cp_pos_info_set_halfmove_clock($pos_info, $hmc + 1);
-		++$self->[CP_POS_REVERSIBLE_CLOCK];
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	}
 
@@ -1437,70 +1428,7 @@ sub doMove {
 }
 
 sub undoMove {
-	my ($self, $undo_info) = @_;
-
-	my ($move, $undo, $captured_mask, @state) = @$undo_info;
-
-	my $signature = $self->[CP_POS_SIGNATURE];
-
-	my ($from, $to, $promote, $piece, $captured) =
-		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
-		 cp_move_piece($move), cp_move_captured($move));
-
-	my $move_mask = (1 << $from) | (1 << $to);
-	my $to_move = !cp_pos_to_move $self;
-
-	# Castling?
-	if ($piece == CP_KING && ((($from - $to) & 0x3) == 0x2)) {
-		# Restore the rook.
-		my $rook_move_mask = $castling_rook_move_masks[$to];
-
-		$self->[CP_POS_WHITE_PIECES + $to_move] ^= $rook_move_mask;
-		$self->[CP_POS_ROOKS] ^= $rook_move_mask;
-		$signature ^= $castling_rook_zk_updates[$to];
-	}
-
-	$self->[CP_POS_WHITE_PIECES + $to_move ] ^= $move_mask;
-
-	if ($promote) {
-		my $remove_mask = 1 << $to;
-		$self->[CP_POS_PAWNS] |= 1 << $from;
-		$self->[$promote] ^= $remove_mask;
-
-		# Remove the promotion piece and replace it with the pawn.
-		$signature ^= _cp_zk_lookup $promote, $to_move, $to;
-		$signature ^= _cp_zk_lookup CP_PAWN, $to_move, $from;
-	} else {
-		$self->[$piece] ^= $move_mask;
-
-		$signature ^= _cp_zk_lookup $piece, $to_move, $to;
-		$signature ^= _cp_zk_lookup $piece, $to_move, $from;
-	}
-
-	if ($captured) {
-		$self->[CP_POS_WHITE_PIECES + !$to_move] |= $captured_mask;
-		$self->[$captured] |= $captured_mask;
-
-		$signature ^= _cp_zk_lookup $captured, $to_move, $to;
-	}
-	
-	my $pos_info = $self->[CP_POS_INFO];
-
-	my $double_pawn_push = $undo & 0x1;
-	if ($double_pawn_push) {
-		my $ep_file = $to & 0x7;
-		_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | $ep_file));
-		$signature ^= $zk_ep_files[$ep_file];
-	} else {
-		_cp_pos_info_set_en_passant $pos_info, 0;
-	}
-
-	$signature ^= $zk_color;
-
-	@$self[CP_POS_INFO .. CP_POS_LAST_FIELD] = @state;
-
-	# FIXME! Copy as well?
-	--(cp_pos_halfmoves($self));
+	&unmove;
 }
 
 sub bMagic {
@@ -2599,7 +2527,7 @@ my @export_accessors = qw(
 	CP_POS_WHITE_PIECES CP_POS_BLACK_PIECES
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
-	CP_POS_HALFMOVE_CLOCK CP_POS_REVERSIBLE_CLOCK CP_POS_HALFMOVES
+	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
 	CP_POS_INFO CP_POS_SIGNATURE
 );
 
@@ -2859,10 +2787,6 @@ sub vacant {
 
 sub halfmoves {
 	shift->[CP_POS_HALFMOVES];
-}
-
-sub reversibleClock {
-	shift->[CP_POS_REVERSIBLE_CLOCK];
 }
 
 sub info {

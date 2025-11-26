@@ -51,8 +51,6 @@ _define cp_pos_signature => '$p', '$p->[CP_POS_SIGNATURE]';
 sub cp_pos_signature {}
 _define cp_pos_info => '$p', '$p->[CP_POS_INFO]';
 sub cp_pos_info {}
-_define cp_pos_reversible_clock => '$p', '$p->[CP_POS_REVERSIBLE_CLOCK]';
-sub cp_pos_reversible_clock {}
 
 # Structure of a position info (in the future):
 #

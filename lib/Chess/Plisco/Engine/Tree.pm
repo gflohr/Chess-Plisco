@@ -14,15 +14,17 @@ package Chess::Plisco::Engine::Tree;
 use strict;
 use integer;
 
-use Locale::TextDomain qw('Chess-Plisco');
+use Locale::TextDomain ('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::Position;
+use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
 
 use Time::HiRes qw(tv_interval);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
+
+use constant CP_POS_REVERSIBLE_CLOCK => Chess::Plisco::Engine::Position::CP_POS_REVERSIBLE_CLOCK();
 
 use constant MATE => -15000;
 use constant INF => 16383;
@@ -236,7 +238,7 @@ sub alphabeta {
 	my $signatures = $self->{signatures};
 	my $signature = $position->[CP_POS_SIGNATURE];
 	if ($ply > 1) {
-		my $rc = $position->reversibleClock;
+		my $rc = $position->[CP_POS_REVERSIBLE_CLOCK];
 		my $history_length = $self->{history_length};
 		my $signature_slot = $history_length + $ply;
 		my $max_back = $signature_slot - $rc - 1;
@@ -595,6 +597,7 @@ sub rootSearch {
 	my @line = @$pline;
 	my $alpha = -INF;
 	my $beta = +INF;
+
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
