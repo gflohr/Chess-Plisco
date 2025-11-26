@@ -85,13 +85,14 @@ use constant CP_POS_WHITE_PIECES => 7;
 use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_LAST_MOVE => 9;
 use constant CP_POS_MATERIAL => 10;
+use constant CP_POS_HALFMOVE_CLOCK => 11;
 # 5 reserved slots.
-use constant CP_POS_USR1 => 11;
-use constant CP_POS_USR2 => 12;
-use constant CP_POS_USR3 => 13;
-use constant CP_POS_USR4 => 14;
-use constant CP_POS_USR5 => 15;
-use constant CP_POS_INFO => 16;
+use constant CP_POS_USR1 => 12;
+use constant CP_POS_USR2 => 13;
+use constant CP_POS_USR3 => 14;
+use constant CP_POS_USR4 => 15;
+use constant CP_POS_USR5 => 16;
+use constant CP_POS_INFO => 17;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -383,6 +384,7 @@ sub new {
 			| ((CP_B_MASK | CP_G_MASK) & CP_8_MASK);
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
 	cp_pos_material($self) = 0;
+	cp_pos_halfmove_clock($self) = 0;
 
 	my $info = 0;
 	_cp_pos_info_set_white_king_side_castling_right($info, 1);
@@ -391,7 +393,6 @@ sub new {
 	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
 	_cp_pos_info_set_to_move($info, CP_WHITE);
 	_cp_pos_info_set_en_passant($info, 0);
-	_cp_pos_info_set_halfmove_clock($info, 0);
 	cp_pos_info($self) = $info;
 	
 	return $self;
@@ -553,7 +554,7 @@ sub newFromFEN {
 		$hmc = 0;
 	}
 
-	_cp_pos_info_set_halfmove_clock($pos_info, $hmc);
+	$self->[CP_POS_HALFMOVE_CLOCK] = $hmc;
 
 	# This is not redundant! Without it, the Zobrist key does not get calculated
 	# correctly.
@@ -1260,18 +1261,17 @@ sub move {
 				$is_ep = 1;
 			}
 		}
-		_cp_pos_info_set_halfmove_clock($pos_info, 0);
+		$self->[CP_POS_HALFMOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
 			_cp_pos_info_set_en_passant($pos_info, ((1 << 3) | ($from & 7)));
 		} else {
 			_cp_pos_info_set_en_passant($pos_info, 0);
 		}
 	} elsif ($her_pieces & $to_mask) {
-		_cp_pos_info_set_halfmove_clock($pos_info, 0);
+		$self->[CP_POS_HALFMOVE_CLOCK] = 0;
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	} else {
-		my $hmc = cp_pos_info_halfmove_clock($pos_info);
-		_cp_pos_info_set_halfmove_clock($pos_info, $hmc + 1);
+		++$self->[CP_POS_HALFMOVE_CLOCK];
 		_cp_pos_info_set_en_passant($pos_info, 0);
 	}
 

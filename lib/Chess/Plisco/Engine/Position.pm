@@ -489,7 +489,7 @@ sub move {
 
 	$self->[CP_POS_SIGNATURE] ^= $zk_update;
 
-	if (!cp_pos_info_halfmove_clock $pos_info
+	if (!(cp_pos_halfmove_clock $self)
 	    || $castling_changed) {
 		$self->[CP_POS_REVERSIBLE_CLOCK] = 0;
 	} else {
