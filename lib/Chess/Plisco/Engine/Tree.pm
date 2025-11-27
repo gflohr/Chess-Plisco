@@ -206,6 +206,7 @@ sub printPV {
 	}
 }
 
+sub quiesce; # Make it invokable without a method call.
 
 # __BEGIN_MACROS__
 sub alphabeta {
@@ -287,7 +288,7 @@ sub alphabeta {
 	}
 
 	if ($depth <= 0) {
-		return $self->quiesce($ply, $alpha, $beta);
+		return quiesce($self, $ply, $alpha, $beta);
 	}
 
 	my @moves = $position->pseudoLegalMoves;
@@ -339,22 +340,19 @@ sub alphabeta {
 			if (DEBUG) {
 				$self->indent($ply, "null window search");
 			}
-			$val = -$self->alphabeta($ply + 1, $depth - 1,
-					-$alpha - 1, -$alpha, \@line);
+			$val = -alphabeta($self, $ply + 1, $depth - 1, -$alpha - 1, -$alpha, \@line);
 			if (($val > $alpha) && ($val < $beta)) {
 				if (DEBUG) {
 					$self->indent($ply, "value $val outside null window, re-search");
 				}
 				undef @line;
-				$val = -$self->alphabeta($ply + 1, $depth - 1,
-						-$beta, -$alpha, \@line);
+				$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 			}
 		} else {
 			if (DEBUG) {
 				$self->indent($ply, "recurse normal search");
 			}
-			$val = -$self->alphabeta($ply + 1, $depth - 1,
-					-$beta, -$alpha, \@line);
+			$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 		}
 		++$legal;
 		if (DEBUG) {
@@ -446,7 +444,7 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
 		}
-		return $self->alphabeta($ply, 1, $alpha, $beta, []);
+		return alphabeta($self, $ply, 1, $alpha, $beta, []);
 	}
 
 	my $tt = $self->{tt};
