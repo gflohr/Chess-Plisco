@@ -1812,7 +1812,6 @@ sub probeWdl {
 	# Positions where en passant is possible need special care because the
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
 	# we can just return the result of the probe.
-	my $pos_info = cp_pos_info $pos;
 	my $ep = cp_pos_en_passant $pos;
 	return $value if !$ep;
 

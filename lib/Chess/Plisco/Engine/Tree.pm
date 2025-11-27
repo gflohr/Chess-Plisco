@@ -297,7 +297,6 @@ sub alphabeta {
 	# PSTs. Maybe it is better to use that value for sorting?
 	my ($pawns, $knights, $bishops, $rooks, $queens) = 
 		@$position[CP_POS_PAWNS .. CP_POS_QUEENS];
-	my $pos_info = cp_pos_info $position;
 	my $her_pieces = $position->[CP_POS_WHITE_PIECES + cp_pos_to_move $position];
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
@@ -498,7 +497,6 @@ sub quiesce {
 	}
 
 	my @pseudo_legal = $position->pseudoLegalAttacks;
-	my $pos_info = cp_pos_info $position;
 	my $her_pieces = $position->[CP_POS_WHITE_PIECES
 			+ !cp_pos_to_move($position)];
 	my (@moves);

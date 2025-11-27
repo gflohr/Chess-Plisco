@@ -94,7 +94,7 @@ use constant CP_POS_USR2 => 15;
 use constant CP_POS_USR3 => 16;
 use constant CP_POS_USR4 => 17;
 use constant CP_POS_USR5 => 18;
-use constant CP_POS_INFO => 19;
+use constant CP_POS_CASTLING_RIGHTS => 19;
 
 # How to evade a check?
 use constant CP_EVASION_ALL => 0;
@@ -389,13 +389,7 @@ sub new {
 	cp_pos_halfmove_clock($self) = 0;
 	cp_pos_to_move($self) = CP_WHITE;
 	cp_pos_en_passant($self) = 0;
-
-	my $info = 0;
-	_cp_pos_info_set_white_king_side_castling_right($info, 1);
-	_cp_pos_info_set_white_queen_side_castling_right($info, 1);
-	_cp_pos_info_set_black_king_side_castling_right($info, 1);
-	_cp_pos_info_set_black_queen_side_castling_right($info, 1);
-	cp_pos_info($self) = $info;
+	cp_pos_castling_rights($self) = 0xf;
 	
 	return $self;
 }
@@ -512,8 +506,6 @@ sub newFromFEN {
 	$self->[CP_POS_PAWNS] = $pawns;
 	$self->[CP_POS_MATERIAL] = $material;
 
-	my $pos_info = 0;
-
 	if ('w' eq lc $color) {
 		$self->[CP_POS_TO_MOVE] = CP_WHITE;
 	} elsif ('b' eq lc $color) {
@@ -529,40 +521,36 @@ sub newFromFEN {
 				state => $castling);
 	}
 
+	my $castling_rights = 0;
 	if ($castling =~ /K/) {
 		$self->__checkCastlingState(CP_G1);
-		_cp_pos_info_set_white_king_side_castling_right($pos_info, 1);
+		$castling_rights |= 1;
 	}
 	if ($castling =~ /Q/) {
 		$self->__checkCastlingState(CP_C1);
-		_cp_pos_info_set_white_queen_side_castling_right($pos_info, 1);
+		$castling_rights |= 2;
 	}
 
 	if ($castling =~ /k/) {
 		$self->__checkCastlingState(CP_G8);
-		_cp_pos_info_set_black_king_side_castling_right($pos_info, 1);
+		$castling_rights |= 4;
 	}
 	if ($castling =~ /q/) {
 		$self->__checkCastlingState(CP_C8);
-		_cp_pos_info_set_black_queen_side_castling_right($pos_info, 1);
+		$castling_rights |= 8;
 	}
 
-	cp_pos_info($self) = $pos_info;
+	cp_pos_castling_rights($self) = $castling_rights;
 
 	my $to_move = cp_pos_to_move($self);
 
-	# FIXME! is this correct?
-	$pos_info = $self->__checkEnPassantState($ep_square, $to_move, $pos_info);
+	$self->__checkEnPassantState($ep_square, $to_move);
 
 	if ($hmc !~ /^0|[1-9][0-9]*$/) {
 		$hmc = 0;
 	}
 
 	$self->[CP_POS_HALFMOVE_CLOCK] = $hmc;
-
-	# This is not redundant! Without it, the Zobrist key does not get calculated
-	# correctly.
-	cp_pos_info($self) = $pos_info;
 
 	if ($moveno !~ /^[1-9][0-9]*$/) {
 		$moveno = 1;
@@ -716,7 +704,7 @@ sub __checkPromotionConsistency {
 }
 
 sub __checkEnPassantState {
-	my ($self, $ep_square, $to_move, $pos_info) = @_;
+	my ($self, $ep_square, $to_move) = @_;
 
 	if ('-' eq $ep_square) {
 		$self->[CP_POS_EN_PASSANT] = 0;
@@ -742,8 +730,6 @@ sub __checkEnPassantState {
 			$self->[CP_POS_EN_PASSANT] = (1 << 3) | ($ep_shift & 0x7);
 		}
 	}
-
-	return $pos_info;
 }
 
 sub __checkCastlingState {
@@ -777,7 +763,6 @@ sub __checkCastlingState {
 sub pseudoLegalMoves {
 	my ($self) = @_;
 
-	my $pos_info = cp_pos_info $self;
 	my $to_move = cp_pos_to_move $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
@@ -801,7 +786,7 @@ sub pseudoLegalMoves {
 
 	# Generate castlings.
 	# Mask out the castling rights for the side to move.
-	my $castling_rights = ($pos_info >> ($to_move << 1)) & 0x3;
+	my $castling_rights = ($self->[CP_POS_CASTLING_RIGHTS] >> ($to_move << 1)) & 0x3;
 	if ($castling_rights) {
 		my ($king_from, $king_from_mask, $king_side_crossing_mask,
 			$king_side_dest_shift,
@@ -952,7 +937,6 @@ sub pseudoLegalMoves {
 sub pseudoLegalAttacks {
 	my ($self) = @_;
 
-	my $pos_info = cp_pos_info $self;
 	my $to_move = cp_pos_to_move $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
@@ -1079,20 +1063,8 @@ sub pseudoLegalAttacks {
 	return @moves;
 }
 
-# FIXME! Make this a macro!
-sub __update {
-	my ($self) = @_;
-
-	# Update king's shift.
-	my $pos_info = cp_pos_info($self);
-
-	cp_pos_info($self) = $pos_info;
-}
-
 sub attacked {
 	my ($self, $shift) = @_;
-
-my $c = $self->[CP_POS_TO_MOVE];
 
 	return _cp_pos_color_attacked $self, $self->[CP_POS_TO_MOVE], $shift;
 }
@@ -1112,7 +1084,6 @@ sub moveGivesCheck {
 	my ($self, $move) = @_;
 
 	# FIXME! Check that all of these variables are really needed at least twice!
-	my $pos_info = cp_pos_info $self;
 	my $from = cp_move_from $move;
 	my $from_mask = 1 << $from;
 	my $to = cp_move_to $move;
@@ -1203,7 +1174,6 @@ sub move {
 
 	my @backup = @$self;
 
-	my $pos_info = cp_pos_info $self;
 	my ($from, $to, $promote, $piece) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_piece($move));
@@ -1215,7 +1185,7 @@ sub move {
 	my $her_idx = CP_POS_WHITE_PIECES + !$to_move;
 	my $her_pieces = $self->[$her_idx];
 
-	my $old_castling = my $new_castling = cp_pos_info_castling_rights $pos_info;
+	my $old_castling = my $new_castling = cp_pos_castling_rights $self;
 
 	if ($piece == CP_KING) {
 		# Castling?
@@ -1296,7 +1266,7 @@ sub move {
 	# it safes branches.  There is one edge case, where a pawn captures a
 	# rook that is on its initial position.  In that case, the castling
 	# rights may have to be updated.
-	_cp_pos_info_set_castling $pos_info, $new_castling;
+	$self->[CP_POS_CASTLING_RIGHTS] = $new_castling;
 
 	if ($promote) {
 		$self->[CP_POS_PAWNS] ^= $to_mask;
@@ -1310,7 +1280,6 @@ sub move {
 	$self->[CP_POS_TO_MOVE] = !$to_move;
 
 	$self->[CP_POS_MATERIAL] += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
-	$self->[CP_POS_INFO] = $pos_info;
 	$self->[CP_POS_LAST_MOVE] = $move;
 
 	return \@backup;
@@ -1519,7 +1488,6 @@ sub SEE {
 	my $to = cp_move_to $move;
 	my $from = cp_move_from $move;
 	my $not_from_mask = ~(1 << ($from));
-	my $pos_info = cp_pos_info($self);
 	my $to_move = cp_pos_to_move $self;
 	my $ep = cp_pos_en_passant($self);
 	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
@@ -2025,14 +1993,12 @@ sub signature {
 		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
-	my $pos_info = cp_pos_info $self;
-
 	my $ep = cp_pos_en_passant $self;
 	if ($ep) {
 		$signature ^= $zk_ep_files[$ep & 7];
 	}
 
-	my $castling = cp_pos_info_castling_rights $pos_info;
+	my $castling = cp_pos_castling_rights $self;
 	$signature ^= $zk_castling[$castling];
 
 	if (cp_pos_to_move $self) {
@@ -2325,7 +2291,6 @@ sub checkPseudoLegalMove {
 	my $from = cp_move_from $move;
 	my $to = cp_move_to $move;
 	my $piece = cp_move_piece $move;
-	my $pos_info = cp_pos_info $self;
 	my $to_move = cp_pos_to_move($self);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
@@ -2448,7 +2413,7 @@ my @export_accessors = qw(
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
 	CP_POS_LAST_MOVE CP_POS_MATERIAL CP_POS_TO_MOVE CP_POS_EN_PASSANT
 	CP_POS_USR1 CP_POS_USR2 CP_POS_USR3 CP_POS_USR4 CP_POS_USR5
-	CP_POS_INFO
+	CP_POS_CASTLING_RIGHTS
 );
 
 my @export_board = qw(
@@ -2707,10 +2672,6 @@ sub vacant {
 
 sub halfmoves {
 	shift->[CP_POS_HALFMOVES];
-}
-
-sub info {
-	shift->[CP_POS_INFO];
 }
 
 sub lastMove {

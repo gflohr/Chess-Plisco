@@ -424,8 +424,7 @@ sub __init {
 sub move {
 	my ($self, $move) = @_;
 
-	my $pos_info = cp_pos_info $self;
-	my $castling = cp_pos_info_castling_rights $pos_info;
+	my $castling = cp_pos_castling_rights($self);
 	my $to_move = cp_pos_to_move($self);
 	my $ep = cp_pos_en_passant $self;
 	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
@@ -479,8 +478,7 @@ sub move {
 	$self->[CP_POS_OPENING_SCORE] += $opening_deltas[$score_index];
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
 
-	$pos_info = cp_pos_info $self;
-	my $new_castling =  cp_pos_info_castling_rights $pos_info;
+	my $new_castling =  cp_pos_castling_rights $self;
 	my $castling_changed = $new_castling != $castling;
 	if ($castling_changed) {
 		$zk_update ^= $zk_castling[$castling]
