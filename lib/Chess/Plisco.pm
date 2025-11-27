@@ -357,10 +357,14 @@ use constant CP_MAGICMOVESRDB => \@magicmovesrdb;
 
 use constant CP_MOVE_PIECE_OFFSET => 0;
 use constant CP_MOVE_CAPTURED_OFFSET => 3;
+# The significant part starts here.
 use constant CP_MOVE_PROMOTE_OFFSET => 6;
-use constant CP_MOVE_COLOR_OFFSET => 9;
-use constant CP_MOVE_FROM_OFFSET => 10;
-use constant CP_MOVE_TO_OFFSET => 16;
+use constant CP_MOVE_FROM_OFFSET => 9;
+use constant CP_MOVE_TO_OFFSET => 15;
+# The significant part ends here. The start square, the destination square,
+# and a possible promotion piece are sufficient to reconstruct any move
+# for a given position.
+use constant CP_MOVE_COLOR_OFFSET => 21;
 use constant CP_MOVE_EN_PASSANT_OFFSET => 22;
 
 my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
@@ -781,7 +785,8 @@ sub pseudoLegalMoves {
 
 	my $from = cp_bitboard_count_isolated_trailing_zbits $king_mask;
 
-	$base_move = ($from << 10) | CP_KING;
+	# FIXME! Try to use the move offset constants. Will that be slower?
+	$base_move = ($from << 9) | CP_KING;
 
 	$target_mask = ~$my_pieces & $king_attack_masks[$from];
 
@@ -800,16 +805,16 @@ sub pseudoLegalMoves {
 			if (($castling_rights & 0x1)
 				&& !(((1 << $king_side_dest_shift) | $king_side_crossing_mask)
 					& $occupancy)) {
-				push @moves, ($king_from << 10) | CP_KING
-					| ($king_side_dest_shift << 16);
+				push @moves, ($king_from << 9) | CP_KING
+					| ($king_side_dest_shift << 15);
 			}
 			if (($castling_rights & 0x2)
 			    && (!(($queen_side_crossing_mask
 			           | $queen_side_rook_crossing_mask
 				       | (1 << $queen_side_dest_shift))
 				      & $occupancy))) {
-				push @moves, ($king_from << 10) | CP_KING
-					| ($queen_side_dest_shift << 16);
+				push @moves, ($king_from << 9) | CP_KING
+					| ($queen_side_dest_shift << 15);
 			}
 		}
 	}
@@ -819,7 +824,7 @@ sub pseudoLegalMoves {
 	while ($knight_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $knight_mask;
 
-		$base_move = ($from << 10) | CP_KNIGHT;
+		$base_move = ($from << 9) | CP_KNIGHT;
 	
 		$target_mask = ~$my_pieces & $knight_attack_masks[$from];
 
@@ -833,7 +838,7 @@ sub pseudoLegalMoves {
 	while ($bishop_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $bishop_mask;
 
-		$base_move = ($from << 10) | CP_BISHOP;
+		$base_move = ($from << 9) | CP_BISHOP;
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -847,7 +852,7 @@ sub pseudoLegalMoves {
 	while ($rook_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $rook_mask;
 
-		$base_move = ($from << 10) | CP_ROOK;
+		$base_move = ($from << 9) | CP_ROOK;
 	
 		$target_mask = cp_mm_rmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -861,7 +866,7 @@ sub pseudoLegalMoves {
 	while ($queen_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $queen_mask;
 
-		$base_move = ($from << 10) | CP_QUEEN;
+		$base_move = ($from << 9) | CP_QUEEN;
 	
 		$target_mask = 
 			(cp_mm_rmagic($from, $occupancy)
@@ -897,7 +902,7 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 10) | CP_PAWN;
+		$base_move = ($from << 9) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
@@ -914,7 +919,7 @@ sub pseudoLegalMoves {
 			$target_mask = $pawn_double_masks->[$from] & $empty;
 			if ($target_mask) {
 				my $to = $from + ($offset << 1);
-				push @moves, ($from << 10) | ($to << 16) | CP_PAWN;
+				push @moves, ($from << 9) | ($to << 15) | CP_PAWN;
 			}
 		}
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
@@ -925,7 +930,7 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 10) | CP_PAWN;
+		$base_move = ($from << 9) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
@@ -3946,9 +3951,10 @@ foreach my $from (0 .. 63) {
 # 0-2: piece
 # 3-5: captured
 # 6-8: promote
-# 9: color
-# 10-15: from
-# 16-21: to
+# 9-14: from
+# 15-20: to
+# 21: color
+# 22: en passant
 my $gen_moves = sub {
 	my ($moves, $piece, $from, $to, $color) = @_;
 	my $move = ($to << (CP_MOVE_TO_OFFSET)) | ($from << (CP_MOVE_FROM_OFFSET)) | $piece | ($color << (CP_MOVE_COLOR_OFFSET));

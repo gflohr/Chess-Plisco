@@ -106,22 +106,22 @@ _define cp_move_set_promote => '$m', '$p',
 		'(($m) = (($m) & ~0x1c0) | (($p)) << 6)';
 sub cp_move_set_promote {}
 
-_define cp_move_color => '$m', '((($m) >> 9) & 0x1)';
-sub cp_move_color {}
-_define cp_move_set_color => '$m', '$c',
-		'(($m) = (($m) & ~0x200) | (($c)) << 9)';
-
-_define cp_move_from => '$m', '((($m) >> 10) & 0x3f)';
+_define cp_move_from => '$m', '((($m) >> 9) & 0x3f)';
 sub cp_move_from {}
 _define cp_move_set_from => '$m', '$f',
-		'(($m) = (($m) & ~0xfc00) | (($f)) << 10)';
+		'(($m) = (($m) & ~0x7e00) | (($f)) << 9)';
 sub cp_move_set_from {}
 
-_define cp_move_to => '$m', '((($m) >> 16) & 0x3f)';
+_define cp_move_to => '$m', '((($m) >> 15) & 0x3f)';
 sub cp_move_to {}
 _define cp_move_set_to => '$m', '$t',
-		'(($m) = (($m) & ~0x3f0000) | (($t)) << 16)';
+		'(($m) = (($m) & ~0x1f8000) | (($t)) << 15)';
 sub cp_move_set_to {}
+
+_define cp_move_color => '$m', '((($m) >> 21) & 0x1)';
+sub cp_move_color {}
+_define cp_move_set_color => '$m', '$c',
+		'(($m) = (($m) & ~0x200000) | (($c)) << 21)';
 
 _define cp_move_en_passant => '$m', '((($m) >> 22) & 0x1)';
 sub cp_move_en_passant {}
@@ -131,14 +131,12 @@ _define cp_move_set_en_passant => '$m', '$e',
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 sub cp_move_coordinate_notation {}
 
-_define cp_move_significant => '$m', '(($m) & 0x3ffc00)';
+_define cp_move_significant => '$m', '(($m) & 0x1fffc0)';
 sub cp_move_significant {}
+
 _define cp_move_equivalent => '$m1', '$m2',
 		'(cp_move_significant($m1) == cp_move_significant($m2))';
-
 sub cp_move_equivalent {}
-_define cp_move_capture_or_promotion => '$m', '($m & 0x1c7000)';
-sub cp_move_capture_or_promotion {}
 
 # Bitboard macros.
 _define cp_bitboard_popcount => '$b', '$c',

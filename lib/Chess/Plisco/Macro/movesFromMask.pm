@@ -14,6 +14,6 @@
 ## no critic (TestingAndDebugging::RequireUseStrict)
 
 while ($target_mask) {
-	push @m, $b | ((cp_bitboard_count_trailing_zbits $t) << 16);
+	push @m, $b | ((cp_bitboard_count_trailing_zbits $t) << 15);
 	$target_mask = cp_bitboard_clear_least_set $target_mask;
 }
