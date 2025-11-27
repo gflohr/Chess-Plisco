@@ -355,6 +355,14 @@ use constant CP_MAGICMOVES_R_MASK => \@magicmoves_r_mask;
 use constant CP_MAGICMOVESBDB => \@magicmovesbdb;
 use constant CP_MAGICMOVESRDB => \@magicmovesrdb;
 
+use constant CP_MOVE_PIECE_OFFSET => 0;
+use constant CP_MOVE_CAPTURED_OFFSET => 3;
+use constant CP_MOVE_PROMOTE_OFFSET => 6;
+use constant CP_MOVE_COLOR_OFFSET => 9;
+use constant CP_MOVE_FROM_OFFSET => 10;
+use constant CP_MOVE_TO_OFFSET => 16;
+use constant CP_MOVE_EN_PASSANT_OFFSET => 22;
+
 my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
 
@@ -773,7 +781,7 @@ sub pseudoLegalMoves {
 
 	my $from = cp_bitboard_count_isolated_trailing_zbits $king_mask;
 
-	$base_move = ($from << 6 | CP_KING << 15);
+	$base_move = ($from << 10) | CP_KING;
 
 	$target_mask = ~$my_pieces & $king_attack_masks[$from];
 
@@ -792,16 +800,16 @@ sub pseudoLegalMoves {
 			if (($castling_rights & 0x1)
 				&& !(((1 << $king_side_dest_shift) | $king_side_crossing_mask)
 					& $occupancy)) {
-				push @moves, ($king_from << 6 | CP_KING << 15)
-					| $king_side_dest_shift;
+				push @moves, ($king_from << 10) | CP_KING
+					| ($king_side_dest_shift << 16);
 			}
 			if (($castling_rights & 0x2)
 			    && (!(($queen_side_crossing_mask
 			           | $queen_side_rook_crossing_mask
 				       | (1 << $queen_side_dest_shift))
 				      & $occupancy))) {
-				push @moves, ($king_from << 6 | CP_KING << 15)
-					| $queen_side_dest_shift;
+				push @moves, ($king_from << 10) | CP_KING
+					| ($queen_side_dest_shift << 16);
 			}
 		}
 	}
@@ -811,7 +819,7 @@ sub pseudoLegalMoves {
 	while ($knight_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $knight_mask;
 
-		$base_move = ($from << 6 | CP_KNIGHT << 15);
+		$base_move = ($from << 10) | CP_KNIGHT;
 	
 		$target_mask = ~$my_pieces & $knight_attack_masks[$from];
 
@@ -825,7 +833,7 @@ sub pseudoLegalMoves {
 	while ($bishop_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $bishop_mask;
 
-		$base_move = ($from << 6 | CP_BISHOP << 15);
+		$base_move = ($from << 10) | CP_BISHOP;
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -839,7 +847,7 @@ sub pseudoLegalMoves {
 	while ($rook_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $rook_mask;
 
-		$base_move = ($from << 6 | CP_ROOK << 15);
+		$base_move = ($from << 10) | CP_ROOK;
 	
 		$target_mask = cp_mm_rmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -853,7 +861,7 @@ sub pseudoLegalMoves {
 	while ($queen_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $queen_mask;
 
-		$base_move = ($from << 6 | CP_QUEEN << 15);
+		$base_move = ($from << 10) | CP_QUEEN;
 	
 		$target_mask = 
 			(cp_mm_rmagic($from, $occupancy)
@@ -889,7 +897,7 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 15);
+		$base_move = ($from << 10) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
@@ -906,7 +914,7 @@ sub pseudoLegalMoves {
 			$target_mask = $pawn_double_masks->[$from] & $empty;
 			if ($target_mask) {
 				my $to = $from + ($offset << 1);
-				push @moves, ($from << 6) | $to | CP_PAWN << 15;
+				push @moves, ($from << 10) | ($to << 16) | CP_PAWN;
 			}
 		}
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
@@ -917,7 +925,7 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 15);
+		$base_move = ($from << 10) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
@@ -945,7 +953,7 @@ sub pseudoLegalAttacks {
 
 	my $from = cp_bitboard_count_isolated_trailing_zbits $king_mask;
 
-	$base_move = ($from << 6 | CP_KING << 15);
+	$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_KING;
 
 	$target_mask = $her_pieces & $king_attack_masks[$from];
 
@@ -956,7 +964,7 @@ sub pseudoLegalAttacks {
 	while ($knight_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $knight_mask;
 
-		$base_move = ($from << 6 | CP_KNIGHT << 15);
+		$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_KNIGHT;
 	
 		$target_mask = $her_pieces & $knight_attack_masks[$from];
 
@@ -970,7 +978,7 @@ sub pseudoLegalAttacks {
 	while ($bishop_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $bishop_mask;
 
-		$base_move = ($from << 6 | CP_BISHOP << 15);
+		$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_BISHOP;
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & $her_pieces;
 
@@ -984,7 +992,7 @@ sub pseudoLegalAttacks {
 	while ($rook_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $rook_mask;
 
-		$base_move = ($from << 6 | CP_ROOK << 15);
+		$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_ROOK;
 	
 		$target_mask = cp_mm_rmagic($from, $occupancy) & $her_pieces;
 
@@ -998,7 +1006,7 @@ sub pseudoLegalAttacks {
 	while ($queen_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $queen_mask;
 
-		$base_move = ($from << 6 | CP_QUEEN << 15);
+		$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_QUEEN;
 	
 		$target_mask = 
 			(cp_mm_rmagic($from, $occupancy)
@@ -1034,7 +1042,7 @@ sub pseudoLegalAttacks {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 15);
+		$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_PAWN;
 		$target_mask = ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
@@ -1045,7 +1053,7 @@ sub pseudoLegalAttacks {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 6 | CP_PAWN << 15);
+		$base_move = ($from << (CP_MOVE_FROM_OFFSET)) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
 			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
@@ -2044,7 +2052,7 @@ sub __dumpMove {
 	} else {
 		$ep_file = "en passant file: -";
 	}
-	return join "\n", $bits, $colour, $to_square, $from_square, $piece_char, $captured_char, $promote_char, $ep, $ep_file, '';
+	return join "\n", $bits, $colour, $from_square, $to_square, $piece_char, $captured_char, $promote_char, $ep, $ep_file, '';
 }
 
 sub __zobristKeyDump {
@@ -2432,18 +2440,29 @@ my @export_game = qw(
 	CP_GAME_INSUFFICIENT_MATERIAL
 );
 
+my @export_moves = qw(
+	CP_MOVE_PIECE_OFFSET
+	CP_MOVE_CAPTURED_OFFSET
+	CP_MOVE_PROMOTE_OFFSET
+	CP_MOVE_COLOR_OFFSET
+	CP_MOVE_FROM_OFFSET
+	CP_MOVE_TO_OFFSET
+	CP_MOVE_EN_PASSANT_OFFSET
+);
+
 my @export_aux = qw(CP_INT_SIZE CP_CHAR_BIT CP_RANDOM_SEED);
 
 our @EXPORT_OK = (@export_pieces, @export_board, @export_accessors,
-		@export_magicmoves, @export_game, @export_aux);
+		@export_magicmoves, @export_game, @export_aux, @export_moves);
 
 our %EXPORT_TAGS = (
 	accessors => [@export_accessors],
 	pieces => [@export_pieces],
 	board => [@export_board],
 	magicmoves => [@export_magicmoves],
+	moves => [@export_moves],
 	aux => [@export_aux],
-	# game => [@export_game],
+	game => [@export_game],
 	all => [@EXPORT_OK],
 );
 
@@ -3873,10 +3892,10 @@ $castling_rook_move_masks[CP_G1] = CP_1_MASK & (CP_H_MASK | CP_F_MASK);
 $castling_rook_move_masks[CP_C8] = CP_8_MASK & (CP_A_MASK | CP_D_MASK);
 $castling_rook_move_masks[CP_G8] = CP_8_MASK & (CP_H_MASK | CP_F_MASK);
 
-$castling_rook_to_mask[CP_C1] = 1 << CP_D1;
-$castling_rook_to_mask[CP_G1] = 1 << CP_F1;
-$castling_rook_to_mask[CP_C8] = 1 << CP_D8;
-$castling_rook_to_mask[CP_G8] = 1 << CP_F8;
+$castling_rook_to_mask[CP_C1] = 1 << (CP_D1);
+$castling_rook_to_mask[CP_G1] = 1 << (CP_F1);
+$castling_rook_to_mask[CP_C8] = 1 << (CP_D8);
+$castling_rook_to_mask[CP_G8] = 1 << (CP_F8);
 
 # The indices are the original squares of the rooks.
 @castling_rights_rook_masks = (-1) x 64;
@@ -3924,93 +3943,93 @@ foreach my $from (0 .. 63) {
 }
 
 # Moves:
-# 0-5: to
-# 6-11: from
-# 12-14: promote
-# 15-17: piece
-# 18-20: captured
-# 21: color
+# 0-2: piece
+# 3-5: captured
+# 6-8: promote
+# 9: color
+# 10-15: from
+# 16-21: to
 my $gen_moves = sub {
 	my ($moves, $piece, $from, $to, $color) = @_;
-	my $move = $to | ($from << 6) | ($piece << 15) | ($color << 21);
+	my $move = ($to << (CP_MOVE_TO_OFFSET)) | ($from << (CP_MOVE_FROM_OFFSET)) | $piece | ($color << (CP_MOVE_COLOR_OFFSET));
 	push @$moves, $move if $piece != CP_PAWN;
-	push @$moves, $move | (CP_PAWN << 18);
-	push @$moves, $move | (CP_KNIGHT << 18);
-	push @$moves, $move | (CP_BISHOP << 18);
-	push @$moves, $move | (CP_ROOK << 18);
-	push @$moves, $move | (CP_QUEEN << 18);
+	push @$moves, $move | (CP_PAWN << (CP_MOVE_CAPTURED_OFFSET));
+	push @$moves, $move | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+	push @$moves, $move | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+	push @$moves, $move | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+	push @$moves, $move | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
 
 	# En passant.
 	if ($color == CP_WHITE && $piece == CP_PAWN && $to >= CP_A6 && $to <= CP_H6) {
-		push @$moves, $move | (CP_KING << 18);
+		push @$moves, $move | (CP_KING << (CP_MOVE_CAPTURED_OFFSET));
 	} elsif ($color == CP_BLACK && $piece == CP_PAWN && $to >= CP_A3 && $to <= CP_H3) {
-		push @$moves, $move | (CP_KING << 18);
+		push @$moves, $move | (CP_KING << (CP_MOVE_CAPTURED_OFFSET));
 	}
 };
 my $gen_promotions = sub {
 	my ($moves, $from, $color) = @_;
-	my $move = ($from << 6) | (CP_PAWN << 15) | ($color << 21);
-	my $to = $color ? $from - 8 : $from + 8;
+	my $move = ($from << (CP_MOVE_FROM_OFFSET)) | (CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($color << (CP_MOVE_COLOR_OFFSET));
+	my $to = ($color ? $from - 8 : $from + 8) << (CP_MOVE_TO_OFFSET);
 	# Normal promotions.
-	push @$moves, $move | (CP_QUEEN << 12) | $to;
-	push @$moves, $move | (CP_ROOK << 12) | $to;
-	push @$moves, $move | (CP_BISHOP << 12) | $to;
-	push @$moves, $move | (CP_KNIGHT << 12) | $to;
+	push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to;
+	push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to;
+	push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to;
+	push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to;
 	# Promotions with captures to the left-side.
 	if (($from & 0x7) != CP_FILE_A) {
-		$to = $color ? $from - 9 : $from + 7;
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_QUEEN << 18);
+		$to = ($color ? $from - 9 : $from + 7) << (CP_MOVE_TO_OFFSET);
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
 	}
 	# Promotions with captures to the right-side.
 	if (($from & 0x7) != CP_FILE_H) {
-		$to = $color ? $from - 7 : $from + 9;
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_QUEEN << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_ROOK << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_BISHOP << 12) | $to | (CP_QUEEN << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_KNIGHT << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_BISHOP << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_ROOK << 18);
-		push @$moves, $move | (CP_KNIGHT << 12) | $to | (CP_QUEEN << 18);
+		$to = ($color ? $from - 7 : $from + 9) << (CP_MOVE_TO_OFFSET);
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_BISHOP << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
+		push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
 	}
 };
 
 foreach my $file (CP_FILE_A .. CP_FILE_H) {
-	my $mb = 1 << 21;
+	my $mb = 1 << (CP_MOVE_COLOR_OFFSET);
 	foreach my $rank (CP_RANK_1 .. CP_RANK_8) {
 		my @moves;
 		my $from = coordinatesToShift(undef, $file, $rank);
-		my $move_from = $from << 6;
+		my $move_from = $from << (CP_MOVE_FROM_OFFSET);
 
 		# Pawn moves.
 		if ($rank == CP_RANK_2) {
 			# White single step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from + 8);
+			push @moves, ((CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($move_from) | (($from + 8) << (CP_MOVE_TO_OFFSET)));
 			# White double step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from + 16);
+			push @moves, ((CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($move_from) | (($from + 16) << (CP_MOVE_TO_OFFSET)));
 			# White captures.
 			$gen_moves->(\@moves, CP_PAWN, $from, $from + 7, CP_WHITE)
 				if $file != CP_FILE_A;
@@ -4020,14 +4039,14 @@ foreach my $file (CP_FILE_A .. CP_FILE_H) {
 			$gen_promotions->(\@moves, $from, CP_BLACK);
 		} elsif ($rank > CP_RANK_2 && $rank < CP_RANK_7) {
 			# White single steps.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from + 8);
+			push @moves, ((CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($move_from) | (($from + 8) << (CP_MOVE_TO_OFFSET)));
 			# White captures.
 			$gen_moves->(\@moves, CP_PAWN, $from, $from + 7, CP_WHITE)
 				if $file != CP_FILE_A;
 			$gen_moves->(\@moves, CP_PAWN, $from, $from + 9, CP_WHITE)
 				if $file != CP_FILE_H;
 			# Black single steps.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from - 8) | $mb;
+			push @moves, ((CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($move_from) | (($from - 8) << (CP_MOVE_TO_OFFSET))) | $mb;
 			# Black captures.
 			$gen_moves->(\@moves, CP_PAWN, $from, $from - 9, CP_BLACK)
 				if $file != CP_FILE_A;
@@ -4035,9 +4054,9 @@ foreach my $file (CP_FILE_A .. CP_FILE_H) {
 				if $file != CP_FILE_H;
 		} elsif ($rank == CP_RANK_7) {
 			# Black single step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from - 8) | $mb;
+			push @moves, ((CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($move_from) | (($from - 8) << (CP_MOVE_TO_OFFSET))) | $mb;
 			# Black double step.
-			push @moves, ((CP_PAWN << 15) | ($move_from) | $from - 16) | $mb;
+			push @moves, ((CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($move_from) | (($from - 16) << (CP_MOVE_TO_OFFSET))) | $mb;
 			# Black captures.
 			$gen_moves->(\@moves, CP_PAWN, $from, $from - 9, CP_BLACK)
 				if $file != CP_FILE_A;
@@ -4136,11 +4155,11 @@ foreach my $file (CP_FILE_A .. CP_FILE_H) {
 
 		# Castlings.
 		if ($from == CP_E1) {
-			push @moves, ((CP_KING << 15) | (CP_E1 << 6) | CP_G1);
-			push @moves, ((CP_KING << 15) | (CP_E1 << 6) | CP_C1);
+			push @moves, ((CP_KING << (CP_MOVE_PIECE_OFFSET)) | (CP_E1 << (CP_MOVE_FROM_OFFSET)) | (CP_G1 << (CP_MOVE_TO_OFFSET)));
+			push @moves, ((CP_KING << (CP_MOVE_PIECE_OFFSET)) | (CP_E1 << (CP_MOVE_FROM_OFFSET)) | (CP_C1 << (CP_MOVE_TO_OFFSET)));
 		} elsif ($from == CP_E8) {
-			push @moves, ((CP_KING << 15) | (CP_E8 << 6) | CP_G8) | $mb;
-			push @moves, ((CP_KING << 15) | (CP_E8 << 6) | CP_C8) | $mb;
+			push @moves, ((CP_KING << (CP_MOVE_PIECE_OFFSET)) | (CP_E8 << (CP_MOVE_FROM_OFFSET)) | (CP_G8 << (CP_MOVE_TO_OFFSET))) | $mb;
+			push @moves, ((CP_KING << (CP_MOVE_PIECE_OFFSET)) | (CP_E8 << (CP_MOVE_FROM_OFFSET)) | (CP_C8 << (CP_MOVE_TO_OFFSET))) | $mb;
 		}
 
 		push @move_numbers, @moves;

@@ -271,8 +271,8 @@ my @endgame_deltas;
 
 foreach my $move (Chess::Plisco->moveNumbers) {
 	my $is_ep;
-	my $color = 1 & ($move >> 21);
-	my $captured = 0x7 & ($move >> 18);
+	my $color = 1 & ($move >> CP_MOVE_COLOR_OFFSET);
+	my $captured = 0x7 & ($move >> CP_MOVE_CAPTURED_OFFSET);
 	if ($captured == CP_KING) {
 		$captured = CP_PAWN;
 		$is_ep = 1;
@@ -472,7 +472,7 @@ sub move {
 	$self->[CP_POS_GAME_PHASE] += $move_phase_deltas[
 		(cp_move_captured($move) << 3) | cp_move_promote($move)
 	];
-	my $score_index = ($move & 0x1fffff) | (!(cp_pos_to_move($self)) << 21);
+	my $score_index = ($move & 0x3fffff & ~(1 << (CP_MOVE_COLOR_OFFSET))) | (!(cp_pos_to_move($self)) << (CP_MOVE_COLOR_OFFSET));
 	$self->[CP_POS_OPENING_SCORE] += $opening_deltas[$score_index];
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
 

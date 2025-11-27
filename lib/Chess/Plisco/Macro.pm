@@ -74,45 +74,68 @@ sub cp_pos_halfmove_clock {}
 _define cp_pos_material => '$p', '$p->[CP_POS_MATERIAL]';
 sub cp_pos_material {}
 
-_define cp_move_to => '$m', '(($m) & 0x3f)';
-sub cp_move_to {}
-_define cp_move_set_to => '$m', '$v', '(($m) = (($m) & ~0x3f) | (($v) & 0x3f))';
-sub cp_move_set_to {}
-_define cp_move_from => '$m', '(($m >> 6) & 0x3f)';
-sub cp_move_from {}
-_define cp_move_set_from => '$m', '$v',
-		'(($m) = (($m) & ~0xfc0) | (($v) & 0x3f) << 6)';
-sub cp_move_set_from {}
-_define cp_move_promote => '$m', '(($m >> 12) & 0x7)';
-sub cp_move_promote {}
-_define cp_move_set_promote => '$m', '$p',
-		'(($m) = (($m) & ~0x7000) | (($p) & 0x7) << 12)';
-sub cp_move_set_promote {}
-_define cp_move_piece => '$m', '(($m >> 15) & 0x7)';
+# Bits of a move:
+#
+# - moving piece (3 bits)
+# - captured piece (3 bits)
+# - promotion (3 bits)
+# - colour (1 bit)
+# - from (6 bits)
+# - to (6 bits)
+# - en passant flag (1 bit)
+#
+# When ordering moves we often want to use the combination of attacker, victim,
+# and optionally promotion as an index into lookup tables. We want to do just
+# a bitwise AND and not a shift followed by a bitwise and for it.
+
+_define cp_move_piece => '$m', '(($m) & 0x7)';
 sub cp_move_piece {}
 _define cp_move_set_piece => '$m', '$a',
-		'(($m) = (($m) & ~0x38000) | (($a) & 0x7) << 15)';
+		'(($m) = (($m) & ~0x7) | ($a))';
 sub cp_move_set_piece {}
-_define cp_move_captured => '$m', '(($m >> 18) & 0x7)';
+
+_define cp_move_captured => '$m', '((($m) >> 3) & 0x7)';
 sub cp_move_captured {}
-_define cp_move_set_captured => '$m', '$a',
-		'(($m) = (($m) & ~0x1c0000) | (($a) & 0x7) << 18)';
+_define cp_move_set_captured => '$m', '$c',
+		'(($m) = (($m) & ~0x38) | (($c)) << 3)';
 sub cp_move_set_captured {}
-_define cp_move_color => '$m', '(($m >> 21) & 0x1)';
+
+_define cp_move_promote => '$m', '((($m) >> 6) & 0x7)';
+sub cp_move_promote {}
+_define cp_move_set_promote => '$m', '$p',
+		'(($m) = (($m) & ~0x1c0) | (($p)) << 6)';
+sub cp_move_set_promote {}
+
+_define cp_move_color => '$m', '((($m) >> 9) & 0x1)';
 sub cp_move_color {}
 _define cp_move_set_color => '$m', '$c',
-		'(($m) = (($m) & ~0x20_0000) | (($c) & 0x1) << 21)';
-_define cp_move_en_passant => '$m', '(($m >> 22) & 0x1)';
+		'(($m) = (($m) & ~0x200) | (($c)) << 9)';
+
+_define cp_move_from => '$m', '((($m) >> 10) & 0x3f)';
+sub cp_move_from {}
+_define cp_move_set_from => '$m', '$f',
+		'(($m) = (($m) & ~0xfc00) | (($f)) << 10)';
+sub cp_move_set_from {}
+
+_define cp_move_to => '$m', '((($m) >> 16) & 0x3f)';
+sub cp_move_to {}
+_define cp_move_set_to => '$m', '$t',
+		'(($m) = (($m) & ~0x3f0000) | (($t)) << 16)';
+sub cp_move_set_to {}
+
+_define cp_move_en_passant => '$m', '((($m) >> 22) & 0x1)';
 sub cp_move_en_passant {}
-_define cp_move_set_en_passant => '$m', '$c',
-		'(($m) = (($m) & ~0x40_0000) | (($c) & 0x1) << 22)';
-sub cp_move_set_captured {}
+_define cp_move_set_en_passant => '$m', '$e',
+		'(($m) = (($m) & ~0x400000) | (($e) & 0x1) << 22)';
+
 _define cp_move_coordinate_notation => '$m', 'cp_shift_to_square(cp_move_from $m) . cp_shift_to_square(cp_move_to $m) . CP_PIECE_CHARS->[CP_BLACK]->[cp_move_promote $m]';
 sub cp_move_coordinate_notation {}
-_define cp_move_significant => '$m', '($m & 0x7fff)';
+
+_define cp_move_significant => '$m', '(($m) & 0x3ffc00)';
 sub cp_move_significant {}
 _define cp_move_equivalent => '$m1', '$m2',
 		'(cp_move_significant($m1) == cp_move_significant($m2))';
+
 sub cp_move_equivalent {}
 _define cp_move_capture_or_promotion => '$m', '($m & 0x1c7000)';
 sub cp_move_capture_or_promotion {}

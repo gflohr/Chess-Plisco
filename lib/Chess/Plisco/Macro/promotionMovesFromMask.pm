@@ -15,11 +15,11 @@
 
 while ($target_mask) {
 
-	my $base_move = $b | cp_bitboard_count_trailing_zbits $t;
+	my $base_move = $b | (cp_bitboard_count_trailing_zbits $t) << 16;
 	push @m,
-		$b | (CP_QUEEN << 12),
-		$b | (CP_ROOK << 12),
-		$b | (CP_BISHOP << 12),
-		$b | (CP_KNIGHT << 12);
+		$b | (5 << 6), # Queen
+		$b | (4 << 6), # Rook
+		$b | (3 << 6), # Bishop
+		$b | (2 << 6); # Knight
 	$target_mask = cp_bitboard_clear_least_set $target_mask;
 }
