@@ -320,10 +320,11 @@ sub alphabeta {
 	my $print_current_move = $ply == 1 && $self->{print_current_move};
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
+	my @backup = @$position;
 	foreach my $move (@moves) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
-		my $state = $position->move($move);
+		$position->move($move, 1);
 		# FIXME! Update that on the fly.
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
@@ -360,7 +361,7 @@ sub alphabeta {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value $val");
 		}
-		$position->unmove($state);
+		@$position = @backup;
 		if (DEBUG) {
 			pop @{$self->{line}};
 		}
@@ -503,11 +504,12 @@ sub quiesce {
 	my $signatures = $self->{signatures};
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
+	my @backup = @$position;
 	foreach my $move (@pseudo_legal) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
-		my $state = $position->move($move);
+		$position->move($move, 1);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
-		$position->unmove($state);
+		@$position = @backup;
 		my $see = $position->SEE($move);
 
 		# A marginal difference can occur if bishops and knights have different
@@ -526,7 +528,7 @@ sub quiesce {
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
 	foreach my $move (sort { $b <=> $a } @moves) {
-		my $state = $position->doMove($move);
+		$position->move($move, 1);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			push @{$self->{line}}, $cn;
@@ -543,7 +545,7 @@ sub quiesce {
 			$self->indent($ply, "move $cn: value: $val");
 			pop @{$self->{line}};
 		}
-		$position->unmove($state);
+		@$position = @backup;
 		if ($val >= $beta) {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
@@ -726,7 +728,7 @@ sub getPonderMove {
 	my $pos = $self->{position}->copy;
 
 	# Play our move.
-	$pos->doMove($line[0]);
+	$pos->move($line[0]);
 
 	# And now try to find an entry in the transposition table.
 	my $signature = $pos->[CP_POS_SIGNATURE];

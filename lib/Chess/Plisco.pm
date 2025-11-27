@@ -1161,9 +1161,9 @@ sub moveSignificant {
 }
 
 sub move {
-	my ($self, $move) = @_;
+	my ($self, $move, $no_backup) = @_;
 
-	my @backup = @$self;
+	my @backup = @$self unless $no_backup;
 
 	my ($from, $to, $promote, $piece) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1280,12 +1280,12 @@ sub unmove {
 }
 
 sub doMove {
-	my ($self, $move) = @_;
+	my ($self, $move, $no_backup) = @_;
 
 	my @check_info = $self->inCheck;
 	return if !$self->checkPseudoLegalMove($move, @check_info);
 
-	return $self->move($move);
+	return $self->move($move, $no_backup);
 }
 
 sub undoMove {
@@ -3488,13 +3488,13 @@ sub moveLegal {
 }
 
 sub applyMove {
-	my ($self, $move) = @_;
+	my ($self, $move, $no_backup) = @_;
 
 	if ($move =~ /[a-z]/i) {
 		$move = $self->parseMove($move) or return;
 	}
 
-	return $self->doMove($move);
+	return $self->doMove($move, $no_backup);
 }
 
 sub unapplyMove {
