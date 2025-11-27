@@ -51,7 +51,7 @@ my $remove_ep = sub {
 
 	my $pos2 = $pos->copy;
 
-	$pos2->[CP_POS_EN_PASSANT] = 0;
+	$pos2->[CP_POS_EN_PASSANT_SHIFT] = 0;
 
 	return $pos2;
 };
@@ -1812,8 +1812,8 @@ sub probeWdl {
 	# Positions where en passant is possible need special care because the
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
 	# we can just return the result of the probe.
-	my $ep = cp_pos_en_passant $pos;
-	return $value if !$ep;
+	my $ep_shift = cp_pos_en_passant_shift $pos;
+	return $value if !$ep_shift;
 
 	# Positions resulting from en passant captures have not been considered,
 	# when generating the table. We do that now, in the wrapper code, by
@@ -1825,7 +1825,6 @@ sub probeWdl {
 	# It is also possible that the only legal moves in a position are en
 	# passant captures. Example: K7/3n1P2/1k6/pP6/8/8/8/8 w - a6 0 1. In this
 	# case, the best of the captures have to be played.
-	my $ep_shift = cp_en_passant_file_to_shift($ep, cp_pos_to_move $pos);
 	my $v1 = -3;
 	my @legal_moves = $pos->legalMoves;
 	my @ep_captures;
@@ -1875,10 +1874,7 @@ sub probeDtz {
 	# Positions where en passant is possible need special care because the
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
 	# we can just return the result of the probe.
-	my $ep = cp_pos_en_passant $pos;
-	my $ep_shift = $ep
-		? cp_en_passant_file_to_shift($ep, cp_pos_to_move($pos))
-		: 0;
+	my $ep_shift = cp_pos_en_passant_shift $pos;
 
 	return $value if !$ep_shift;
 

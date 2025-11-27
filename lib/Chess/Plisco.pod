@@ -430,32 +430,11 @@ seed L</CP_RANDOM_SEED>.  If you turn the constant L</CP_RANDOM_SEED> into
 a non-constant subroutine, you can also get different signatures, whenever
 you re-load the library.
 
-=item B<enPassant>
-
-Return a 4-bit value. The highest bit signals whether en passant is possible.
-The lower 3 bit give the en passant file.
-
-There is no method B<enPassantFile> and that is by design.  If en passant is
-possible on the a file, the method would return 0 which is the a file encoded.
-The normal pattern is therefore:
-
-=over 8
-    my $ep = $pos->enPassant;
-    if ($ep) {
-        my $ep_file = $ep & 7;
-        my $ep_square = $pos->enPassantFileToShift($ep);
-    }
-=back
-
-However, there is no need to mask out the highest bit because the library
-does that for you wherever an en passant file is expected.
-
 =item B<enPassantShift>
 
-If en-passant is possible, returns the shift of the square where the capturing
-pawn has to move. If en-passant is not possible, 0 is returned. 0 happens to be
-the shift of "a1" but "a1" is not a valid en-passant square. It is therefore
-safe to use this method in boolean context.
+Returns the shift of the en passant square or 0 if en passant is not possible
+0 happens to be the shift for a1 but since en passant is never possible on a1,
+this is not a problem.
 
 =item B<material>
 
@@ -1280,12 +1259,6 @@ signatures.
 
 If you want a different seed, you should override the constant
 L</CP_RANDOM_SEED>.
-
-=item B<enPassantFileToShift(FILE, COLOUR)>
-
-Given an en passant file B<FILE> return the shift of the en passant square
-for colour B<C>. Instead of a file (0-8) you can also pass a complete
-en passant info (0-16) where bit 4 is set.
 
 =back
 

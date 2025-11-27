@@ -426,10 +426,8 @@ sub move {
 
 	my $castling = cp_pos_castling_rights($self);
 	my $to_move = cp_pos_to_move($self);
-	my $ep = cp_pos_en_passant $self;
-	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
-	my $ep_file = $ep_shift & 7;
-	my $zk_update = $ep ? ($zk_ep_files[$ep_file]) : 0;
+	my $ep_shift = cp_pos_en_passant_shift $self;
+	my $zk_update = $ep_shift ? ($zk_ep_files[$ep_shift & 7]) : 0;
 
 	my $state = $self->SUPER::move($move) or return;
 	$move = $self->[CP_POS_LAST_MOVE];

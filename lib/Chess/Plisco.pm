@@ -87,7 +87,7 @@ use constant CP_POS_LAST_MOVE => 9;
 use constant CP_POS_MATERIAL => 10;
 use constant CP_POS_HALFMOVE_CLOCK => 11;
 use constant CP_POS_TO_MOVE => 12;
-use constant CP_POS_EN_PASSANT => 13;
+use constant CP_POS_EN_PASSANT_SHIFT => 13;
 # 5 reserved slots.
 use constant CP_POS_USR1 => 14;
 use constant CP_POS_USR2 => 15;
@@ -95,11 +95,6 @@ use constant CP_POS_USR3 => 16;
 use constant CP_POS_USR4 => 17;
 use constant CP_POS_USR5 => 18;
 use constant CP_POS_CASTLING_RIGHTS => 19;
-
-# How to evade a check?
-use constant CP_EVASION_ALL => 0;
-use constant CP_EVASION_CAPTURE => 1;
-use constant CP_EVASION_KING_MOVE => 2;
 
 # Board masks and shifts.
 # Squares.
@@ -388,7 +383,7 @@ sub new {
 	cp_pos_material($self) = 0;
 	cp_pos_halfmove_clock($self) = 0;
 	cp_pos_to_move($self) = CP_WHITE;
-	cp_pos_en_passant($self) = 0;
+	cp_pos_en_passant_shift($self) = 0;
 	cp_pos_castling_rights($self) = 0xf;
 	
 	return $self;
@@ -707,7 +702,7 @@ sub __checkEnPassantState {
 	my ($self, $ep_square, $to_move) = @_;
 
 	if ('-' eq $ep_square) {
-		$self->[CP_POS_EN_PASSANT] = 0;
+		$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 	} elsif ($to_move == CP_WHITE) {
 		if ($ep_square !~ /^[a-h]6$/) {
 			die __x("Illegal FEN: White to move and en-passant square '{square}' is not on 6th rank.\n",
@@ -717,7 +712,7 @@ sub __checkEnPassantState {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift - 8)) & $self->[CP_POS_BLACK_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			$self->[CP_POS_EN_PASSANT] = (1 << 3) | ($ep_shift & 0x7);
+			$self->[CP_POS_EN_PASSANT_SHIFT] = $ep_shift;
 		}
 	} elsif ($to_move == CP_BLACK) {
 		if ($ep_square !~ /^[a-h]3$/) {
@@ -727,7 +722,7 @@ sub __checkEnPassantState {
 		my $ep_shift = $self->squareToShift($ep_square);
 		if ((1 << ($ep_shift + 8)) & $self->[CP_POS_WHITE_PIECES]
 		    & $self->[CP_POS_PAWNS]) {
-			$self->[CP_POS_EN_PASSANT] = (1 << 3) | ($ep_shift & 0x7);
+			$self->[CP_POS_EN_PASSANT_SHIFT] = $ep_shift;
 		}
 	}
 }
@@ -881,14 +876,12 @@ sub pseudoLegalMoves {
 
 	my $pawn_mask;
 
-	my $ep = cp_pos_en_passant $self;
-	my $ep_shift;
+	my $ep_shift = cp_pos_en_passant_shift $self;
 	my $ep_target_mask;
-	if ($ep) {
-		$ep_shift = cp_en_passant_file_to_shift($ep, $to_move);
+	if ($ep_shift) {
 		$ep_target_mask = 1 << $ep_shift; 
 	} else {
-		$ep_shift = $ep_target_mask = 0;
+		$ep_target_mask = 0;
 	}
 
 	# Pawn single steps and captures w/o promotions.
@@ -1028,13 +1021,12 @@ sub pseudoLegalAttacks {
 
 	my $pawn_mask;
 
-	my $ep = cp_pos_en_passant $self;
-	my ($ep_shift, $ep_target_mask);
-	if ($ep) {
-		$ep_shift = cp_en_passant_file_to_shift($ep, $to_move);
+	my $ep_shift = cp_pos_en_passant_shift $self;
+	my $ep_target_mask;
+	if ($ep_shift) {
 		$ep_target_mask = 1 << $ep_shift; 
 	} else {
-		$ep_shift = $ep_target_mask = 0;
+		$ep_target_mask = 0;
 	}
 
 	# Pawn captures w/o promotions.
@@ -1100,10 +1092,9 @@ sub moveGivesCheck {
 			& ($self->[CP_POS_BISHOPS] | $self->[CP_POS_QUEENS]);
 	my $rsliders = $my_pieces
 			& ($self->[CP_POS_ROOKS] | $self->[CP_POS_QUEENS]);
-	my $ep = cp_pos_en_passant $self;
-	if ($ep) {
-		my $ep_shift = cp_en_passant_file_to_shift($ep, $to_move);
-		if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
+	if ($piece == CP_PAWN) {
+		my $ep_shift = cp_pos_en_passant_shift $self;
+		if ($ep_shift && $to == $ep_shift) {
 			# Remove the captured piece, as well.
 			$from_mask |= $ep_pawn_masks[$ep_shift];
 		}
@@ -1225,30 +1216,27 @@ sub move {
 
 	my $is_ep;
 	if ($piece == CP_PAWN) {
-		my $ep = cp_pos_en_passant $self;
+		my $ep_shift = cp_pos_en_passant_shift $self;
 
 		# Check en passant.
-		if ($ep) {
-			my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
-
-			if ($ep_shift && $to == $ep_shift) {
-				$captured_mask = $ep_pawn_masks[$ep_shift];
-				$captured = CP_PAWN;
-				$is_ep = 1;
-			}
+		if ($ep_shift && $to == $ep_shift) {
+			$captured_mask = $ep_pawn_masks[$ep_shift];
+			$captured = CP_PAWN;
+			$is_ep = 1;
 		}
+
 		$self->[CP_POS_HALFMOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
-			$self->[CP_POS_EN_PASSANT] = (1 << 3) | ($from & 7);
+			$self->[CP_POS_EN_PASSANT_SHIFT] = $from + (($to - $from) >> 1);
 		} else {
-			$self->[CP_POS_EN_PASSANT] = 0;
+			$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 		}
 	} elsif ($her_pieces & $to_mask) {
 		$self->[CP_POS_HALFMOVE_CLOCK] = 0;
-			$self->[CP_POS_EN_PASSANT] = 0;
+			$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 	} else {
 		++$self->[CP_POS_HALFMOVE_CLOCK];
-			$self->[CP_POS_EN_PASSANT] = 0;
+			$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 	}
 
 	# Move all pieces involved.
@@ -1353,18 +1341,10 @@ sub toMove {
 	return cp_pos_to_move($self);
 }
 
-sub enPassant {
-	my ($self) = @_;
-
-	return cp_pos_en_passant($self);
-}
-
 sub enPassantShift {
 	my ($self) = @_;
 
-	my $ep = cp_pos_en_passant($self);
-
-	return $ep ? cp_en_passant_file_to_shift($ep, $self->toMove) : 0;
+	return cp_pos_en_passant_shift($self);
 }
 
 sub material {
@@ -1489,8 +1469,7 @@ sub SEE {
 	my $from = cp_move_from $move;
 	my $not_from_mask = ~(1 << ($from));
 	my $to_move = cp_pos_to_move $self;
-	my $ep = cp_pos_en_passant($self);
-	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+	my $ep_shift = cp_pos_en_passant_shift($self);
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
 		&& cp_move_piece($move) == CP_PAWN);
 	my $white = cp_pos_white_pieces($self);
@@ -1789,8 +1768,8 @@ sub parseMove {
 		$captured = CP_QUEEN;
 	} elsif ($to_mask & cp_pos_kings($self)) {
 		$captured = CP_KING;
-	} elsif ($piece == CP_PAWN && $self->enPassant
-	         && (cp_move_to($move) == $self->enPassantFileToShift($self->enPassant, $self->toMove))) {
+	} elsif ($piece == CP_PAWN && $self->enPassantShift
+	         && (cp_move_to($move) == $self->enPassantShift)) {
 		$captured = CP_PAWN;
 		cp_move_set_en_passant $move, 1;
 	}
@@ -1993,9 +1972,9 @@ sub signature {
 		$piece_mask = cp_bitboard_clear_least_set $piece_mask;
 	}
 
-	my $ep = cp_pos_en_passant $self;
-	if ($ep) {
-		$signature ^= $zk_ep_files[$ep & 7];
+	my $ep_shift = cp_pos_en_passant_shift $self;
+	if ($ep_shift) {
+		$signature ^= $zk_ep_files[$ep_shift & 7];
 	}
 
 	my $castling = cp_pos_castling_rights $self;
@@ -2216,13 +2195,6 @@ sub insufficientMaterial {
 	return;
 }
 
-sub enPassantFileToShift {
-	my ($whatever, $ep_file, $turn) = @_;
-
-	return cp_en_passant_file_to_shift $ep_file, $turn;
-}
-
-
 sub inCheck {
 	my ($self) = @_;
 
@@ -2307,8 +2279,7 @@ sub checkPseudoLegalMove {
 	# Check number 4 is done below for en passant moves.
 	return if _cp_pos_move_pinned $self, $from, $to, $king_shift, $my_pieces, $her_pieces;
 
-	my $ep = cp_pos_en_passant $self;
-	my $ep_shift = $ep ? cp_en_passant_file_to_shift($ep, $to_move) : 0;
+	my $ep_shift = cp_pos_en_passant_shift $self;
 	my $is_ep;
 	my $to_mask = 1 << $to;
 
@@ -2411,7 +2382,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_LAST_MOVE CP_POS_MATERIAL CP_POS_TO_MOVE CP_POS_EN_PASSANT
+	CP_POS_LAST_MOVE CP_POS_MATERIAL CP_POS_TO_MOVE CP_POS_EN_PASSANT_SHIFT
 	CP_POS_USR1 CP_POS_USR2 CP_POS_USR3 CP_POS_USR4 CP_POS_USR5
 	CP_POS_CASTLING_RIGHTS
 );
@@ -2764,9 +2735,8 @@ sub toFEN {
 		$fen .= '- ';
 	}
 
-	my $ep = $self->enPassant;
-	if ($ep) {
-		my $ep_shift = $self->enPassantFileToShift($ep, $self->toMove);
+	my $ep_shift = $self->enPassantShift;
+	if ($ep_shift) {
 		my $square = $self->shiftToSquare($ep_shift);
 		$fen .= $square;
 	} else {
@@ -2947,8 +2917,7 @@ sub SAN {
 	my $to_mask = 1 << $to;
 	my $to_move = $self->toMove;
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
-	my $ep = $self->enPassant;
-	my $ep_shift = $ep ? $self->enPassantFileToShift($ep, $to_move) : 0;
+	my $ep_shift = $self->enPassantShift;
 	my @files = ('a' .. 'h');
 	my @ranks = ('1' .. '8');
 	my ($from_file, $from_rank) = $self->shiftToCoordinates($from);
@@ -3613,7 +3582,7 @@ sub dumpInfo {
 	}
 
 	$output .= 'En passant square: ';
-	if ($self->enPassant) {
+	if ($self->enPassantShift) {
 		$output .= $self->shiftToSquare($self->enPassanShift);
 	} else {
 		$output .= '-';

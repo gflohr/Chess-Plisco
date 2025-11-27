@@ -67,8 +67,8 @@ _define cp_pos_black_queen_side_castling_right => '$p',
 sub cp_pos_black_queen_side_castling_right {}
 _define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
 sub cp_pos_to_move {}
-_define cp_pos_en_passant => '$p', '$p->[CP_POS_EN_PASSANT]';
-sub cp_pos_en_passant {}
+_define cp_pos_en_passant_shift => '$p', '$p->[CP_POS_EN_PASSANT_SHIFT]';
+sub cp_pos_en_passant_shift {}
 _define cp_pos_halfmove_clock => '$p', '$p->[CP_POS_HALFMOVE_CLOCK]';
 sub cp_pos_halfmove_clock {}
 _define cp_pos_material => '$p', '$p->[CP_POS_MATERIAL]';
@@ -157,8 +157,6 @@ _define cp_square_to_shift => '$s',
 sub cp_square_to_shift {}
 _define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 sub cp_shift_to_square {}
-_define cp_en_passant_file_to_shift => '$f', '$c', '16 + !($c) * 24 + ($f & 0x7)';
-sub cp_en_passant_file_to_shift {}
 
 _define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
 	'movesFromMask.pm';

@@ -259,13 +259,9 @@ Same as L<Chess::Plisco/halfMoveClock>.
 
 Same as L<Chess::Plisco/halfMoves>.
 
-=item B<cp_pos_en_passant(POS)>
+=item B<cp_pos_en_passant_shift(POS)>
 
-Same as L<Chess::Plisco/enPassant>.
-
-=item B<cp_pos_en_passant_file(POS)>
-
-Same as L<Chess::Plisco/enPassantFile>.
+Same as L<Chess::Plisco/enPassantShift>.
 
 =item B<cp_pos_signature(POS)>
 
