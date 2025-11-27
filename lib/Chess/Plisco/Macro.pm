@@ -54,11 +54,6 @@ sub cp_pos_info {}
 _define cp_pos_last_move => '$p', '$p->[CP_POS_LAST_MOVE]';
 sub cp_pos_last_move {}
 
-# Structure of a position info (in the future):
-#
-# castling:         offset  0,  4 bits
-# ep file:          offset  4,  4 bits
-# turn:             offset  8,  1 bit
 _define cp_pos_info_castling_rights => '$i', '$i & 0xf';
 sub cp_pos_info_castling_rights {}
 _define cp_pos_info_white_king_side_castling_right => '$i', '$i & (1 << 0)';
@@ -69,8 +64,6 @@ _define cp_pos_info_black_king_side_castling_right => '$i', '$i & (1 << 2)';
 sub cp_pos_info_black_king_side_castling_right {}
 _define cp_pos_info_black_queen_side_castling_right => '$i', '$i & (1 << 3)';
 sub cp_pos_info_black_queen_side_castling_right {}
-_define cp_pos_info_en_passant => '$i', '(($i & (0xf << 4)) >> 4)';
-sub cp_pos_info_en_passant {}
 
 _define _cp_pos_info_set_castling => '$i', '$c',
 	'($i = ($i & ~0xf) | ($c))';
@@ -82,8 +75,6 @@ _define _cp_pos_info_set_black_king_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 2)) | (($c) << 2))';
 _define _cp_pos_info_set_black_queen_side_castling_right => '$i', '$c',
 	'($i = ($i & ~(1 << 3)) | (($c) << 3))';
-_define _cp_pos_info_set_en_passant => '$i', '$s',
-	'($i = ($i & ~(0xf << 4)) | (($s) << 4))';
 
 _define cp_pos_castling_rights => '$p',
 		'(cp_pos_info_castling_rights(cp_pos_info($p)))';
@@ -102,7 +93,7 @@ _define cp_pos_black_queen_side_castling_right => '$p',
 sub cp_pos_black_queen_side_castling_right {}
 _define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
 sub cp_pos_to_move {}
-_define cp_pos_en_passant => '$p', '(cp_pos_info_en_passant(cp_pos_info($p)))';
+_define cp_pos_en_passant => '$p', '$p->[CP_POS_EN_PASSANT]';
 sub cp_pos_en_passant {}
 _define cp_pos_halfmove_clock => '$p', '$p->[CP_POS_HALFMOVE_CLOCK]';
 sub cp_pos_halfmove_clock {}

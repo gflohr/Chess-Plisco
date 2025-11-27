@@ -50,11 +50,8 @@ my $remove_ep = sub {
 	my ($pos) = @_;
 
 	my $pos2 = $pos->copy;
-	my $info = $pos2->[CP_POS_INFO];
 
-	_cp_pos_info_set_en_passant $info, 0;
-
-	$pos2->[CP_POS_INFO] = $info;
+	$pos2->[CP_POS_EN_PASSANT] = 0;
 
 	return $pos2;
 };
@@ -1816,7 +1813,7 @@ sub probeWdl {
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
 	# we can just return the result of the probe.
 	my $pos_info = cp_pos_info $pos;
-	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep = cp_pos_en_passant $pos;
 	return $value if !$ep;
 
 	# Positions resulting from en passant captures have not been considered,
@@ -1879,8 +1876,7 @@ sub probeDtz {
 	# Positions where en passant is possible need special care because the
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
 	# we can just return the result of the probe.
-	my $pos_info = cp_pos_info $pos;
-	my $ep = cp_pos_info_en_passant $pos_info;
+	my $ep = cp_pos_en_passant $pos;
 	my $ep_shift = $ep
 		? cp_en_passant_file_to_shift($ep, cp_pos_to_move($pos))
 		: 0;
