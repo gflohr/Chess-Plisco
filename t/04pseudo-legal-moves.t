@@ -127,6 +127,14 @@ my @tests = (
 		captures => { e5e6 => CP_PAWN },
 	},
 	{
+		fen => '4k3/8/8/8/8/8/3pp3/4K3 w - - 0 1',
+		name => 'white king captures pawn',
+		moves => [qw(
+			e1d1 e1d2 e1e2 e1f1 e1f2
+		)],
+		captures => { e1d2 => CP_PAWN, e1e2 => CP_PAWN },
+	},
+	{
 		fen => '3r2k1/2P5/8/8/8/8/8/K7 w - - 0 1',
 		name => 'white pawn captures rook with promotion',
 		moves => [qw(
@@ -249,6 +257,14 @@ my @tests = (
 			h8g7 h8g8 h8h7
 		)],
 		captures => { d6d4 => CP_PAWN },
+	},
+	{
+		fen => '4k3/3PP3/8/8/8/8/8/4K3 b - - 0 1',
+		name => 'black king captures pawn',
+		moves => [qw(
+			e8d7 e8d8 e8e7 e8f7 e8f8
+		)],
+		captures => { e8d7 => CP_PAWN, e8e7 => CP_PAWN },
 	},
 	{
 		fen => '7k/8/8/8/8/8/4p3/K2N4 b - - 0 1',

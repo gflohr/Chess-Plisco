@@ -265,15 +265,11 @@ the legality checker.
 
 =item B<pseudoLegalAttacks>
 
-Like L</pseudoLegalMoves> but only returns "interesting" moves.  Interesting
-moves are captures, promotions, and moves directly giving check.  Discovered
-checks are not generated.  This has performance reasons.
+Like L</pseudoLegalMoves> but only returns "interesting" moves. Interesting
+moves are captures and promotions. Moves giving check would also be
+interesting but they are currently not generated.
 
 You will want to call this method for generating moves in a quiescence search.
-Since quiescence search is imperfect anyway, it is assumed that ignoring
-discovered checks does not have a negative impact.
-
-Future versions of this library may include discovered checks.
 
 =item B<moveNumbers>
 
