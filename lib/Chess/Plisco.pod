@@ -669,9 +669,7 @@ Engines should use the method L</move> instead because it is faster.
 If B<STATE> is state information returned by L</applyMove>, takes back the
 move that was given as an argument to L</applyMove>.
 
-Engines should use the method L</unmove> instead because it is faster.
-
-=item B<doMove(MOVE[, NO_BACKUP])>
+=item B<doMove(MOVE)>
 
 Applies the move represented by the integer(!) B<MOVE> to the position.  If
 the move is legal, the method returns state information that can be used to
@@ -684,46 +682,28 @@ L</pseudoLegalMoves> has returned for the current position.
 The method returns state information that can later be used to undo the move
 and reset the position to the state it had before the move was applied.
 
-Engines should use the method L</move> instead because it is faster.
-
 =item B<undoMove(STATE)>
 
 If B<STATE> is state information returned by L</doMove>, takes back the
 move that was given as an argument to L</doMove>.
 
-Engines should use the method L</unmove> instead because it is faster.
-
-=item B<move(MOVE[, NO_BACKUP]>)
+=item B<move(MOVE>)
 
 Does the move B<MOVE> which must be legal because no legality check is
 performed.
 
-The method returns state information that can later be used to undo the move
-and reset the position to the state it had before the move was applied. The
-state information is in fact a copy of the object itself. If you pass a
-truthy value for B<NO_BACKUP> this copy is not made which safes a little time.
+Unlike B<doMove()>, the method does not return state information that can be
+used to later undo the move. The caller is responsible for that. A typical
+pattern looks like this:
 
-Rationale: If you search a position you will often have code like this:
-
+    my @backup = @$position; # A shallow copy is sufficient.
     foreach my $move ($position->legalMoves) {
         my $state = $position->move($move);
-        # ... do something with $position.
-        $position->unmove($state);
-    }
-
-That has an avoidable overhead. First, you can avoid creating a backup
-of the position over and over again. And second, you can save one method
-invocation:
-
-    my @backup = @$position;
-    foreach my $move ($position->legalMoves) {
-        $position->move($move, 1);
         # ... do something with $position.
         @$position = @backup;
     }
 
-This saves just a little time but when you are searching hundreds of thousands
-of positions, this is signifcant.
+Consequently, there is no B<unmove()> method.
 
 =item B<SEE(MOVE)>
 
@@ -1200,39 +1180,14 @@ is computed from the resulting position, and finally the move is undone.
 
 =over 4
 
-=item B<perftByCopy(POSITION, DEPTH)>
+=item B<perft(DEPTH)>
 
-Does a performance test for position B<POSITION> to depth B<DEPTH>.  Returns
-the number of leaf nodes found.
+Does a performance test to depth B<DEPTH>.  Returns the number of leaf nodes
+found.
 
-Instead of calling L</undoMove> the moves found are applied to a copy of the
-current position that is discarded later.  This is currently slightly faster
-than undoing the move programatically with L</undoMove>.
+=item B<perftWithOutput(DEPTH, FILEHANDLE)>
 
-Note that you have to pass a B<Chess::Plisco> instance as the first argument
-even when calling it as an instance method! This has performance reason.
-
-=item B<perftByUndo(DEPTH)>
-
-Does a performance test for the current position to depth B<DEPTH>.  Returns
-the number of leaf nodes found.
-
-Moves are undone programmatically with L</undoMove>.  This is currently
-slightly slower than just copying the position, see L</perftByCopy>.
-
-=item B<perftByCopyWithOutput(DEPTH, FILEHANDLE)>
-
-Does the the same as B<perftByCopy> but prints out all top-level moves found
-with the number of subnodes for each move.  The time needed is measured
-with L<Time::HiRes/gettimeofday> and reported at the end as well as the
-number of nodes found.
-
-This method can be used directly to implement the command "go perft" for a UCI
-compatible chess engine.
-
-=item B<perftByUndoWithOutput(DEPTH, FILEHANDLE)>
-
-Does the the same as B<perftByUndo> but prints out all top-level moves found
+Does the the same as B<perft> but prints out all top-level moves found
 with the number of subnodes for each move.  The time needed is measured
 with L<Time::HiRes/gettimeofday> and reported at the end as well as the
 number of nodes found.

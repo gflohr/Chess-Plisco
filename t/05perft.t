@@ -135,7 +135,7 @@ foreach my $test (@tests) {
 		no integer;
 		SKIP: {
 			my $started = [gettimeofday];
-			my $got = $pos->perftByCopy($pos->copy, $depth);
+			my $got = $pos->perft($depth);
 			my $elapsed = tv_interval($started);
 			my $expect = $perfts[$depth - 0.5];
 			is $got, $expect, "perft depth $depth ($test->{name})";

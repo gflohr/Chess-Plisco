@@ -1174,9 +1174,7 @@ sub moveSignificant {
 }
 
 sub move {
-	my ($self, $move, $no_backup) = @_;
-
-	my @backup = @$self unless $no_backup;
+	my ($self, $move) = @_;
 
 	my ($from, $to, $promote, $piece) =
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
@@ -1282,27 +1280,25 @@ sub move {
 
 	$self->[CP_POS_MATERIAL] += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 	$self->[CP_POS_LAST_MOVE] = $move;
-
-	return \@backup;
-}
-
-sub unmove {
-	my ($self, $backup) = @_;
-
-	@$self = @$backup;
 }
 
 sub doMove {
-	my ($self, $move, $no_backup) = @_;
+	my ($self, $move) = @_;
 
 	my @check_info = $self->inCheck;
 	return if !$self->checkPseudoLegalMove($move, @check_info);
 
-	return $self->move($move, $no_backup);
+	my @backup = @$self;
+
+	$self->move($move);
+
+	return \@backup;
 }
 
 sub undoMove {
-	&unmove;
+	my ($self, $backup) = @_;
+
+	@$self = @$backup;
 }
 
 sub bMagic {
@@ -3146,46 +3142,30 @@ sub __parseSAN {
 	return $self->__parseUCIMove($1, $2, $3);
 }
 
-sub perftByUndo {
+sub perft {
 	my ($self, $depth) = @_;
 
 	my $nodes = 0;
+
+	# FIXME! Use pseudo-legal moves instead!
 	my @moves = $self->legalMoves;
+	my @backup = @$self;
 	foreach my $move (@moves) {
-		my $undo_info = $self->move($move);
+		$self->move($move);
 
 		if ($depth > 1) {
-			$nodes += $self->perftByUndo($depth - 1);
+			$nodes += perft($self, $depth - 1);
 		} else {
 			++$nodes;
 		}
 
-		$self->unmove($undo_info);
+		@$self = @backup;
 	}
 
 	return $nodes;
 }
 
-sub perftByCopy {
-	my ($class, $pos, $depth) = @_;
-
-	my $nodes = 0;
-	my @moves = $pos->legalMoves;
-	foreach my $move (@moves) {
-		my $copy = bless [@$pos], 'Chess::Plisco';
-		$copy->move($move);
-
-		if ($depth > 1) {
-			$nodes += $class->perftByCopy($copy, $depth - 1);
-		} else {
-			++$nodes;
-		}
-	}
-
-	return $nodes;
-}
-
-sub perftByUndoWithOutput {
+sub perftWithOutput {
 	my ($self, $depth, $fh) = @_;
 
 	return if $depth <= 0;
@@ -3196,71 +3176,24 @@ sub perftByUndoWithOutput {
 	my $nodes = 0;
 
 	my @moves = $self->legalMoves;
+	my @backup = @$self;
 	foreach my $move (@moves) {
-		my $undo_info = $self->move($move);
-
 		my $movestr = $self->moveCoordinateNotation($move);
-
 		$fh->print("$movestr: ");
 
-		my $subnodes;
+		$self->move($move);
 
+		my $subnodes;
 		if ($depth > 1) {
-			$subnodes = $self->perftByUndo($depth - 1);
+			$subnodes = $self->perft($depth - 1);
 		} else {
 			$subnodes = 1;
 		}
 
 		$nodes += $subnodes;
-
 		$fh->print("$subnodes\n");
 
-		$self->unmove($undo_info);
-	}
-
-	no integer;
-
-	my $elapsed = Time::HiRes::tv_interval($started, [Time::HiRes::gettimeofday()]);
-
-	my $nps = '+INF';
-	if ($elapsed) {
-		$nps = int (0.5 + $nodes / $elapsed);
-	}
-	$fh->print("info nodes: $nodes ($elapsed s, nps: $nps)\n");
-
-	return $nodes;
-}
-
-sub perftByCopyWithOutput {
-	my ($self, $depth, $fh) = @_;
-
-	return if $depth <= 0;
-
-	require Time::HiRes;
-	my $started = [Time::HiRes::gettimeofday()];
-
-	my $nodes = 0;
-
-	my @moves = $self->legalMoves;
-	foreach my $move (@moves) {
-		my $copy = bless [@$self], 'Chess::Plisco';
-		$copy->move($move);
-
-		my $movestr = $copy->moveCoordinateNotation($move);
-
-		$fh->print("$movestr: ");
-
-		my $subnodes;
-
-		if ($depth > 1) {
-			$subnodes = $self->perftByCopy($copy, $depth - 1);
-		} else {
-			$subnodes = 1;
-		}
-
-		$nodes += $subnodes;
-
-		$fh->print("$subnodes\n");
+		@$self = @backup;
 	}
 
 	no integer;
@@ -3512,13 +3445,13 @@ sub moveLegal {
 }
 
 sub applyMove {
-	my ($self, $move, $no_backup) = @_;
+	my ($self, $move) = @_;
 
 	if ($move =~ /[a-z]/i) {
 		$move = $self->parseMove($move) or return;
 	}
 
-	return $self->doMove($move, $no_backup);
+	return $self->doMove($move);
 }
 
 sub unapplyMove {
