@@ -1684,22 +1684,7 @@ sub SEE {
 	$occupancy &= $not_from_mask;
 
 	my $promote = cp_move_promote($move);
-
-	my $captured;
-	if ($move_is_ep || ($to_mask & $pawns)) {
-		$captured = CP_PAWN;
-	} elsif ($to_mask & $knights) {
-		$captured = CP_KNIGHT;
-	} elsif ($to_mask & $bishops) {
-		$captured = CP_BISHOP;
-	} elsif ($to_mask & $rooks) {
-		$captured = CP_ROOK;
-	} elsif ($to_mask & $queens) {
-		$captured = CP_QUEEN;
-	} else {
-		# For SEE purposes we have to assume that we do not underpromote.
-		$captured = CP_NO_PIECE;
-	}
+	my $captured = cp_move_captured($move);
 
 	my $side_to_move = !$to_move;
 	my @gain = ($piece_values[$captured]);
