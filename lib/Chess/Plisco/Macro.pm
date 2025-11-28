@@ -179,8 +179,7 @@ sub cp_square_to_shift {}
 _define cp_shift_to_square => '$s', 'chr(97 + ($s & 0x7)) . (1 + ($s >> 3))';
 sub cp_shift_to_square {}
 
-_define_from_file _cp_moves_from_mask => '$t', '@m', '$b',
-	'movesFromMask.pm';
+_define_from_file _cp_moves_from_mask => '$t', '@m', '$b', 'movesFromMask.pm';
 _define_from_file _cp_promotion_moves_from_mask => '$t', '@m', '$b',
 	'promotionMovesFromMask.pm';
 _define_from_file _cp_pos_move_pinned =>

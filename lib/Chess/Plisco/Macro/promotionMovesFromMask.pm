@@ -14,7 +14,8 @@
 ## no critic (TestingAndDebugging::RequireUseStrict)
 
 while ($target_mask) {
-	my $base_move = $b | (cp_bitboard_count_trailing_zbits $t) << 15;
+	my $to = cp_bitboard_count_trailing_zbits $t;
+	my $base_move = $b | ($to << 15) | ($board[$to] << 3);
 	push @m,
 		$b | (5 << 6), # Queen
 		$b | (4 << 6), # Rook

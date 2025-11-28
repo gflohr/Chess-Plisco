@@ -250,6 +250,15 @@ my @pawn_aux_data = (
 # Map ep squares to the mask of the pawn that gets removed.
 my @ep_pawn_masks;
 
+# Map eq squares to the shift of the pawn that gets removed.
+my @ep_pawn_to_shifts;
+
+# Map ep squares to the mask of the pawn that captures.
+my @ep_pawn_from_masks;
+
+# Map ep squares to the completely encoded move.
+my @ep_moves;
+
 my @castling_aux_data = (
 	# White.
 	[
@@ -366,6 +375,12 @@ use constant CP_MOVE_TO_OFFSET => 15;
 # for a given position.
 use constant CP_MOVE_COLOR_OFFSET => 21;
 use constant CP_MOVE_EN_PASSANT_OFFSET => 22;
+
+# This is not exported.
+use constant CP_MOVE_EN_PASSANT_BASE_MOVE =>
+	(1 << (CP_MOVE_EN_PASSANT_OFFSET))
+	| (CP_PAWN << (CP_MOVE_CAPTURED_OFFSET))
+	| (CP_PAWN << (CP_MOVE_PIECE_OFFSET));
 
 my @piece_values = (0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
 	CP_ROOK_VALUE, CP_QUEEN_VALUE);
@@ -771,10 +786,38 @@ sub pseudoLegalMoves {
 	my ($self) = @_;
 
 	my $to_move = cp_pos_to_move $self;
+	my $turn_mask = $to_move << (CP_MOVE_COLOR_OFFSET);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
 	my $empty = ~$occupancy;
+
+	my @board;
+	my $her_pawns = $her_pieces & $self->[CP_POS_PAWNS];
+	while ($her_pawns) {
+		$board[cp_bitboard_count_trailing_zbits $her_pawns] = CP_PAWN;
+		$her_pawns = cp_bitboard_clear_least_set $her_pawns;
+	}
+	my $her_knights = $her_pieces & $self->[CP_POS_KNIGHTS];
+	while ($her_knights) {
+		$board[cp_bitboard_count_trailing_zbits $her_knights] = CP_KNIGHT;
+		$her_knights = cp_bitboard_clear_least_set $her_knights;
+	}
+	my $her_bishops = $her_pieces & $self->[CP_POS_BISHOPS];
+	while ($her_bishops) {
+		$board[cp_bitboard_count_trailing_zbits $her_bishops] = CP_BISHOP;
+		$her_bishops = cp_bitboard_clear_least_set $her_bishops;
+	}
+	my $her_rooks = $her_pieces & $self->[CP_POS_ROOKS];
+	while ($her_rooks) {
+		$board[cp_bitboard_count_trailing_zbits $her_rooks] = CP_ROOK;
+		$her_rooks = cp_bitboard_clear_least_set $her_rooks;
+	}
+	my $her_queens = $her_pieces & $self->[CP_POS_QUEENS];
+	while ($her_queens) {
+		$board[cp_bitboard_count_trailing_zbits $her_queens] = CP_QUEEN;
+		$her_queens = cp_bitboard_clear_least_set $her_queens;
+	}
 
 	my (@moves, $target_mask, $base_move);
 
@@ -786,7 +829,7 @@ sub pseudoLegalMoves {
 	my $from = cp_bitboard_count_isolated_trailing_zbits $king_mask;
 
 	# FIXME! Try to use the move offset constants. Will that be slower?
-	$base_move = ($from << 9) | CP_KING;
+	$base_move = $turn_mask | ($from << 9) | CP_KING;
 
 	$target_mask = ~$my_pieces & $king_attack_masks[$from];
 
@@ -805,7 +848,7 @@ sub pseudoLegalMoves {
 			if (($castling_rights & 0x1)
 				&& !(((1 << $king_side_dest_shift) | $king_side_crossing_mask)
 					& $occupancy)) {
-				push @moves, ($king_from << 9) | CP_KING
+				push @moves, $turn_mask | ($king_from << 9) | CP_KING
 					| ($king_side_dest_shift << 15);
 			}
 			if (($castling_rights & 0x2)
@@ -813,7 +856,7 @@ sub pseudoLegalMoves {
 			           | $queen_side_rook_crossing_mask
 				       | (1 << $queen_side_dest_shift))
 				      & $occupancy))) {
-				push @moves, ($king_from << 9) | CP_KING
+				push @moves, $turn_mask | ($king_from << 9) | CP_KING
 					| ($queen_side_dest_shift << 15);
 			}
 		}
@@ -824,7 +867,7 @@ sub pseudoLegalMoves {
 	while ($knight_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $knight_mask;
 
-		$base_move = ($from << 9) | CP_KNIGHT;
+		$base_move = $turn_mask | ($from << 9) | CP_KNIGHT;
 	
 		$target_mask = ~$my_pieces & $knight_attack_masks[$from];
 
@@ -838,7 +881,7 @@ sub pseudoLegalMoves {
 	while ($bishop_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $bishop_mask;
 
-		$base_move = ($from << 9) | CP_BISHOP;
+		$base_move = $turn_mask | ($from << 9) | CP_BISHOP;
 	
 		$target_mask = cp_mm_bmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -852,7 +895,7 @@ sub pseudoLegalMoves {
 	while ($rook_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $rook_mask;
 
-		$base_move = ($from << 9) | CP_ROOK;
+		$base_move = $turn_mask | ($from << 9) | CP_ROOK;
 	
 		$target_mask = cp_mm_rmagic($from, $occupancy) & ($empty | $her_pieces);
 
@@ -866,7 +909,7 @@ sub pseudoLegalMoves {
 	while ($queen_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $queen_mask;
 
-		$base_move = ($from << 9) | CP_QUEEN;
+		$base_move = $turn_mask | ($from << 9) | CP_QUEEN;
 	
 		$target_mask = 
 			(cp_mm_rmagic($from, $occupancy)
@@ -887,24 +930,29 @@ sub pseudoLegalMoves {
 
 	my $pawns = cp_pos_pawns $self;
 
-	my $pawn_mask;
+	my $pawn_mask = $my_pieces & $pawns & $regular_mask;
 
+	# En passant.
 	my $ep_shift = cp_pos_en_passant_shift $self;
-	my $ep_target_mask;
-	if ($ep_shift) {
-		$ep_target_mask = 1 << $ep_shift; 
-	} else {
-		$ep_target_mask = 0;
+	if ($ep_shift && $board[$ep_pawn_to_shifts[$ep_shift]]) {
+		my $from_mask = $pawn_mask & $ep_pawn_from_masks[$ep_shift];
+		while ($from_mask) {
+			push @moves,
+				CP_MOVE_EN_PASSANT_BASE_MOVE
+				| $turn_mask
+				| ((cp_bitboard_count_trailing_zbits $from_mask) << 9)
+				| ($ep_shift << 15);
+			$from_mask = cp_bitboard_clear_least_set $from_mask;
+		}
 	}
 
 	# Pawn single steps and captures w/o promotions.
-	$pawn_mask = $my_pieces & $pawns & $regular_mask;
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 9) | CP_PAWN;
+		$base_move = $turn_mask | ($from << 9) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
-			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
+			| ($pawn_capture_masks->[$from] & ($her_pieces));
 		_cp_moves_from_mask $target_mask, @moves, $base_move;
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
@@ -919,7 +967,7 @@ sub pseudoLegalMoves {
 			$target_mask = $pawn_double_masks->[$from] & $empty;
 			if ($target_mask) {
 				my $to = $from + ($offset << 1);
-				push @moves, ($from << 9) | ($to << 15) | CP_PAWN;
+				push @moves, $turn_mask | ($from << 9) | ($to << 15) | CP_PAWN;
 			}
 		}
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
@@ -930,9 +978,9 @@ sub pseudoLegalMoves {
 	while ($pawn_mask) {
 		my $from = cp_bitboard_count_trailing_zbits $pawn_mask;
 
-		$base_move = ($from << 9) | CP_PAWN;
+		$base_move = $turn_mask | ($from << 9) | CP_PAWN;
 		$target_mask = ($pawn_single_masks->[$from] & $empty)
-			| ($pawn_capture_masks->[$from] & ($her_pieces | $ep_target_mask));
+			| ($pawn_capture_masks->[$from] & ($her_pieces));
 		_cp_promotion_moves_from_mask $target_mask, @moves, $base_move;
 		$pawn_mask = cp_bitboard_clear_least_set $pawn_mask;
 	}
@@ -962,6 +1010,8 @@ sub pseudoLegalAttacks {
 
 	$target_mask = $her_pieces & $king_attack_masks[$from];
 
+	# The macro expects the variable to be defined.
+	my @board;
 	_cp_moves_from_mask $target_mask, @moves, $base_move;
 
 	# Generate knight moves.
@@ -1255,7 +1305,6 @@ sub move {
 		$self->[$her_idx] ^= $captured_mask;
 		$self->[$captured] ^= $captured_mask;
 		cp_move_set_captured($move, $captured);
-
 	}
 
 	$self->[$my_idx] ^= $move_mask;
@@ -3147,10 +3196,10 @@ sub perft {
 
 	my $nodes = 0;
 
-	# FIXME! Use pseudo-legal moves instead!
-	my @moves = $self->legalMoves;
+	my @moves = $self->pseudoLegalMoves;
 	my @backup = @$self;
 	foreach my $move (@moves) {
+		next if !$self->checkPseudoLegalMove($move);
 		$self->move($move);
 
 		if ($depth > 1) {
@@ -3175,9 +3224,10 @@ sub perftWithOutput {
 
 	my $nodes = 0;
 
-	my @moves = $self->legalMoves;
+	my @moves = $self->pseudoLegalMoves;
 	my @backup = @$self;
 	foreach my $move (@moves) {
+		next if !$self->checkPseudoLegalMove($move);
 		my $movestr = $self->moveCoordinateNotation($move);
 		$fh->print("$movestr: ");
 
@@ -3727,10 +3777,18 @@ $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 
 # Map en passant squares to masks.
 foreach my $shift (16 .. 23) {
+	# Black en passant captures.
 	$ep_pawn_masks[$shift] = 1 << ($shift + 8);
+	$ep_pawn_to_shifts[$shift] = $shift + 8;
+	$ep_pawn_from_masks[$shift] |= (1 << ($shift + 7)) if $shift != 16;
+	$ep_pawn_from_masks[$shift] |= (1 << ($shift + 9)) if $shift != 23;
 }
 foreach my $shift (40 .. 47) {
+	# White en passant captures.
 	$ep_pawn_masks[$shift] = 1 << ($shift - 8);
+	$ep_pawn_to_shifts[$shift] = $shift - 8;
+	$ep_pawn_from_masks[$shift] |= (1 << ($shift - 9)) if $shift != 40;
+	$ep_pawn_from_masks[$shift] |= (1 << ($shift - 7)) if $shift != 47;
 }
 
 # Common lines.
