@@ -319,7 +319,8 @@ sub alphabeta {
 				push @quiet, $move;
 			}
 		}
-		@moves = (@pv, @tt, @promotions, @checks, %captures, @quiet);
+		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
+		@moves = (@pv, @tt, @promotions, @checks, @captures_and_quiets);
 	} elsif ($depth >= 2) {
 		# Light sorting.
 		my (@pv, @tt, @promotions, %captures, @quiet); # And killers, history, ...
@@ -336,11 +337,11 @@ sub alphabeta {
 				push @quiet, $move;
 			}
 		}
-		my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
-		@moves = (@pv, @tt, @promotions, @captures, @quiet);
+		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
+		@moves = (@pv, @tt, @promotions, @captures_and_quiets);
 	} else {
 		# Minimal sorting.
-		my (@pv, @tt, @promotions, %captures, @quiet);
+		my (@pv, @tt, @promotions, @captures, @quiet);
 		foreach my $move (@moves) {
 			if (cp_move_equivalent $move, $pv_move) {
 				push @pv, $move;
@@ -349,12 +350,12 @@ sub alphabeta {
 			} elsif (cp_move_promote $move) {
 				push @promotions, $move;
 			} elsif (cp_move_captured $move) {
-				$captures{$move} = $mvv_lva[$move & 0x3f];
+				push @captures, $move;
 			} else {
 				push @quiet, $move;
 			}
 		}
-		my @captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } keys %captures;
+		@captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @captures;
 		@moves = (@pv, @tt, @promotions, @captures, @quiet);
 	}
 
@@ -556,7 +557,6 @@ sub quiesce {
 	my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
 	@moves = (@tt, @promotions, @checks, @captures);
 
-	my (@moves);
 	my $signatures = $self->{signatures};
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
@@ -638,7 +638,6 @@ sub rootSearch {
 	my $alpha = -INF;
 	my $beta = +INF;
 
-$DB::single = 1;
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
@@ -817,13 +816,15 @@ foreach my $mover (CP_PAWN .. CP_KING) {
 	}
 }
 
-my @mvv_lva_values = [
+my @mvv_lva_values = (
 	0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
-	CP_ROOK_VALUE, CP_QUEEN_VALUE, 2 * CP_QUEEN_VALUE];
+	CP_ROOK_VALUE, CP_QUEEN_VALUE, 2 * CP_QUEEN_VALUE,
+);
 foreach my $victim (CP_PAWN .. CP_QUEEN) {
 	foreach my $attacker (CP_PAWN .. CP_KING) {
 		$mvv_lva[($victim << 3) | $attacker] =
 			100 * $mvv_lva_values[$victim] - $mvv_lva_values[$attacker];
+		my $idx = ($victim << 3) | $attacker;
 	}
 }
 
