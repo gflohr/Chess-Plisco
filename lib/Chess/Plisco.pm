@@ -1258,53 +1258,35 @@ sub move {
 	$new_castling &= $castling_rights_rook_masks[$from];
 	$new_castling &= $castling_rights_rook_masks[$to];
 
-	my $captured = CP_NO_PIECE;
-	my $captured_mask = 0;
-	if ($to_mask & $her_pieces) {
-		if ($to_mask & cp_pos_pawns($self)) {
-			$captured = CP_PAWN;
-		} elsif ($to_mask & cp_pos_knights($self)) {
-			$captured = CP_KNIGHT;
-		} elsif ($to_mask & cp_pos_bishops($self)) {
-			$captured = CP_BISHOP;
-		} elsif ($to_mask & cp_pos_rooks($self)) {
-			$captured = CP_ROOK;
+	my $captured = cp_move_captured $move;
+
+	# Remove captured piece.
+	if ($captured) {
+		if (cp_move_en_passant $move) {
+			my $ep_shift = $self->[CP_POS_EN_PASSANT_SHIFT];
+			my $capture_mask = $ep_pawn_masks[$ep_shift];
+			$self->[$her_idx] ^= $capture_mask;
+			$self->[CP_PAWN] ^= $capture_mask;
 		} else {
-			$captured = CP_QUEEN;
+			my $capture_mask = (1 << $to);
+			$self->[$her_idx] ^= $capture_mask;
+			$self->[$captured] ^= $capture_mask;
 		}
-		$captured_mask = 1 << $to;
 	}
 
-	my $is_ep;
-	if ($piece == CP_PAWN) {
-		my $ep_shift = cp_pos_en_passant_shift $self;
-
-		# Check en passant.
-		if ($ep_shift && $to == $ep_shift) {
-			$captured_mask = $ep_pawn_masks[$ep_shift];
-			$captured = CP_PAWN;
-			$is_ep = 1;
-		}
-
+	if (CP_PAWN == $piece) {
 		$self->[CP_POS_HALFMOVE_CLOCK] = 0;
 		if (_cp_pawn_double_step $from, $to) {
 			$self->[CP_POS_EN_PASSANT_SHIFT] = $from + (($to - $from) >> 1);
 		} else {
 			$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 		}
-	} elsif ($her_pieces & $to_mask) {
+	} elsif ($captured) {
+		$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 		$self->[CP_POS_HALFMOVE_CLOCK] = 0;
-			$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 	} else {
+		$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
 		++$self->[CP_POS_HALFMOVE_CLOCK];
-			$self->[CP_POS_EN_PASSANT_SHIFT] = 0;
-	}
-
-	# Move all pieces involved.
-	if ($captured != CP_NO_PIECE) {
-		$self->[$her_idx] ^= $captured_mask;
-		$self->[$captured] ^= $captured_mask;
-		cp_move_set_captured($move, $captured);
 	}
 
 	$self->[$my_idx] ^= $move_mask;
@@ -1321,9 +1303,6 @@ sub move {
 		$self->[$promote] ^= $to_mask;
 	}
 
-	cp_move_set_color($move, $to_move);
-	cp_move_set_en_passant($move, $is_ep);
-
 	++$self->[CP_POS_HALFMOVES];
 	$self->[CP_POS_TO_MOVE] = !$to_move;
 
@@ -1335,7 +1314,7 @@ sub doMove {
 	my ($self, $move) = @_;
 
 	my @check_info = $self->inCheck;
-	return if !$self->checkPseudoLegalMove($move, @check_info);
+	return if !$self->__checkPseudoLegalMove($move, @check_info);
 
 	my @backup = @$self;
 
@@ -2316,6 +2295,14 @@ sub inCheck {
 }
 
 sub checkPseudoLegalMove {
+	my ($self, $move) = @_;
+
+	my @check_info = $self->inCheck;
+
+	return $self->__checkPseudoLegalMove($move, @check_info);
+}
+
+sub __checkPseudoLegalMove {
 	my ($self, $move, $in_check, $king_shift, $defence_bb) = @_;
 
 	my $from = cp_move_from $move;
@@ -2419,7 +2406,7 @@ sub legalMoves {
 
 	my @legal;
 	foreach my $move (pseudoLegalMoves($self)) {
-		$move = checkPseudoLegalMove($self, $move, @check_state) or next;
+		$move = __checkPseudoLegalMove($self, $move, @check_state) or next;
 		push @legal, $move;
 	}
 
@@ -3199,7 +3186,7 @@ sub perft {
 	my @moves = $self->pseudoLegalMoves;
 	my @backup = @$self;
 	foreach my $move (@moves) {
-		next if !$self->checkPseudoLegalMove($move);
+		next if !checkPseudoLegalMove($self, $move);
 		$self->move($move);
 
 		if ($depth > 1) {
