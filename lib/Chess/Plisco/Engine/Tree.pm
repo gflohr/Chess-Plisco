@@ -297,7 +297,8 @@ sub alphabeta {
 
 	my @moves = $position->pseudoLegalMoves;
 
-	# Sort moves.
+	# Sort moves. FIXME!!!! Bad captures must be searched *after* the
+	# quiet moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
 	if ($depth >= 3) {
@@ -552,39 +553,20 @@ sub quiesce {
 		}
 	}
 
-	my @captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } keys %captures;
+	my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
 	@moves = (@tt, @promotions, @checks, @captures);
 
-	my $her_pieces = $position->[CP_POS_WHITE_PIECES
-			+ !cp_pos_to_move($position)];
 	my (@moves);
 	my $signatures = $self->{signatures};
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
 	my @backup = @$position;
-	foreach my $move (@moves) {
-		next if !$position->checkPseudoLegalMove($move, @check_info);
-		$position->move($move, 1);
-		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
-		@$position = @backup;
-		my $see = $position->SEE($move);
-
-		# A marginal difference can occur if bishops and knights have different
-		# values.  But we want to ignore that.
-		next if $see <= -CP_PAWN_VALUE;
-
-		# FIXME! Do we have a PV move here?
-		if ($move == $tt_move) {
-			push @moves, MOVE_ORDERING_TT | $move;
-		} else {
-			push @moves, ($see << 32) | $move;
-		}
-	}
 
 	my $legal = 0;
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
-	foreach my $move (sort { $b <=> $a } @moves) {
+	foreach my $move (@moves) {
+		next if !$position->checkPseudoLegalMove($move, @check_info);
 		$position->move($move, 1);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
@@ -656,6 +638,7 @@ sub rootSearch {
 	my $alpha = -INF;
 	my $beta = +INF;
 
+$DB::single = 1;
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
