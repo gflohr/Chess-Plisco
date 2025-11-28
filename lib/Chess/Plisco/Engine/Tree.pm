@@ -301,7 +301,7 @@ sub alphabeta {
 	# quiet moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	if ($depth >= 3) {
+	if ($depth >= 5) {
 		# Full sorting.
 		my (@pv, @tt, @promotions, @checks, %captures, @quiet); # And killers, history, ...
 		foreach my $move (@moves) {
@@ -321,7 +321,7 @@ sub alphabeta {
 		}
 		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
 		@moves = (@pv, @tt, @promotions, @checks, @captures_and_quiets);
-	} elsif ($depth >= 2) {
+	} elsif ($depth >= 4) {
 		# Light sorting.
 		my (@pv, @tt, @promotions, %captures, @quiet); # And killers, history, ...
 		foreach my $move (@moves) {
