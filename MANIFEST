@@ -36,7 +36,6 @@ lib/Chess/Plisco/Macro/attacked.pm
 lib/Chess/Plisco/Macro/clearButMostSet.pm
 lib/Chess/Plisco/Macro/countIsolatedTrailingZbits.pm
 lib/Chess/Plisco/Macro/countTrailingZbits.pm
-lib/Chess/Plisco/Macro/infoUpdate.pm
 lib/Chess/Plisco/Macro/moveAttacked.pm
 lib/Chess/Plisco/Macro/movePinned.pm
 lib/Chess/Plisco/Macro/movesFromMask.pm
@@ -59,6 +58,7 @@ t/02square-conversion.t
 t/03attacked.t
 t/03epd.t
 t/03fen.t
+t/03in-check.t
 t/03move-attacked.t
 t/03move-pinned.t
 t/03move.t
@@ -69,13 +69,13 @@ t/04check-check.t
 t/04do-move.t
 t/04game-over.t
 t/04insufficient-material.t
-t/04king-shift.t
 t/04legal-moves.t
 t/04material.t
 t/04move-generator.t
 t/04move-gives-check.t
 t/04move-legal.t
 t/04pseudo-legal-attacks.t
+t/04pseudo-legal-moves.t
 t/04see.t
 t/04syzygy-dtz-en-passant.t
 t/04syzygy-endgame-epd.t
@@ -88,8 +88,7 @@ t/04syzygy-wdl-en-passant.t
 t/04zobrist-keys.t
 t/05bugs.t
 t/05move-making-pgn.t
-t/05perft-by-copy.t
-t/05perft-by-undo.t
+t/05perft.t
 t/11evaluate-compare.t
 t/11evaluate-move.t
 t/20draw-detection.t

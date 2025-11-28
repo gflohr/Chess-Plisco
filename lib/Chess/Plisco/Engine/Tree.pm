@@ -48,6 +48,10 @@ use constant SAFETY_MARGIN => 50;
 # "attractive" than captures that the rook makes.
 my @move_values = (0) x 369;
 
+
+# MVV-LVA values. Looked up via the captured and moving piece ($move & 0x3f).
+my @mvv_lva;
+
 sub new {
 	my ($class, %options) = @_;
 
@@ -293,26 +297,65 @@ sub alphabeta {
 
 	my @moves = $position->pseudoLegalMoves;
 
-	# Expand the moves with a score so that they can be sorted.
-	# FIXME! Our evaluation function knows the delta for each move from the
-	# PSTs. Maybe it is better to use that value for sorting?
-	my ($pawns, $knights, $bishops, $rooks, $queens) = 
-		@$position[CP_POS_PAWNS .. CP_POS_QUEENS];
-	my $her_pieces = $position->[CP_POS_WHITE_PIECES + cp_pos_to_move $position];
+	# Sort moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	foreach my $move (@moves) {
-		if (cp_move_equivalent $move, $pv_move) {
-			$move |= MOVE_ORDERING_PV;
-		} elsif (cp_move_equivalent $move, $tt_move) {
-			$move |= MOVE_ORDERING_TT;
-		} elsif ($depth > 1) {
-			$move |= $position->SEE($move) << 32;
+	if ($depth >= 3) {
+		# Full sorting.
+		my (@pv, @tt, @promotions, @checks, %captures, @quiet); # And killers, history, ...
+		foreach my $move (@moves) {
+			if (cp_move_equivalent $move, $pv_move) {
+				push @pv, $move;
+			} elsif (cp_move_equivalent $move, $tt_move) {
+				push @tt, $move;
+			} elsif (cp_move_promote $move) {
+				push @promotions, $move;
+			} elsif ($position->moveGivesCheck($move)) {
+				push @checks, $move;
+			} elsif (cp_move_captured $move) {
+				$captures{$move} = $position->SEE($move);
+			} else {
+				push @quiet, $move;
+			}
 		}
+		@moves = (@pv, @tt, @promotions, @checks, %captures, @quiet);
+	} elsif ($depth >= 2) {
+		# Light sorting.
+		my (@pv, @tt, @promotions, %captures, @quiet); # And killers, history, ...
+		foreach my $move (@moves) {
+			if (cp_move_equivalent $move, $pv_move) {
+				push @pv, $move;
+			} elsif (cp_move_equivalent $move, $tt_move) {
+				push @tt, $move;
+			} elsif (cp_move_promote $move) {
+				push @promotions, $move;
+			} elsif (cp_move_captured $move) {
+				$captures{$move} = $position->SEE($move);
+			} else {
+				push @quiet, $move;
+			}
+		}
+		my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
+		@moves = (@pv, @tt, @promotions, @captures, @quiet);
+	} else {
+		# Minimal sorting.
+		my (@pv, @tt, @promotions, %captures, @quiet);
+		foreach my $move (@moves) {
+			if (cp_move_equivalent $move, $pv_move) {
+				push @pv, $move;
+			} elsif (cp_move_equivalent $move, $tt_move) {
+				push @tt, $move;
+			} elsif (cp_move_promote $move) {
+				push @promotions, $move;
+			} elsif (cp_move_captured $move) {
+				$captures{$move} = $mvv_lva[$move & 0x3f];
+			} else {
+				push @quiet, $move;
+			}
+		}
+		my @captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } keys %captures;
+		@moves = (@pv, @tt, @promotions, @captures, @quiet);
 	}
-
-	# Now sort the moves according to the material gain.
-	@moves = sort { $b <=> $a } @moves;
 
 	my $legal = 0;
 	my $pv_found;
@@ -495,7 +538,23 @@ sub quiesce {
 		$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 	}
 
-	my @pseudo_legal = $position->pseudoLegalAttacks;
+	my @moves = $position->pseudoLegalAttacks;
+	my (@tt, @promotions, @checks, %captures);
+	foreach my $move (@moves) {
+		if (cp_move_equivalent $move, $tt_move) {
+			push @tt, $move;
+		} elsif (cp_move_promote $move) {
+			push @promotions, $move;
+		} elsif ($position->moveGivesCheck($move)) { # FIXME! Too expensive?
+			push @checks, $move;
+		} else {
+			$captures{$move} = $position->SEE($move);
+		}
+	}
+
+	my @captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } keys %captures;
+	@moves = (@tt, @promotions, @checks, @captures);
+
 	my $her_pieces = $position->[CP_POS_WHITE_PIECES
 			+ !cp_pos_to_move($position)];
 	my (@moves);
@@ -503,7 +562,7 @@ sub quiesce {
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
 	my @backup = @$position;
-	foreach my $move (@pseudo_legal) {
+	foreach my $move (@moves) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		$position->move($move, 1);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
@@ -772,6 +831,16 @@ foreach my $mover (CP_PAWN .. CP_KING) {
 				my $pvalue = $value + $piece_values[$promote] - CP_PAWN_VALUE;
 			}
 		}
+	}
+}
+
+my @mvv_lva_values = [
+	0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
+	CP_ROOK_VALUE, CP_QUEEN_VALUE, 2 * CP_QUEEN_VALUE];
+foreach my $victim (CP_PAWN .. CP_QUEEN) {
+	foreach my $attacker (CP_PAWN .. CP_KING) {
+		$mvv_lva[($victim << 3) | $attacker] =
+			100 * $mvv_lva_values[$victim] - $mvv_lva_values[$attacker];
 	}
 }
 

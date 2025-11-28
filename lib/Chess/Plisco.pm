@@ -1173,6 +1173,8 @@ sub moveAttacked {
 sub moveGivesCheck {
 	my ($self, $move) = @_;
 
+	# FIXME! Offer this as a macro!
+
 	# FIXME! Check that all of these variables are really needed at least twice!
 	my $from = cp_move_from $move;
 	my $from_mask = 1 << $from;
