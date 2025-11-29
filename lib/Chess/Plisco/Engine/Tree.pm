@@ -350,12 +350,18 @@ sub alphabeta {
 					push @quiet, $move;
 				}
 			} elsif (cp_move_captured $move) {
-				$good_captures{$move} = $position->SEE($move);
+				my $see = $position->SEE($move);
+				if ($see >= 0) {
+					$good_captures{$move} = $position->SEE($move);
+				} else {
+					push @bad_captures, $move;
+				}
 			} else {
 				push @quiet, $move;
 			}
 		}
 		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
+		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] } @bad_captures;
 	} else {
 		# Minimal sorting.
 		foreach my $move (@moves) {
