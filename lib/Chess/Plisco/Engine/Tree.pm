@@ -52,6 +52,10 @@ my @move_values = (0) x 369;
 # MVV-LVA values. Looked up via the captured and moving piece ($move & 0x3f).
 my @mvv_lva;
 
+# Usually only queen promotions and sometimes promotions to a knight are
+# interesting. This mask is used to filter them out.
+use constant GOOD_PROMO_MASK => (1 << (CP_QUEEN)) | (1 << (CP_KNIGHT));
+
 sub new {
 	my ($class, %options) = @_;
 
@@ -301,43 +305,57 @@ sub alphabeta {
 	# quiet moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	my (@pv, @tt, @promotions, @checks, @captures, @quiet);
+	my (@pv, @tt, @promotions, @checks, @good_captures, @quiet, @bad_captures);
 	if ($depth >= 5) {
 		# Full sorting.
-		my %captures;
+		my %good_captures;
 		foreach my $move (@moves) {
 			if (cp_move_equivalent $move, $pv_move) {
 				push @pv, $move;
 			} elsif (cp_move_equivalent $move, $tt_move) {
 				push @tt, $move;
-			} elsif (CP_QUEEN == cp_move_promote $move) {
-				push @promotions, $move;
+			} elsif (my $promote = cp_move_promote $move) {
+				if ((GOOD_PROMO_MASK >> $promote) & 1) {
+					push @promotions, $move;
+				} else {
+					push @quiet, $move;
+				}
 			} elsif ($position->moveGivesCheck($move)) {
 				push @checks, $move;
 			} elsif (cp_move_captured $move) {
-				$captures{$move} = $position->SEE($move);
+				my $see = $position->SEE($move);
+				if ($see >= 0) {
+					$good_captures{$move} = $position->SEE($move);
+				} else {
+					push @bad_captures, $move;
+				}
 			} else {
 				push @quiet, $move;
 			}
 		}
-		@captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
+		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
+		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] } @bad_captures;
 	} elsif ($depth >= 4) {
 		# Light sorting.
-		my %captures;
+		my %good_captures;
 		foreach my $move (@moves) {
 			if (cp_move_equivalent $move, $pv_move) {
 				push @pv, $move;
 			} elsif (cp_move_equivalent $move, $tt_move) {
 				push @tt, $move;
-			} elsif (CP_QUEEN == cp_move_promote $move) {
-				push @promotions, $move;
+			} elsif (my $promote = cp_move_promote $move) {
+				if ((GOOD_PROMO_MASK >> $promote) & 1) {
+					push @promotions, $move;
+				} else {
+					push @quiet, $move;
+				}
 			} elsif (cp_move_captured $move) {
-				$captures{$move} = $position->SEE($move);
+				$good_captures{$move} = $position->SEE($move);
 			} else {
 				push @quiet, $move;
 			}
 		}
-		@captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
+		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
 	} else {
 		# Minimal sorting.
 		foreach my $move (@moves) {
@@ -345,17 +363,21 @@ sub alphabeta {
 				push @pv, $move;
 			} elsif (cp_move_equivalent $move, $tt_move) {
 				push @tt, $move;
-			} elsif (CP_QUEEN == cp_move_promote $move) {
-				push @promotions, $move;
+			} elsif (my $promote = cp_move_promote $move) {
+				if ((GOOD_PROMO_MASK >> $promote) & 1) {
+					push @promotions, $move;
+				} else {
+					push @quiet, $move;
+				}
 			} elsif (cp_move_captured $move) {
-				push @captures, $move;
+				push @good_captures, $move;
 			} else {
 				push @quiet, $move;
 			}
 		}
-		@captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @captures;
+		@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
 	}
-	@moves = (@pv, @tt, @promotions, @checks, @captures, @quiet);
+	@moves = (@pv, @tt, @promotions, @checks, @good_captures, @quiet, @bad_captures);
 
 	my $legal = 0;
 	my $pv_found;
@@ -543,9 +565,9 @@ sub quiesce {
 	foreach my $move (@moves) {
 		if (cp_move_equivalent $move, $tt_move) {
 			push @tt, $move;
-		} elsif (my $promote = cp_move_promote $move) {
+		} elsif ((GOOD_PROMO_MASK >> (cp_move_promote $move)) & 1) {
 			# Skip underpromotions in quiescence.
-			push @promotions, $move if $promote == CP_QUEEN;
+			push @promotions, $move;
 		} elsif ($position->moveGivesCheck($move)) { # FIXME! Too expensive?
 			push @checks, $move;
 		} else {
