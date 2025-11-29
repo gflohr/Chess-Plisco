@@ -301,9 +301,10 @@ sub alphabeta {
 	# quiet moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
+	my (@pv, @tt, @promotions, @checks, @captures, @quiet);
 	if ($depth >= 5) {
 		# Full sorting.
-		my (@pv, @tt, @promotions, @checks, %captures, @quiet); # And killers, history, ...
+		my %captures;
 		foreach my $move (@moves) {
 			if (cp_move_equivalent $move, $pv_move) {
 				push @pv, $move;
@@ -319,11 +320,10 @@ sub alphabeta {
 				push @quiet, $move;
 			}
 		}
-		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
-		@moves = (@pv, @tt, @promotions, @checks, @captures_and_quiets);
+		@captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
 	} elsif ($depth >= 4) {
 		# Light sorting.
-		my (@pv, @tt, @promotions, %captures, @quiet); # And killers, history, ...
+		my %captures;
 		foreach my $move (@moves) {
 			if (cp_move_equivalent $move, $pv_move) {
 				push @pv, $move;
@@ -337,11 +337,9 @@ sub alphabeta {
 				push @quiet, $move;
 			}
 		}
-		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
-		@moves = (@pv, @tt, @promotions, @captures_and_quiets);
+		@captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
 	} else {
 		# Minimal sorting.
-		my (@pv, @tt, @promotions, @captures, @quiet);
 		foreach my $move (@moves) {
 			if (cp_move_equivalent $move, $pv_move) {
 				push @pv, $move;
@@ -356,8 +354,8 @@ sub alphabeta {
 			}
 		}
 		@captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @captures;
-		@moves = (@pv, @tt, @promotions, @captures, @quiet);
 	}
+	@moves = (@pv, @tt, @promotions, @checks, @captures, @quiet);
 
 	my $legal = 0;
 	my $pv_found;
