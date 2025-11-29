@@ -309,7 +309,7 @@ sub alphabeta {
 				push @pv, $move;
 			} elsif (cp_move_equivalent $move, $tt_move) {
 				push @tt, $move;
-			} elsif (cp_move_promote $move) {
+			} elsif (CP_QUEEN == cp_move_promote $move) {
 				push @promotions, $move;
 			} elsif ($position->moveGivesCheck($move)) {
 				push @checks, $move;
@@ -329,7 +329,7 @@ sub alphabeta {
 				push @pv, $move;
 			} elsif (cp_move_equivalent $move, $tt_move) {
 				push @tt, $move;
-			} elsif (cp_move_promote $move) {
+			} elsif (CP_QUEEN == cp_move_promote $move) {
 				push @promotions, $move;
 			} elsif (cp_move_captured $move) {
 				$captures{$move} = $position->SEE($move);
@@ -347,7 +347,7 @@ sub alphabeta {
 				push @pv, $move;
 			} elsif (cp_move_equivalent $move, $tt_move) {
 				push @tt, $move;
-			} elsif (cp_move_promote $move) {
+			} elsif (CP_QUEEN == cp_move_promote $move) {
 				push @promotions, $move;
 			} elsif (cp_move_captured $move) {
 				push @captures, $move;
@@ -545,8 +545,9 @@ sub quiesce {
 	foreach my $move (@moves) {
 		if (cp_move_equivalent $move, $tt_move) {
 			push @tt, $move;
-		} elsif (cp_move_promote $move) {
-			push @promotions, $move;
+		} elsif (my $promote = cp_move_promote $move) {
+			# Skip underpromotions in quiescence.
+			push @promotions, $move if $promote == CP_QUEEN;
 		} elsif ($position->moveGivesCheck($move)) { # FIXME! Too expensive?
 			push @checks, $move;
 		} else {
