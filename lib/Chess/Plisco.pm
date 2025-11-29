@@ -1351,7 +1351,7 @@ sub doMove {
 	my ($self, $move) = @_;
 
 	my @check_info = $self->inCheck;
-	return if !$self->__checkPseudoLegalMove($move, @check_info);
+	return if !$self->checkPseudoLegalMove($move, @check_info);
 
 	my @backup = @$self;
 
@@ -2317,14 +2317,6 @@ sub inCheck {
 }
 
 sub checkPseudoLegalMove {
-	my ($self, $move) = @_;
-
-	my @check_info = $self->inCheck;
-
-	return $self->__checkPseudoLegalMove($move, @check_info);
-}
-
-sub __checkPseudoLegalMove {
 	my ($self, $move, $in_check, $king_shift, $defence_bb) = @_;
 
 	my $from = cp_move_from $move;
@@ -2428,7 +2420,7 @@ sub legalMoves {
 
 	my @legal;
 	foreach my $move (pseudoLegalMoves($self)) {
-		$move = __checkPseudoLegalMove($self, $move, @check_state) or next;
+		$move = checkPseudoLegalMove($self, $move, @check_state) or next;
 		push @legal, $move;
 	}
 
@@ -3205,10 +3197,11 @@ sub perft {
 
 	my $nodes = 0;
 
+	my @check_info = $self->inCheck;
 	my @moves = $self->pseudoLegalMoves;
 	my @backup = @$self;
 	foreach my $move (@moves) {
-		next if !checkPseudoLegalMove($self, $move);
+		next if !checkPseudoLegalMove($self, $move, @check_info);
 		$self->move($move);
 
 		if ($depth > 1) {
@@ -3233,10 +3226,11 @@ sub perftWithOutput {
 
 	my $nodes = 0;
 
+	my @check_info = $self->inCheck;
 	my @moves = $self->pseudoLegalMoves;
 	my @backup = @$self;
 	foreach my $move (@moves) {
-		next if !$self->checkPseudoLegalMove($move);
+		next if !$self->checkPseudoLegalMove($move, @check_info);
 		my $movestr = $self->moveCoordinateNotation($move);
 		$fh->print("$movestr: ");
 
