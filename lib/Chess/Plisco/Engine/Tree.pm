@@ -21,6 +21,7 @@ use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
 
 use Time::HiRes qw(tv_interval);
+use List::Util qw(first);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
@@ -68,6 +69,7 @@ sub new {
 		$position->[CP_POS_REVERSIBLE_CLOCK] = @$signatures - 1;
 	}
 
+	my @killers = map { [] } 0 .. MAX_PLY - 1;
 	my $self = {
 		position => $position,
 		signatures => $signatures,
@@ -77,6 +79,7 @@ sub new {
 		info => $options{info} || sub {},
 		book => $options{book},
 		book_depth => $options{book_depth},
+		killers => \@killers,
 	};
 
 	bless $self, $class;
@@ -305,7 +308,11 @@ sub alphabeta {
 	# quiet moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	my (@pv, @tt, @promotions, @checks, @good_captures, @quiet, @bad_captures);
+	my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+	my $killers = $self->{killers}->[$ply];
+	my $k1 = $killers->[0];
+	my $k2 = $killers->[1];
+	my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
 	if ($depth >= 5) {
 		# Full sorting.
 		my %good_captures;
@@ -329,6 +336,12 @@ sub alphabeta {
 				} else {
 					push @bad_captures, $move;
 				}
+			} elsif ($move == $k1) {
+				$k1[0] = $move;
+			} elsif ($move == $k2) {
+				$k2[0] = $move;
+			} elsif ($move == $k3) {
+				$k3[0] = $move;
 			} else {
 				push @quiet, $move;
 			}
@@ -356,6 +369,12 @@ sub alphabeta {
 				} else {
 					push @bad_captures, $move;
 				}
+			} elsif ($move == $k1) {
+				$k1[0] = $move;
+			} elsif ($move == $k2) {
+				$k2[0] = $move;
+			} elsif ($move == $k3) {
+				$k3[0] = $move;
 			} else {
 				push @quiet, $move;
 			}
@@ -377,13 +396,19 @@ sub alphabeta {
 				}
 			} elsif (cp_move_captured $move) {
 				push @good_captures, $move;
+			} elsif ($move == $k1) {
+				$k1[0] = $move;
+			} elsif ($move == $k2) {
+				$k2[0] = $move;
+			} elsif ($move == $k3) {
+				$k3[0] = $move;
 			} else {
 				push @quiet, $move;
 			}
 		}
 		@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
 	}
-	@moves = (@pv, @tt, @promotions, @checks, @good_captures, @quiet, @bad_captures);
+	@moves = (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
 
 	my $legal = 0;
 	my $pv_found;
@@ -443,6 +468,12 @@ sub alphabeta {
 			$tt->store($signature, $depth,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
 				$val, $move);
+
+			if (first { $_ == $move} @quiet) {
+				my $killers = $self->{killers}->[$ply];
+				($killers->[0], $killers->[1]) = ($move, $killers->[0]);
+			}
+
 			return $beta;
 		}
 		if ($val > $alpha) {
