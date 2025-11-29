@@ -245,7 +245,7 @@ sub __onUciInput {
 sub __onUciCmdFen {
 	my ($self) = @_;
 
-	$self->{__out}->print("$self->{__position}\n");
+	$self->{__out}->print($self->{__position}->toFEN);
 
 	return $self;
 }
@@ -357,8 +357,7 @@ sub __onUciCmdGo {
 	};
 
 	if ($params{perft}) {
-		$self->{__position}->perftByCopyWithOutput($params{perft},
-		                                           $self->{__out});
+		$self->{__position}->perftWithOutput($params{perft}, $self->{__out});
 		return $self;
 	}
 

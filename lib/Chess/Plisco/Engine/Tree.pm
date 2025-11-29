@@ -14,15 +14,18 @@ package Chess::Plisco::Engine::Tree;
 use strict;
 use integer;
 
-use Locale::TextDomain qw('Chess-Plisco');
+use Locale::TextDomain ('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::Position;
+use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
 
 use Time::HiRes qw(tv_interval);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
+
+use constant CP_POS_SIGNATURE => Chess::Plisco::Engine::Position::CP_POS_SIGNATURE();
+use constant CP_POS_REVERSIBLE_CLOCK => Chess::Plisco::Engine::Position::CP_POS_REVERSIBLE_CLOCK();
 
 use constant MATE => -15000;
 use constant INF => 16383;
@@ -45,13 +48,17 @@ use constant SAFETY_MARGIN => 50;
 # "attractive" than captures that the rook makes.
 my @move_values = (0) x 369;
 
+
+# MVV-LVA values. Looked up via the captured and moving piece ($move & 0x3f).
+my @mvv_lva;
+
 sub new {
 	my ($class, %options) = @_;
 
 	my $position = $options{position};
 	my $signatures = $options{signatures};
 
-	# Make sure that the reversible clock does not look beyond the know
+	# Make sure that the reversible clock does not look beyond the known
 	# positions.  This will simplify the detection of a draw by repetition.
 	if ($position->[CP_POS_REVERSIBLE_CLOCK] >= @$signatures) {
 		$position->[CP_POS_REVERSIBLE_CLOCK] = @$signatures - 1;
@@ -203,6 +210,7 @@ sub printPV {
 	}
 }
 
+sub quiesce; # Make it invokable without a method call.
 
 # __BEGIN_MACROS__
 sub alphabeta {
@@ -221,7 +229,7 @@ sub alphabeta {
 			. " depth: $depth, sig: $hex_signature $position");
 	}
 
-	if (cp_pos_half_move_clock($position) >= 100) {
+	if (cp_pos_halfmove_clock($position) >= 100) {
 		if (DEBUG) {
 			$self->indent($ply, "draw detected");
 		}
@@ -236,7 +244,7 @@ sub alphabeta {
 	my $signatures = $self->{signatures};
 	my $signature = $position->[CP_POS_SIGNATURE];
 	if ($ply > 1) {
-		my $rc = $position->reversibleClock; # FIXME! Use this!!!
+		my $rc = $position->[CP_POS_REVERSIBLE_CLOCK];
 		my $history_length = $self->{history_length};
 		my $signature_slot = $history_length + $ply;
 		my $max_back = $signature_slot - $rc - 1;
@@ -284,33 +292,72 @@ sub alphabeta {
 	}
 
 	if ($depth <= 0) {
-		return $self->quiesce($ply, $alpha, $beta);
+		return quiesce($self, $ply, $alpha, $beta);
 	}
 
 	my @moves = $position->pseudoLegalMoves;
 
-	# Expand the moves with a score so that they can be sorted.
-	# FIXME! Our evaluation function knows the delta for each move from the
-	# PSTs. Maybe it is better to use that value for sorting?
-	my ($pawns, $knights, $bishops, $rooks, $queens) = 
-		@$position[CP_POS_PAWNS .. CP_POS_QUEENS];
-	my $pos_info = cp_pos_info $position;
-	my $her_pieces = $position->[CP_POS_WHITE_PIECES + cp_pos_info_to_move $pos_info];
-	my $ep_shift = cp_pos_info_en_passant_shift $pos_info;
+	# Sort moves. FIXME!!!! Bad captures must be searched *after* the
+	# quiet moves.
 	my $pv_move;
 	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	foreach my $move (@moves) {
-		if (cp_move_equivalent $move, $pv_move) {
-			$move |= MOVE_ORDERING_PV;
-		} elsif (cp_move_equivalent $move, $tt_move) {
-			$move |= MOVE_ORDERING_TT;
-		} elsif ($depth > 1) {
-			$move |= $position->SEE($move) << 32;
+	if ($depth >= 5) {
+		# Full sorting.
+		my (@pv, @tt, @promotions, @checks, %captures, @quiet); # And killers, history, ...
+		foreach my $move (@moves) {
+			if (cp_move_equivalent $move, $pv_move) {
+				push @pv, $move;
+			} elsif (cp_move_equivalent $move, $tt_move) {
+				push @tt, $move;
+			} elsif (cp_move_promote $move) {
+				push @promotions, $move;
+			} elsif ($position->moveGivesCheck($move)) {
+				push @checks, $move;
+			} elsif (cp_move_captured $move) {
+				$captures{$move} = $position->SEE($move);
+			} else {
+				push @quiet, $move;
+			}
 		}
+		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
+		@moves = (@pv, @tt, @promotions, @checks, @captures_and_quiets);
+	} elsif ($depth >= 4) {
+		# Light sorting.
+		my (@pv, @tt, @promotions, %captures, @quiet); # And killers, history, ...
+		foreach my $move (@moves) {
+			if (cp_move_equivalent $move, $pv_move) {
+				push @pv, $move;
+			} elsif (cp_move_equivalent $move, $tt_move) {
+				push @tt, $move;
+			} elsif (cp_move_promote $move) {
+				push @promotions, $move;
+			} elsif (cp_move_captured $move) {
+				$captures{$move} = $position->SEE($move);
+			} else {
+				push @quiet, $move;
+			}
+		}
+		my @captures_and_quiets = sort { $captures{$b} <=> $captures{$a} } @quiet, keys %captures;
+		@moves = (@pv, @tt, @promotions, @captures_and_quiets);
+	} else {
+		# Minimal sorting.
+		my (@pv, @tt, @promotions, @captures, @quiet);
+		foreach my $move (@moves) {
+			if (cp_move_equivalent $move, $pv_move) {
+				push @pv, $move;
+			} elsif (cp_move_equivalent $move, $tt_move) {
+				push @tt, $move;
+			} elsif (cp_move_promote $move) {
+				push @promotions, $move;
+			} elsif (cp_move_captured $move) {
+				push @captures, $move;
+			} else {
+				push @quiet, $move;
+			}
+		}
+		@captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @captures;
+		@moves = (@pv, @tt, @promotions, @captures, @quiet);
 	}
-
-	# Now sort the moves according to the material gain.
-	@moves = sort { $b <=> $a } @moves;
 
 	my $legal = 0;
 	my $pv_found;
@@ -318,9 +365,13 @@ sub alphabeta {
 	my $best_move = 0;
 	my $print_current_move = $ply == 1 && $self->{print_current_move};
 	my $signature_slot = $self->{history_length} + $ply;
+	my @check_info = $position->inCheck;
+	my @backup = @$position;
 	foreach my $move (@moves) {
+		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
-		my $state = $position->doMove($move) or next;
+		$position->move($move, 1);
+		# FIXME! Update that on the fly.
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
@@ -334,29 +385,26 @@ sub alphabeta {
 			if (DEBUG) {
 				$self->indent($ply, "null window search");
 			}
-			$val = -$self->alphabeta($ply + 1, $depth - 1,
-					-$alpha - 1, -$alpha, \@line);
+			$val = -alphabeta($self, $ply + 1, $depth - 1, -$alpha - 1, -$alpha, \@line);
 			if (($val > $alpha) && ($val < $beta)) {
 				if (DEBUG) {
 					$self->indent($ply, "value $val outside null window, re-search");
 				}
 				undef @line;
-				$val = -$self->alphabeta($ply + 1, $depth - 1,
-						-$beta, -$alpha, \@line);
+				$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 			}
 		} else {
 			if (DEBUG) {
 				$self->indent($ply, "recurse normal search");
 			}
-			$val = -$self->alphabeta($ply + 1, $depth - 1,
-					-$beta, -$alpha, \@line);
+			$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 		}
 		++$legal;
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value $val");
 		}
-		$position->undoMove($state);
+		@$position = @backup;
 		if (DEBUG) {
 			pop @{$self->{line}};
 		}
@@ -437,11 +485,11 @@ sub quiesce {
 	}
 
 	# Expand the search, when in check.
-	if (cp_pos_in_check($position)) {
+	if ($position->inCheck) {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
 		}
-		return $self->alphabeta($ply, 1, $alpha, $beta, []);
+		return alphabeta($self, $ply, 1, $alpha, $beta, []);
 	}
 
 	my $tt = $self->{tt};
@@ -492,36 +540,34 @@ sub quiesce {
 		$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 	}
 
-	my @pseudo_legal = $position->pseudoLegalAttacks;
-	my $pos_info = cp_pos_info $position;
-	my $her_pieces = $position->[CP_POS_WHITE_PIECES
-			+ !cp_pos_to_move($position)];
-	my (@moves);
-	my $signatures = $self->{signatures};
-	my $signature_slot = $self->{history_length} + $ply;
-	foreach my $move (@pseudo_legal) {
-		my $state = $position->doMove($move) or next;
-		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
-		$position->undoMove($state);
-		my $see = $position->SEE($move);
-
-		# A marginal difference can occur if bishops and knights have different
-		# values.  But we want to ignore that.
-		next if $see <= -CP_PAWN_VALUE;
-
-		# FIXME! Do we have a PV move here?
-		if ($move == $tt_move) {
-			push @moves, MOVE_ORDERING_TT | $move;
+	my @moves = $position->pseudoLegalAttacks;
+	my (@tt, @promotions, @checks, %captures);
+	foreach my $move (@moves) {
+		if (cp_move_equivalent $move, $tt_move) {
+			push @tt, $move;
+		} elsif (cp_move_promote $move) {
+			push @promotions, $move;
+		} elsif ($position->moveGivesCheck($move)) { # FIXME! Too expensive?
+			push @checks, $move;
 		} else {
-			push @moves, ($see << 32) | $move;
+			$captures{$move} = $position->SEE($move);
 		}
 	}
+
+	my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
+	@moves = (@tt, @promotions, @checks, @captures);
+
+	my $signatures = $self->{signatures};
+	my $signature_slot = $self->{history_length} + $ply;
+	my @check_info = $position->inCheck;
+	my @backup = @$position;
 
 	my $legal = 0;
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
-	foreach my $move (sort { $b <=> $a } @moves) {
-		my $state = $position->doMove($move);
+	foreach my $move (@moves) {
+		next if !$position->checkPseudoLegalMove($move, @check_info);
+		$position->move($move, 1);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			push @{$self->{line}}, $cn;
@@ -538,7 +584,7 @@ sub quiesce {
 			$self->indent($ply, "move $cn: value: $val");
 			pop @{$self->{line}};
 		}
-		$position->undoMove($state);
+		@$position = @backup;
 		if ($val >= $beta) {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
@@ -591,6 +637,7 @@ sub rootSearch {
 	my @line = @$pline;
 	my $alpha = -INF;
 	my $beta = +INF;
+
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);
@@ -720,7 +767,7 @@ sub getPonderMove {
 	my $pos = $self->{position}->copy;
 
 	# Play our move.
-	$pos->doMove($line[0]);
+	$pos->move($line[0]);
 
 	# And now try to find an entry in the transposition table.
 	my $signature = $pos->[CP_POS_SIGNATURE];
@@ -766,6 +813,18 @@ foreach my $mover (CP_PAWN .. CP_KING) {
 				my $pvalue = $value + $piece_values[$promote] - CP_PAWN_VALUE;
 			}
 		}
+	}
+}
+
+my @mvv_lva_values = (
+	0, CP_PAWN_VALUE, CP_KNIGHT_VALUE, CP_BISHOP_VALUE,
+	CP_ROOK_VALUE, CP_QUEEN_VALUE, 2 * CP_QUEEN_VALUE,
+);
+foreach my $victim (CP_PAWN .. CP_QUEEN) {
+	foreach my $attacker (CP_PAWN .. CP_KING) {
+		$mvv_lva[($victim << 3) | $attacker] =
+			100 * $mvv_lva_values[$victim] - $mvv_lva_values[$attacker];
+		my $idx = ($victim << 3) | $attacker;
 	}
 }
 

@@ -14,8 +14,10 @@
 
 use strict;
 
-use Test::More tests => 9;
+use Test::More tests => 14;
 
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::TranspositionTable;
 
 my $tt = Chess::Plisco::Engine::TranspositionTable->new(1);
@@ -56,3 +58,23 @@ ok defined $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta),
 my $collision = $key % scalar @$tt;
 ok !defined $tt->probe($collision, $test_depth - 1, $test_alpha, $test_beta),
 	"type 2 collision";
+
+$tt->clear;
+my $real_move = 0;
+my $from = CP_D7;
+my $to = CP_E8;
+my $promote = CP_ROOK;
+cp_move_set_from $real_move, $from;
+cp_move_set_to $real_move, $to;
+cp_move_set_promote $real_move, $promote;
+
+$tt->store($key, $test_depth, TT_SCORE_EXACT, $test_value, $real_move);
+
+my $best_move;
+my $value = $tt->probe($key, $test_depth - 1, $test_alpha, $test_beta, \$best_move);
+ok defined $value, "stored move retrieved";
+
+ok defined $best_move, 'best move was returned';
+is(cp_move_from($best_move), $from, 'from square not tampered');
+is(cp_move_to($best_move), $to, 'to square not tampered');
+is(cp_move_promote($best_move), $promote, 'promote piece not tampered');

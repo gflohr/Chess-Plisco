@@ -14,7 +14,9 @@ use integer;
 
 use Test::More;
 use Data::Dumper;
+
 use Chess::Plisco qw(:all);
+use Chess::Plisco::Engine::Position;
 
 my ($pos, @moves, @expect);
 
@@ -78,7 +80,7 @@ my @tests = (
 plan tests => 5 * @tests;
 
 foreach my $test (@tests) {
-	my $pos = Chess::Plisco->new($test->{fen});
+	my $pos = Chess::Plisco::Engine::Position->new($test->{fen});
 	my $zk_before = $pos->signature;
 	ok defined $zk_before, "$test->{name}: zk defined after move";
 	my $move = $pos->parseMove($test->{san});
@@ -87,6 +89,6 @@ foreach my $test (@tests) {
 	my $zk_updated = $pos->signature;
 	ok defined $zk_updated, "$test->{name}: zk after move";
 	my $fen = $pos->toFEN;
-	$pos = Chess::Plisco->new($fen);
+	$pos = Chess::Plisco::Engine::Position->new($fen);
 	is $zk_updated, $pos->signature, "$test->{name}: zk updated";
 }
