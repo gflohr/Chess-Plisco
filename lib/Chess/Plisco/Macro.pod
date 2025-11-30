@@ -470,6 +470,13 @@ Calculate the maximum of B<A> and B<B>.
 
 Calculate the minimum of B<A> and B<B>.
 
+=item B<cp_clamp(V, LO, HI)>
+
+=item B<clamp V, LO, HI>
+
+If the value of B<V> is within B<[LO, HI]>, returns B<V>; otherwise returns
+the nearest boundary.
+
 =back
 
 =head1 COPYRIGHT

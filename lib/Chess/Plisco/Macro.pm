@@ -199,6 +199,8 @@ sub cp_max {}
 _define cp_min => '$A', '$B', '((($A) < ($B)) ? ($A) : ($B))';
 sub cp_min {}
 
+_define cp_clamp => '$v', '$lo', '$hi', '($v) < ($lo) ? ($lo) : ($v) > ($hi) ? ($hi) : ($v)';
+
 # Zobrist keys.
 _define _cp_zk_lookup => '$p', '$c', '$s', '$zk_pieces[((($p) << 7) | (($c) << 6) | ($s)) - 128]';
 
