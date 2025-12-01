@@ -21,7 +21,6 @@ use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
 
 use Time::HiRes qw(tv_interval);
-use List::Util qw(first);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
@@ -80,6 +79,7 @@ sub new {
 		book => $options{book},
 		book_depth => $options{book_depth},
 		killers => \@killers,
+		cutoff_moves => [[], []], # History heuristic, one slot for each side.
 	};
 
 	bless $self, $class;
@@ -408,9 +408,20 @@ sub alphabeta {
 		}
 		@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
 	}
+
+	# Apply history bonus and malus to all quiet moves. We store the bonuses
+	# in the upper 32 bits so that we can do a simple integer sort.
+	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
+	foreach my $move (@quiet) {
+		$DB::single = 1 if $cutoff_moves->[($move & 0x1ffe00) >> 9];
+		$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
+	}
+	@quiet = sort { $b <=> $a } @quiet;
+
 	@moves = (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
 
 	my $legal = 0;
+	my $moveno = 0;
 	my $pv_found;
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
@@ -451,6 +462,7 @@ sub alphabeta {
 			$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 		}
 		++$legal;
+		++$moveno;
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value $val");
@@ -469,9 +481,32 @@ sub alphabeta {
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
 				$val, $move);
 
-			if (first { $_ == $move} @quiet) {
+			# Quiet move or bad capture failing high?
+			my $first_quiet = 1 + (scalar @moves) - (scalar @quiet) - (scalar @bad_captures);
+			if ($moveno >= $first_quiet && !cp_move_captured $move) {
+				if (DEBUG) {
+					my $cn = $position->moveCoordinateNotation($move);
+					$self->indent($ply, "$cn is quiet and becomes new killer move");
+				}
+
+				# We also allow bad captures to be a killer move.
 				my $killers = $self->{killers}->[$ply];
 				($killers->[0], $killers->[1]) = ($move, $killers->[0]);
+
+				# The history bonus should only be given to real quiet
+				# moves, not bad captures. Later, when we also give
+				# maluses, we still want to give the malus to all
+				# previously searched quiet moves.
+
+				# This is the from and to square as one single integer.
+				my $from_to = ($move & 0x1ffe00) >> 9;
+
+				$cutoff_moves->[$from_to] += $depth * $depth;
+				if (DEBUG) {
+					my $bonus = $depth * $depth;
+					my $cn = $position->moveCoordinateNotation($move);
+					$self->indent($ply, "$cn is quiet and gets history bonus $bonus");
+				}
 			}
 
 			return $beta;
