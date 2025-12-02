@@ -255,16 +255,12 @@ sub alphabeta {
 		my $history_length = $self->{history_length};
 		my $signature_slot = $history_length + $ply;
 		my $max_back = $signature_slot - $rc - 1;
-		my $repetitions = 0;
 		for (my $n = $signature_slot - 5; $n >= $max_back; $n -= 2) {
 			if ($signatures->[$n] == $signature) {
-				++$repetitions;
-				if ($repetitions >= 2 || $n >= $history_length) {
-					if (DEBUG) {
-						$self->indent($ply, "3-fold repetition");
-					}
-					return DRAW;
+				if (DEBUG) {
+					$self->indent($ply, "3-fold repetition");
 				}
+				return DRAW;
 			}
 		}
 	}
