@@ -413,7 +413,6 @@ sub alphabeta {
 	# in the upper 32 bits so that we can do a simple integer sort.
 	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
 	foreach my $move (@quiet) {
-		$DB::single = 1 if $cutoff_moves->[($move & 0x1ffe00) >> 9];
 		$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
 	}
 	@quiet = sort { $b <=> $a } @quiet;
@@ -433,7 +432,6 @@ sub alphabeta {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
 		$position->move($move, 1);
-		# FIXME! Update that on the fly.
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
@@ -661,6 +659,7 @@ sub quiesce {
 	foreach my $move (@moves) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		$position->move($move, 1);
+		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			push @{$self->{line}}, $cn;
