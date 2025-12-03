@@ -143,6 +143,7 @@ my @tests = (
 plan tests => 10 * @tests;
 
 foreach my $test (@tests) {
+$DB::single = 1 if 'd6e6' eq $test->{move};
 	my $pos = Chess::Plisco->new($test->{fen});
 	ok $pos, "valid FEN $test->{fen}";
 	my $move = $pos->parseMove($test->{move});

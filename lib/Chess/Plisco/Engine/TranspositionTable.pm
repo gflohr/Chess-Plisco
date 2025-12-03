@@ -14,6 +14,8 @@ package Chess::Plisco::Engine::TranspositionTable;
 use strict;
 use integer;
 
+use Chess::Plisco qw(:all);
+use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Tree;
 
 use constant TT_ENTRY_SIZE => 16;
@@ -64,7 +66,9 @@ sub probe {
 	return if $stored_key != $lookup_key;
 
 	my ($edepth, $flags, $value, $move) = unpack 's4', $payload;
-	$$bestmove = $move if $move;
+	if ($move) {
+		$$bestmove = ($move << (CP_MOVE_PROMOTE_OFFSET)) if $move;
+	}
 
 	if ($edepth >= $depth) {
 		if ($flags == TT_SCORE_EXACT) {
@@ -96,7 +100,7 @@ sub store {
 
 	# Replacement scheme is currently replace-always.  We must make sure that
 	# only the significant bits of the best move are stored.
-	my $payload = pack 's4', $depth, $flags, $value, $move & 0x7fff;
+	my $payload = pack 's4', $depth, $flags, $value, cp_move_significant($move) >> CP_MOVE_PROMOTE_OFFSET;
 
 	$self->[$key % scalar @$self] = [$key, $payload];
 }
