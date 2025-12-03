@@ -98,10 +98,7 @@ sub allocateTime {
 	# FIXME! Depending on the volatility of the position, there should be
 	# a time cushion that can be used if the evaluation changes a lot between      
 	# iterations.
-	my $allocated_time = int (0.5 + $time_left / $mtg);
-
-	# Never use more than 95 % of the time left.
-	$tree->{allocated_time} = cp_max($allocated_time, $time_left / 20);
+	$tree->{allocated_time} = int (0.5 + $time_left / $mtg);
 }
 
 sub movesToGo {
