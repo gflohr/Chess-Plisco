@@ -18,6 +18,7 @@ use strict;
 
 use Time::HiRes qw(gettimeofday tv_interval);
 
+use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::TimeControl::MovesToGo;
 
 sub new {
