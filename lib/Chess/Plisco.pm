@@ -251,7 +251,7 @@ my @pawn_aux_data = (
 my @ep_pawn_masks;
 
 # Map eq squares to the shift of the pawn that gets removed.
-my @ep_pawn_to_shifts;
+my @ep_shift_to_attacker_mask;
 
 # Map ep squares to the mask of the pawn that captures.
 my @ep_pawn_from_masks;
@@ -951,7 +951,7 @@ sub pseudoLegalMoves {
 
 	# En passant.
 	my $ep_shift = cp_pos_en_passant_shift $self;
-	if ($ep_shift && $board[$ep_pawn_to_shifts[$ep_shift]]) {
+	if ($ep_shift && $board[$ep_shift_to_attacker_mask[$ep_shift]]) {
 		my $from_mask = $pawn_mask & $ep_pawn_from_masks[$ep_shift];
 		while ($from_mask) {
 			push @moves,
@@ -1132,7 +1132,7 @@ sub pseudoLegalAttacks {
 
 	# En passant.
 	my $ep_shift = cp_pos_en_passant_shift $self;
-	if ($ep_shift && $board[$ep_pawn_to_shifts[$ep_shift]]) {
+	if ($ep_shift && $board[$ep_shift_to_attacker_mask[$ep_shift]]) {
 		my $from_mask = $pawn_mask & $ep_pawn_from_masks[$ep_shift];
 		while ($from_mask) {
 			push @moves,
@@ -2890,16 +2890,22 @@ sub toFEN {
 	}
 
 	my $ep_shift = $self->enPassantShift;
+	my $ep_square = '-';
 	if ($ep_shift) {
 		my $square = $self->shiftToSquare($ep_shift);
 		if ($options{force_en_passant_square}) {
-			$fen .= $square;
+			$ep_square = $square;
 		} else {
-			$fen .= $square;
+			foreach my $move ($self->legalMoves) {
+				my $lan = $self->LAN($move, encode_pawn => 1);
+				if ($lan =~ /^P[a-h][1-8]x$square/) {
+					$ep_square = $square;
+					last;
+				}
+			}
 		}
-	} else {
-		$fen .= '-';
 	}
+	$fen .= $ep_square;
 
 	$fen .= sprintf ' %u %u', $self->halfmoveClock,
 			1 + ($self->[CP_POS_HALFMOVES] >> 1);
@@ -3870,14 +3876,14 @@ $pawn_masks[CP_BLACK] = [\@black_pawn_single_masks, \@black_pawn_double_masks,
 foreach my $shift (16 .. 23) {
 	# Black en passant captures.
 	$ep_pawn_masks[$shift] = 1 << ($shift + 8);
-	$ep_pawn_to_shifts[$shift] = $shift + 8;
+	$ep_shift_to_attacker_mask[$shift] = $shift + 8;
 	$ep_pawn_from_masks[$shift] |= (1 << ($shift + 7)) if $shift != 16;
 	$ep_pawn_from_masks[$shift] |= (1 << ($shift + 9)) if $shift != 23;
 }
 foreach my $shift (40 .. 47) {
 	# White en passant captures.
 	$ep_pawn_masks[$shift] = 1 << ($shift - 8);
-	$ep_pawn_to_shifts[$shift] = $shift - 8;
+	$ep_shift_to_attacker_mask[$shift] = $shift - 8;
 	$ep_pawn_from_masks[$shift] |= (1 << ($shift - 9)) if $shift != 40;
 	$ep_pawn_from_masks[$shift] |= (1 << ($shift - 7)) if $shift != 47;
 }

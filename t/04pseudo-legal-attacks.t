@@ -204,38 +204,38 @@ foreach my $test (@tests) {
 	my @moves = $pos->pseudoLegalAttacks;
 	my %moves;
 	foreach my $move (@moves) {
-		my $lan = $pos->LAN($move, 1);
-		$moves{$lan} = $move,
+		my $cn = $pos->moveCoordinateNotation($move, 1);
+		$moves{$cn} = $move,
 	}
-	my @lans = sort keys %moves;
+	my @cn = sort keys %moves;
 	my $captures = $test->{captures} // {};
 	my $promotions = $test->{promotions} // {};
 	my $ep_moves = $test->{ep_moves} // {};
 	my $exp_colour = $pos->toMove;
 
-	foreach my $lan (@lans) {
-		ok $captures->{$lan} || $promotions->{$lan}, "$test->{name} $lan is a capture or promotion";
+	foreach my $cn (@cn) {
+		ok $captures->{$cn} || $promotions->{$cn}, "$test->{name} $cn is a capture or promotion";
 
-		my $move = $moves{$lan};
+		my $move = $moves{$cn};
 
-		if ($captures->{$lan}) {
+		if ($captures->{$cn}) {
 			my $got_captured = $pos->moveCaptured($move);
-			my $exp_captured = $captures->{$lan} // CP_NO_PIECE;
-			is $got_captured, $exp_captured, "$test->{name} $lan captured";
+			my $exp_captured = $captures->{$cn} // CP_NO_PIECE;
+			is $got_captured, $exp_captured, "$test->{name} $cn captured";
 		}
 
-		if ($promotions->{$lan}) {
+		if ($promotions->{$cn}) {
 			my $got_promote = $pos->movePromote($move);
-			my $exp_promote = $promotions->{$lan} // CP_NO_PIECE;
-			is $got_promote, $exp_promote, "$test->{name} $lan promote";
+			my $exp_promote = $promotions->{$cn} // CP_NO_PIECE;
+			is $got_promote, $exp_promote, "$test->{name} $cn promote";
 		}
 
 		my $got_is_ep = $pos->moveEnPassant($move); 
-		my $exp_is_ep = $ep_moves->{$lan} || 0;
-		is $got_is_ep, $exp_is_ep, "$test->{name} $lan is en passant";
+		my $exp_is_ep = $ep_moves->{$cn} || 0;
+		is $got_is_ep, $exp_is_ep, "$test->{name} $cn is en passant";
 
 		my $got_colour = $pos->moveColor($move);
-		is $got_colour, $exp_colour, "$test->{name} $lan colour";
+		is $got_colour, $exp_colour, "$test->{name} $cn colour";
 	}
 }
 

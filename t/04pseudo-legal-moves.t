@@ -305,28 +305,28 @@ foreach my $test (@tests) {
 	my @moves = $pos->pseudoLegalMoves;
 	my %moves;
 	foreach my $move (@moves) {
-		my $lan = $pos->LAN($move, 1);
-		$moves{$lan} = $move,
+		my $cn = $pos->moveCoordinateNotation($move, 1);
+		$moves{$cn} = $move,
 	}
-	my @lans = sort keys %moves;
-	is_deeply \@lans, $test->{moves}, "$test->{name} all moves";
+	my @cns = sort keys %moves;
+	is_deeply \@cns, $test->{moves}, "$test->{name} all moves";
 	my $captures = $test->{captures} // {};
 	my $ep_moves = $test->{ep_moves} // {};
 	my $exp_colour = $pos->toMove;
 
-	foreach my $lan (@lans) {
-		my $move = $moves{$lan};
+	foreach my $cn (@cns) {
+		my $move = $moves{$cn};
 
 		my $got_captured = $pos->moveCaptured($move);
-		my $exp_captured = $captures->{$lan} // CP_NO_PIECE;
-		is $got_captured, $exp_captured, "$test->{name} $lan captured";
+		my $exp_captured = $captures->{$cn} // CP_NO_PIECE;
+		is $got_captured, $exp_captured, "$test->{name} $cn captured";
 
 		my $got_is_ep = $pos->moveEnPassant($move); 
-		my $exp_is_ep = $ep_moves->{$lan} || 0;
-		is $got_is_ep, $exp_is_ep, "$test->{name} $lan is en passant";
+		my $exp_is_ep = $ep_moves->{$cn} || 0;
+		is $got_is_ep, $exp_is_ep, "$test->{name} $cn is en passant";
 
 		my $got_colour = $pos->moveColor($move);
-		is $got_colour, $exp_colour, "$test->{name} $lan colour";
+		is $got_colour, $exp_colour, "$test->{name} $cn colour";
 	}
 }
 
