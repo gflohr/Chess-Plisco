@@ -256,8 +256,25 @@ my @ep_pawn_to_shifts;
 # Map ep squares to the mask of the pawn that captures.
 my @ep_pawn_from_masks;
 
-# Map ep squares to the completely encoded move.
-my @ep_moves;
+# Map ep squares to the captures in coordinate notation.
+my %ep_moves = (
+	a3 => ['b4a3'],
+	b3 => ['a4b3', 'c4b3'],
+	c3 => ['b4c3', 'd4c3'],
+	d3 => ['c4d3', 'e4d3'],
+	e3 => ['d4e3', 'f4e3'],
+	f3 => ['e4f3', 'g4f3'],
+	g3 => ['f4g3', 'h4g3'],
+	h3 => ['g4h3'],
+	a6 => ['b5a6'],
+	b6 => ['a5b6', 'c5b6'],
+	c6 => ['b5c6', 'd5c6'],
+	d6 => ['c5d6', 'e5d6'],
+	e6 => ['d5e6', 'f5e6'],
+	f6 => ['e5f6', 'g5f6'],
+	g6 => ['f5g6', 'h5g6'],
+	h6 => ['g5h6'],
+);
 
 my @castling_aux_data = (
 	# White.
@@ -1533,7 +1550,57 @@ sub moveCoordinateNotation {
 }
 
 sub LAN {
-	&moveCoordinateNotation;
+	my ($self, $move, @options) = @_;
+
+	my %options = $self->__coerceOptions(@options);
+
+	my $from = cp_move_from $move;
+	my $from_square = cp_shift_to_square $from;
+	my $to = cp_move_to $move;
+	my $to_square = cp_shift_to_square $to;
+	my $piece = cp_move_piece $move;
+	my $piece_char = CP_PIECE_CHARS->[CP_WHITE]->[$piece];
+	my $promote = cp_move_promote $move;
+	my $promote_chars = $promote ? ('=' . CP_PIECE_CHARS->[CP_WHITE]->[$promote]) : '';
+
+	if ($piece == CP_PAWN && !$options{encode_pawn}) {
+		$piece_char = '';
+	}
+
+	my $hyphen_or_capture;
+	if (cp_move_captured $move) {
+		$hyphen_or_capture = 'x';
+	} elsif ($options{no_hyphen}) {
+		$hyphen_or_capture = '';
+	} else {
+		$hyphen_or_capture = '-';
+	}
+
+	my $check_or_mate;
+	my $copy = $self->copy;
+	$copy->doMove($move);
+	if (!$copy->legalMoves) {
+		$check_or_mate = '#';
+	} elsif ($copy->inCheck) {
+		$check_or_mate = '+';
+	} else {
+		$check_or_mate = '';
+	}
+
+	my $base_move;
+	if ($piece == CP_KING) {
+		if ($from - $to == 2) {
+			$base_move = 'O-O-O';
+		} elsif ($from - $to == -2) {
+			$base_move = 'O-O';
+		}
+	}
+
+	if (!defined $base_move) {
+		$base_move = join '', $piece_char, $from_square, $hyphen_or_capture, $to_square, $promote_chars;
+	}
+
+	return join '', $base_move, $check_or_mate;
 }
 
 sub SEE {
@@ -2719,8 +2786,25 @@ sub lastMove {
 	shift->[CP_POS_LAST_MOVE];
 }
 
+sub __coerceOptions {
+	my ($self, @options) = @_;
+
+	if (@options == 1) {
+		if (reftype $options[0] eq 'HASH') {
+			@options = %{$options[0]};
+		} elsif (reftype $options[0] eq 'ARRAY') {
+			@options = @{$options[0]};
+		}
+	}
+
+	return @options;
+}
+
 sub toFEN {
-	my ($self) = @_;
+	my ($self, @options) = @_;
+
+	my %options = $self->__coerceOptions(@options);
+	$options{force_en_passant_square} //= $options{force_ep_square};
 
 	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
 	my $b_pieces = $self->[CP_POS_BLACK_PIECES];
@@ -2808,7 +2892,11 @@ sub toFEN {
 	my $ep_shift = $self->enPassantShift;
 	if ($ep_shift) {
 		my $square = $self->shiftToSquare($ep_shift);
-		$fen .= $square;
+		if ($options{force_en_passant_square}) {
+			$fen .= $square;
+		} else {
+			$fen .= $square;
+		}
 	} else {
 		$fen .= '-';
 	}

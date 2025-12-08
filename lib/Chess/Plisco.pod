@@ -183,13 +183,24 @@ check.
 
 =over 4
 
-=item B<toFEN>
+=item B<toFEN[, OPTIONS]>
 
 Renders the position to Forsyth-Edwards Notation.  Alternatively, you can just
 use the object as a string:
 
     $position = Chess::Plisco->new;
     say $position->toFEN;
+
+B<OPTIONS> is an optional hash (or hash reference). The only supported property
+at the moment is "force_en_passant_square" (alias "force_ep_square"). The
+original FEN standard stated that the en passant square in a FEN string should
+be set regardless of whether a pawn is possible respectively legal. The
+de-facto standard today is that the square should be omitted if there is no
+legal en passant capture in the particular position. Passing a truthy value
+will set the en-passant square even if there is no opponent pawn on a
+square that is able to capture or if capturing would leave the own king in
+check. The default is to do a legality check. Important! The behaviour in
+versions prior to 1.x was to follow the old convention.
 
 =item B<legalMoves>
 
@@ -538,10 +549,24 @@ Renders the integer B<MOVE> into Standard-Algebraic Notation SAN, for example
 Renders the integer B<MOVE> into coordinate notation, for example "e2e4" or
 "f2f1q".
 
-=item B<LAN(MOVE)>
+=item B<LAN(MOVE[, OPTIONS])>
 
-Returns the Long Algebraic Notation LAN of the move.  This is an alias for
-L</moveCoordinateNotation>.
+Returns the Long Algebraic Notation LAN of the move.  The following optional
+options (passed as a hash or hash reference) are supported:
+
+=over 8
+
+=item B<no_hyphen>
+
+Use a hyphen between the from and to square ("e2e4" instead of "e2-e4").
+
+=item B<encode_pawn>
+
+Add a leading "P" for pawn moves, i.e. "Pe2-e4" instead of "e2-e4".
+
+=back
+
+Before version 1.x this was an alias for L</moveCoordinateNotation>.
 
 =item B<moveEquivalent(MOVE1, MOVE2)>
 
@@ -1331,22 +1356,6 @@ A bitboard of all pawns (black and white) on the board.  See also L</pawns>.
 =item B<POS-E<gt>[CP_POS_HALFMOVES]>
 
 The number of half-moves made.  See also L</halfmoves>.
-
-=item B<POS-E<gt>[CP_POS_IN_CHECK]>
-
-Bitmask of pieces giving check.  See also L</inCheck>.
-
-=item B<POS-E<gt>[CP_POS_EVASION_SQUARES]>
-
-Bitboard of squares where a check can be blocked.  See also L</evasionSquares>.
-
-=item B<POS-E<gt>[CP_POS_SIGNATURE]>
-
-Same as L</signature>.
-
-=item B<POS-E<gt>[CP_POS_INFO]>
-
-Additional properties of the position. See also L</info>.
 
 =back
 
