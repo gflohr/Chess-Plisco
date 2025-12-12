@@ -232,8 +232,9 @@ sub alphabeta {
 	if (DEBUG) {
 		my $hex_signature = sprintf '%016x', $position->signature;
 		my $line = join ' ', @{$self->{line}};
+		my $fen = $position->toFEN;
 		$self->indent($ply, "alphabeta: alpha = $alpha, beta = $beta, line: $line,"
-			. " depth: $depth, sig: $hex_signature $position");
+			. " depth: $depth, sig: $hex_signature $fen");
 	}
 
 	if (cp_pos_halfmove_clock($position) >= 100) {
