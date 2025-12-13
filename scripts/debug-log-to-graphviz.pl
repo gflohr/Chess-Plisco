@@ -6,6 +6,8 @@ use Chess::Plisco;
 
 sub getLine;
 sub processPosition;
+sub getNode;
+sub printDot;
 
 my ($filename, $depth) = @ARGV;
 
@@ -31,47 +33,52 @@ my @value;
 
 my $pos = Chess::Plisco->new('8/8/2p5/4K2k/8/8/8/8 w - - 0 61');
 my $tree = {
-	subnodes => [],
+	moves => [],
+	subnodes => {},
 };
 
 my $value = processPosition $pos, $tree;
-
-use Data::Dumper;
-warn Dumper $tree;
 
 if (!defined $value) {
 	die "search not terminated";
 }
 
+$tree->{value} = $value;
+
+use Data::Dumper;
+warn Dumper $tree;
+
 print <<"EOF";
 Digraph AlphaBetaTree {
 	node[shape=circle, fontsize=8]
-	root[]
+	n[]
 EOF
+
+printDot $tree, $pos, [];
 
 print <<"EOF";
 
-	root[label="root v=$value\\nα=-∞ β=+∞"];
+	n[label="root v=$value\\nα=-∞ β=+∞"];
 }
 EOF
 
 sub processPosition {
 	my ($pos, $tree) = @_;
 
+	my @moves;
+
 	while (my %line = getLine) {
 		if ($line{type} eq 'finished') {
 			return $line{value};
 		} elsif ($line{type} eq 'start') {
 			my $move = $line{move};
-			my $subtree = { move => $move, subnodes => []};
-
-			$subtree->{value} = processPosition $pos, $subtree;
-
-			push @{$tree->{subnodes}}, $subtree;
+			push @moves, $move;
 		} elsif ($line{type} eq 'value') {
-			return $line{value};
-		} elsif ($line{type} eq 'score') {
-			return $line{value};
+			my $node = getNode(\@moves, $tree);
+			$node->{value} = $line{value};
+			pop @moves;
+		#} elsif ($line{type} eq 'score') {
+		#	return $line{value};
 		}
 	}
 }
@@ -84,7 +91,6 @@ sub getLine {
 	die "unrecognised line: $line" if $line !~ s/^DEBUG //;
 
 	if ($line =~ /^Score at depth $depth: (-[0-9]+)$/) {
-		$DB::single = 1;
 		return type => 'finished', value => $1 ;
 	}
 
@@ -105,11 +111,47 @@ sub getLine {
 		return %retval, type => 'start', move => $1;
 	} elsif ($line =~ /^move ([a-h][1-8][a-h][1-8][qrbn]?): value (-?[0-9]+)$/) {
 		return %retval, type => 'value', move => $1, value => $2;
-	} elsif ($line =~ /^quiescence standing pat \((-?[0-9]+)/) {
-		return %retval, type => 'score', value => $1, standing_pat => 1;
-	} elsif ($line =~ /^quiescence returning alpha (-?[0-9]+)/) {
-		return %retval, type => 'score', value => $1, return_alpha => 1;
+	#} elsif ($line =~ /^quiescence standing pat \((-?[0-9]+)/) {
+	#	return %retval, type => 'score', value => $1, standing_pat => 1;
+	#} elsif ($line =~ /^quiescence returning alpha (-?[0-9]+)/) {
+	#	return %retval, type => 'score', value => $1, return_alpha => 1;
 	}
 
 	return %retval, unrecognised => $line;
+}
+
+sub getNode {
+	my ($moves, $tree) = @_;
+
+	my $node = $tree;
+
+	foreach my $move (@$moves) {
+		if (!$node->{subnodes}->{$move}) {
+			push @{$node->{moves}}, $move;
+			$node->{subnodes}->{$move} //= {
+				moves => [],
+				subnodes => {},
+			};
+		}
+		$node = $tree->{subnodes}->{$move};
+	}
+
+	return $node;
+}
+
+sub printDot {
+	my ($tree, $pos, $path) = @_;
+
+	my $parent_suffix = join '_', @$path;
+
+	my $i = 0;
+	foreach my $move (@{$tree->{moves}}) {
+		++$i;
+		my $suffix = join '-', @$path, $i;
+		my $san = $pos->SAN($pos->parseMove($move));
+		my $subtree = $tree->{subnodes}->{$move};
+
+		print qq{\tn${suffix}[label="v=$subtree->{value}"];\n};
+		print qq{\tn$parent_suffix -> n${suffix}[label="$san"];\n};
+	}
 }
