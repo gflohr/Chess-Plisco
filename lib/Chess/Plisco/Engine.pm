@@ -258,7 +258,6 @@ sub __onUciCmdFen {
 sub __onUciCmdPgn {
 	my ($self) = @_;
 
-$DB::single = 1;
 	my @now = localtime;
 	my $date = sprintf '%04d.%02d.%02d', $now[5] + 1900, $now[4] + 1, $now[3];
 
@@ -504,7 +503,6 @@ sub __onUciCmdGo {
 		} else {
 			$self->__output("bestmove $cn");
 		}
-		$self->{__position}->applyMove($bestmove);
 		push @{$self->{__moves}}, $cn;
 	}
 
