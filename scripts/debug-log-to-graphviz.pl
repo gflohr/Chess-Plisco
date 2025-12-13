@@ -54,7 +54,7 @@ Digraph AlphaBetaTree {
 	n[]
 EOF
 
-printDot $tree, $pos, [];
+printDot $tree, $pos;
 
 print <<"EOF";
 
@@ -140,18 +140,24 @@ sub getNode {
 }
 
 sub printDot {
-	my ($tree, $pos, $path) = @_;
+	my ($tree, $pos, @path) = @_;
 
-	my $parent_suffix = join '_', @$path;
+	my $parent_suffix = join '_', @path;
 
 	my $i = 0;
 	foreach my $move (@{$tree->{moves}}) {
 		++$i;
-		my $suffix = join '-', @$path, $i;
+		my $suffix = join '_', @path, $i;
 		my $san = $pos->SAN($pos->parseMove($move));
 		my $subtree = $tree->{subnodes}->{$move};
 
 		print qq{\tn${suffix}[label="v=$subtree->{value}"];\n};
 		print qq{\tn$parent_suffix -> n${suffix}[label="$san"];\n};
+
+		my $undo = $pos->doMove($move);
+
+		printDot $subtree, $pos, @path, $i;
+
+		$pos->undoMove($undo);
 	}
 }
