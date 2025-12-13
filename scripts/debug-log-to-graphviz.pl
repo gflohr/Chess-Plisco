@@ -43,10 +43,10 @@ if (!defined $value) {
 	die "search not terminated";
 }
 
-$tree->{value} = $value;
+$tree->{value} = -$value;
 
-use Data::Dumper;
-warn Dumper $tree;
+#use Data::Dumper;
+#warn Dumper $tree;
 
 print <<"EOF";
 Digraph AlphaBetaTree {
@@ -75,10 +75,15 @@ sub processPosition {
 			push @moves, $move;
 		} elsif ($line{type} eq 'value') {
 			my $node = getNode(\@moves, $tree);
-			$node->{value} = $line{value};
+			$node->{value} = -$line{value};
 			pop @moves;
-		#} elsif ($line{type} eq 'score') {
-		#	return $line{value};
+		} elsif ($line{type} eq 'alphabeta') {
+			my $node = getNode(\@moves, $tree);
+			$node->{alpha} = $line{alpha};
+			$node->{beta} = $line{beta};
+		} elsif ($line{type} eq 'cutoff') {
+			my $node = getNode(\@moves, $tree);
+			$node->{cutoff} = 1;
 		}
 	}
 }
@@ -112,10 +117,10 @@ sub getLine {
 		return %retval, type => 'start', move => $1;
 	} elsif ($line =~ /^move ([a-h][1-8][a-h][1-8][qrbn]?): value (-?[0-9]+)$/) {
 		return %retval, type => 'value', move => $1, value => $2;
-	#} elsif ($line =~ /^quiescence standing pat \((-?[0-9]+)/) {
-	#	return %retval, type => 'score', value => $1, standing_pat => 1;
-	#} elsif ($line =~ /^quiescence returning alpha (-?[0-9]+)/) {
-	#	return %retval, type => 'score', value => $1, return_alpha => 1;
+	} elsif ($line =~ /^alphabeta: alpha = (-?[0-9]+), beta = (-?[0-9]+),/) {
+		return %retval, type => 'alphabeta', alpha => $1, beta => $2;
+	} elsif ($line =~ /^[a-h][1-8][a-h][1-8][qrbn]? fail high/) {
+		return %retval, type => 'cutoff';
 	}
 
 	return %retval, unrecognised => $line;
@@ -152,10 +157,25 @@ sub printDot {
 		my $san = $pos->SAN($pos->parseMove($move));
 		my $subtree = $tree->{subnodes}->{$move};
 
-		print qq{\tn${suffix}[label="v=$subtree->{value}"];\n};
-		print qq{\tn$parent_suffix -> n${suffix}[label="$san"];\n};
+		my $value_op = $subtree->{cutoff} ? '≥' : '=';
+		my $alpha = $subtree->{alpha};
+		my $beta = $subtree->{beta};
+		$alpha =~ s/16383/∞/;
+		$beta =~ s/16383/∞/;
 
 		my $undo = $pos->doMove($move);
+
+		my $cutoff = '';
+		if ($subtree->{cutoff}) {
+			my @legal_moves = $pos->legalMoves;
+			my $num_moves = @legal_moves - @{$subtree->{moves}};
+			if ($num_moves > 0) {
+				$cutoff = "\\n$num_moves moves\\ncut off";
+			}
+		}
+
+		print qq{\tn${suffix}[label="v${value_op}$subtree->{value}\\nα=${alpha} β=${beta}$cutoff"];\n};
+		print qq{\tn$parent_suffix -> n${suffix}[label="$san"];\n};
 
 		printDot $subtree, $pos, @path, $i;
 
