@@ -727,6 +727,10 @@ sub rootSearch {
 	my $alpha = -INF;
 	my $beta = +INF;
 
+	if (DEBUG) {
+		my $fen = $position->toFEN;
+		$self->debug("Searching $fen");
+	}
 	eval {
 		while (++$depth <= $max_depth) {
 			my @lower_windows = (-50, -100, -INF);

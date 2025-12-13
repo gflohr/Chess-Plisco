@@ -17,6 +17,12 @@ if (!defined $depth || $depth !~ /^[1-9][0-9]*$/) {
 
 open my $fh, '<', $filename or die "$filename: $!";
 
+my $line = $fh->getline;
+if ($line !~ /^DEBUG Searching (.*)\n/) {
+	die "$filename: not a debug log\n";
+}
+my $fen = $1;
+
 # Scan to depth.
 my $found;
 while (my $line = $fh->getline) {
@@ -31,7 +37,7 @@ die "no output for depth $depth found" if !$found;
 my @ab;
 my @value;
 
-my $pos = Chess::Plisco->new('8/8/2p5/4K2k/8/8/8/8 w - - 0 61');
+my $pos = Chess::Plisco->new($fen);
 my $tree = {
 	moves => [],
 	subnodes => {},
@@ -154,6 +160,12 @@ sub printDot {
 	foreach my $move (@{$tree->{moves}}) {
 		++$i;
 		my $suffix = join '_', @path, $i;
+		eval {
+			$pos->parseMove($move);
+		};
+		if ($@) {
+			$DB::single = 1;
+		}
 		my $san = $pos->SAN($pos->parseMove($move));
 		my $subtree = $tree->{subnodes}->{$move};
 
@@ -163,7 +175,7 @@ sub printDot {
 		$alpha =~ s/16383/∞/;
 		$beta =~ s/16383/∞/;
 
-		my $undo = $pos->doMove($move);
+		my $undo = $pos->applyMove($move);
 
 		my $cutoff = '';
 		if ($subtree->{cutoff}) {
@@ -179,6 +191,6 @@ sub printDot {
 
 		printDot $subtree, $pos, @path, $i;
 
-		$pos->undoMove($undo);
+		$pos->unapplyMove($undo);
 	}
 }
