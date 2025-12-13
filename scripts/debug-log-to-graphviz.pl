@@ -105,6 +105,7 @@ sub getLine {
 		ply => $1,
 		seldepth => $2,
 		type => 'unknown',
+		original => $original,
 	);
 
 	if ($line =~ /^move ([a-h][1-8][a-h][1-8][qrbn]?): start search$/) {
@@ -133,7 +134,7 @@ sub getNode {
 				subnodes => {},
 			};
 		}
-		$node = $tree->{subnodes}->{$move};
+		$node = $node->{subnodes}->{$move};
 	}
 
 	return $node;
