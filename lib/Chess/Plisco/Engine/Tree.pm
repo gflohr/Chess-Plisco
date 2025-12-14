@@ -537,13 +537,13 @@ sub alphabeta {
 	if (!$legal) {
 		# Mate or stalemate.
 		if (!$position->inCheck) {
-			$alpha = DRAW;
+			$best_value = DRAW;
 		} else {
 			#$alpha = MATE + $self->{depth} - $depth + 1;
-			$alpha = MATE + $ply;
+			$best_value = MATE + $ply;
 		}
 		if (DEBUG) {
-			$self->indent($ply, "mate/stalemate, score: $alpha");
+			$self->indent($ply, "mate/stalemate, score: $best_value");
 		}
 	}
 
