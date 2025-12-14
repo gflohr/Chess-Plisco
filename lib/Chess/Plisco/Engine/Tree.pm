@@ -419,12 +419,14 @@ sub alphabeta {
 	my $legal = 0;
 	my $moveno = 0;
 	my $pv_found;
+	my $is_null_window = $beta - $alpha == 1;
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
 	my $best_move = 0;
 	my $print_current_move = $ply == 1 && $self->{print_current_move};
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
 	my @backup = @$position;
+	my $best_value = -INF;
 	foreach my $move (@moves) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
@@ -432,7 +434,7 @@ sub alphabeta {
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		++$self->{nodes};
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
-		my $val;
+		my $score;
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: start search");
@@ -442,39 +444,63 @@ sub alphabeta {
 			if (DEBUG) {
 				$self->indent($ply, "null window search");
 			}
-			$val = -alphabeta($self, $ply + 1, $depth - 1, -$alpha - 1, -$alpha, \@line);
-			if (($val > $alpha) && ($val < $beta)) {
+			$score = -alphabeta($self, $ply + 1, $depth - 1, -$alpha - 1, -$alpha, \@line);
+			if (($score > $alpha) && ($score < $beta)) {
 				if (DEBUG) {
-					$self->indent($ply, "value $val outside null window, re-search");
+					$self->indent($ply, "value $score outside null window, re-search");
 				}
 				undef @line;
-				$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
+				$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 			}
 		} else {
 			if (DEBUG) {
 				$self->indent($ply, "recurse normal search");
 			}
-			$val = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
+			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line);
 		}
 		++$legal;
 		++$moveno;
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
-			$self->indent($ply, "move $cn: value $val");
+			$self->indent($ply, "move $cn: value $score");
 		}
 		@$position = @backup;
 		if (DEBUG) {
 			pop @{$self->{line}};
 		}
-		if ($val >= $beta) {
+		if ($score > $best_value) {
+			$best_value = $score;
+			$best_move = $move;
+			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
+
+			if ($score > $alpha) {
+				$alpha = $score;
+				$pv_found = 1;
+				@$pline = ($move, @line);
+
+				if (DEBUG) {
+					$self->indent($ply, "raise alpha to $alpha");
+				}
+				if ($ply == 1) {
+					$self->{score} = $score;
+					$self->printPV($pline);
+				}
+			}
+		}
+		if ($score >= $beta) {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
 				my $cn = $position->moveCoordinateNotation($move);
-				$self->indent($ply, "$cn fail high ($val >= $beta), store $val(BETA) \@depth $depth for $hex_sig");
+				if ($is_null_window) {
+					$self->indent($ply, "$cn fail high ($score >= $beta) without tt store for $hex_sig");
+				} else {
+					$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BETA) \@depth $depth for $hex_sig");
+				}
 			}
 			$tt->store($signature, $depth,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
-				$val, $move);
+				$score, $move) if !$is_null_window;
+
 
 			# Quiet move or bad capture failing high?
 			my $first_quiet = 1 + (scalar @moves) - (scalar @quiet) - (scalar @bad_captures);
@@ -504,23 +530,7 @@ sub alphabeta {
 				}
 			}
 
-			return $beta;
-		}
-		if ($val > $alpha) {
-			$alpha = $val;
-			$pv_found = 1;
-			@$pline = ($move, @line);
-
-			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
-			$best_move = $move;
-	
-			if (DEBUG) {
-				$self->indent($ply, "raise alpha to $alpha");
-			}
-			if ($ply == 1) {
-				$self->{score} = $val;
-				$self->printPV($pline);
-			}
+			return $best_value;
 		}
 	}
 
@@ -539,18 +549,22 @@ sub alphabeta {
 
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		my $type;
-		if ($tt_type == TT_SCORE_ALPHA) {
-			$type = 'ALPHA';
+		if ($is_null_window) {
+			$self->indent($ply, "returning best value $best_value without tt store for $hex_sig");
 		} else {
-			$type = 'EXACT';
+			my $type;
+			if ($tt_type == TT_SCORE_ALPHA) {
+				$type = 'ALPHA';
+			} else {
+				$type = 'EXACT';
+			}
+			$self->indent($ply, "returning best value $best_value, store ($type) \@depth $depth for $hex_sig");
 		}
-		$self->indent($ply, "returning alpha $alpha, store ($type) \@depth $depth for $hex_sig");
 	}
 
-	$tt->store($signature, $depth, $tt_type, $alpha, $best_move);
+	$tt->store($signature, $depth, $tt_type, $best_value, $best_move) if !$is_null_window;
 
-	return $alpha;
+	return $best_value;
 }
 
 sub quiesce {
@@ -603,26 +617,33 @@ sub quiesce {
 		return $tt_value;
 	}
 
-	my $val = $position->evaluate;
+	my $is_null_window = $beta - $alpha == 1;
+
+	my $best_value = $position->evaluate;
 	if (DEBUG) {
-		$self->indent($ply, "static evaluation: $val");
+		$self->indent($ply, "static evaluation: $best_value");
 	}
-	if ($val >= $beta) {
+	if ($best_value >= $beta) {
 		if (DEBUG) {
 			my $hex_sig = sprintf '%016x', $signature;
-			$self->indent($ply, "quiescence standing pat ($val >= $beta), store $val(EXACT) \@depth 0 for $hex_sig");
+			if ($is_null_window) {
+				$self->indent($ply, "quiescence standing pat ($best_value >= $beta) without tt store for $hex_sig");
+			} else {
+				$self->indent($ply, "quiescence standing pat ($best_value >= $beta), store $best_value(EXACT) \@depth 0 for $hex_sig");
+			}
 		}
 		# FIXME! Is that correct?
 		$tt->store($signature, 0,
 			Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT(),
-			$val, 0
-		);
-		return $beta;
+			$best_value, 0
+		) if !$is_null_window;
+
+		return $best_value;
 	}
 
 	my $tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_ALPHA();
-	if ($val > $alpha) {
-		$alpha = $val;
+	if ($best_value > $alpha) {
+		$alpha = $best_value;
 		# FIXME! Correct?
 		$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 	}
@@ -667,31 +688,39 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "recurse quiescence search");
 		}
-		$val = -quiesce($self, $ply + 1, -$beta, -$alpha);
+		my $score = -quiesce($self, $ply + 1, -$beta, -$alpha);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
-			$self->indent($ply, "move $cn: value: $val");
+			$self->indent($ply, "move $cn: value: $score");
 			pop @{$self->{line}};
 		}
 		@$position = @backup;
-		if ($val >= $beta) {
+		if ($score >= $beta) {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
 				my $cn = $position->moveCoordinateNotation($move);
-				$self->indent($ply, "$cn quiescence fail high ($val >= $beta), store $val(BETA) \@depth 0 for $hex_sig");
+				if ($is_null_window) {
+					$self->indent($ply, "$cn quiescence fail high ($score >= $beta) without tt store for $hex_sig");
+				} else {
+					$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score(BETA) \@depth 0 for $hex_sig");
+				}
 			}
 			$tt->store($signature, 0,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
-				$val, $move);
-			return $beta;
+				$score, $move) if !$is_null_window;
+
+			return $score;
 		}
-		if ($val > $alpha) {
+		if ($score > $best_value) {
+			$best_value = $score;
+			$best_move = $move;
+		}
+		if ($score > $alpha) {
 			if (DEBUG) {
 				$self->indent($ply, "raise quiescence alpha to $alpha");
 			}
-			$alpha = $val;
+			$alpha = $score;
 			$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
-			$best_move = $move;
 		}
 	}
 
@@ -703,12 +732,16 @@ sub quiesce {
 		} else {
 			$type = 'EXACT';
 		}
-		$self->indent($ply, "quiescence returning alpha $alpha, store ($type) \@depth 0 for $hex_sig");
+		if ($is_null_window) {
+			$self->indent($ply, "quiescence returning best value $best_value without tt store for $hex_sig");
+		} else {
+			$self->indent($ply, "quiescence returning best value $best_value, store ($type) \@depth 0 for $hex_sig");
+		}
 	}
 
-	$tt->store($signature, 0, $tt_type, $val, $best_move);
+	$tt->store($signature, 0, $tt_type, $best_value, $best_move) if !$is_null_window;
 
-	return $alpha;
+	return $best_value;
 }
 
 sub rootSearch {
