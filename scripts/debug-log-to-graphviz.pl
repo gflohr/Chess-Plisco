@@ -101,7 +101,7 @@ sub getLine {
 	my $original = $line;
 	die "unrecognised line: $line" if $line !~ s/^DEBUG //;
 
-	if ($line =~ /^Score at depth $depth: (-[0-9]+)$/) {
+	if ($line =~ /^Score at depth $depth: (-?[0-9]+)$/) {
 		return type => 'finished', value => $1 ;
 	}
 
