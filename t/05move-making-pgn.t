@@ -53,11 +53,11 @@ GAME: while ($pgn->read_game) {
 	$pgn->parse_game;
 
 	my @undo_infos;
-	my @fen = ($pos->toFEN);
+	my @fen = ($pos->toFEN(force_en_passant_square => 1));
 	my @signatures = ($pos->signature);
 	my @positions = ($pos->copy);
 
-	$signatures{$pos->signature}->{significant_for_repetition $pos->toFEN} = 1;
+	$signatures{$pos->signature}->{significant_for_repetition $pos->toFEN(force_en_passant_square => 1)} = 1;
 
 	my $sans = $pgn->moves;
 
@@ -80,7 +80,7 @@ GAME: while ($pgn->read_game) {
 			ok $undo_info, "do move $san for position $copy";
 		}
 		push @undo_infos, $undo_info;
-		my $fen = $pos->toFEN;
+		my $fen = $pos->toFEN(force_en_passant_square => 1);
 		push @fen, $fen;
 
 		my $signature = $pos->signature;
@@ -109,7 +109,7 @@ GAME: while ($pgn->read_game) {
 		my $undo_info = pop @undo_infos;
 		$pos->undoMove($undo_info);
 		my $wanted_fen = pop @fen;
-		my $got_fen = $pos->toFEN;
+		my $got_fen = $pos->toFEN(force_en_passant_square => 1);
 		my $halfmove = 1 + @undo_infos;
 		if ($wanted_fen ne $got_fen) {
 			report_failure $pgn, $pos,
@@ -165,7 +165,7 @@ sub report_failure {
 	}
 	chomp $reason;
 
-	my $fen = $pos->toFEN;
+	my $fen = $pos->toFEN(force_en_passant_square => 1);
 
 	diag <<EOF;
 Test failed at '$pgn_file':

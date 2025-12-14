@@ -88,7 +88,10 @@ foreach my $test (@tests) {
 	ok $pos->doMove($move), "$test->{name}: do $test->{san}";
 	my $zk_updated = $pos->signature;
 	ok defined $zk_updated, "$test->{name}: zk after move";
-	my $fen = $pos->toFEN;
+	# Internally, we do not check the legality of en-passant captures becuase
+	# the check is relatively expensive, and signatures have to be updated
+	# very often.
+	my $fen = $pos->toFEN(force_en_passant_square => 1);
 	$pos = Chess::Plisco::Engine::Position->new($fen);
 	is $zk_updated, $pos->signature, "$test->{name}: zk updated";
 }
