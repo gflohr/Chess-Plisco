@@ -51,7 +51,7 @@ my $remove_ep = sub {
 
 	my $pos2 = $pos->copy;
 
-	_cp_pos_set_en_passant_shift $pos2, 0;
+	$pos2->[CP_POS_EN_PASSANT_SHIFT] = 0;
 
 	return $pos2;
 };
@@ -1875,6 +1875,7 @@ sub probeDtz {
 	# Syzygy tablebases assume that en passant is not possible. Otherwise,
 	# we can just return the result of the probe.
 	my $ep_shift = cp_pos_en_passant_shift $pos;
+
 	return $value if !$ep_shift;
 
 	# Positions resulting from en passant captures have not been considered,
@@ -2018,7 +2019,7 @@ sub __probeDtzNoEP {
 
 			my $v;
 			eval {
-				if (!cp_pos_half_move_clock($pos)) {
+				if (!cp_pos_halfmove_clock($pos)) {
 					if ($wdl == -2) {
 						$v = -1;
 					} else {

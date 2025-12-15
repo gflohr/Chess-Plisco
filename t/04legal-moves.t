@@ -159,8 +159,8 @@ foreach my $test (@tests) {
 				"$test->{name}: no captured piece for $movestr");
 		}
 
-		is(cp_move_color($move), $pos->toMove,
-			"$test->{name} correct color for $movestr");
+		is(cp_move_colour($move), $pos->toMove,
+			"$test->{name} correct colour for $movestr");
 	}
 }
 
