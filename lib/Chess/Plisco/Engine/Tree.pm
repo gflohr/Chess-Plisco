@@ -491,15 +491,11 @@ sub alphabeta {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
 				my $cn = $position->moveCoordinateNotation($move);
-				if ($is_null_window) {
-					$self->indent($ply, "$cn fail high ($score >= $beta) without tt store for $hex_sig");
-				} else {
-					$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BETA) \@depth $depth for $hex_sig");
-				}
+				$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BETA) \@depth $depth for $hex_sig");
 			}
 			$tt->store($signature, $depth,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
-				$score, $move) if !$is_null_window;
+				$score, $move);
 
 
 			# Quiet move or bad capture failing high?
@@ -549,7 +545,7 @@ sub alphabeta {
 
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		if ($is_null_window) {
+		if ($is_null_window && $tt_type == Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT()) {
 			$self->indent($ply, "returning best value $best_value without tt store for $hex_sig");
 		} else {
 			my $type;
@@ -562,7 +558,8 @@ sub alphabeta {
 		}
 	}
 
-	$tt->store($signature, $depth, $tt_type, $best_value, $best_move) if !$is_null_window;
+	$tt->store($signature, $depth, $tt_type, $best_value, $best_move)
+		if !($is_null_window && $tt_type == Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT());
 
 	return $best_value;
 }
@@ -636,7 +633,7 @@ sub quiesce {
 		$tt->store($signature, 0,
 			Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT(),
 			$best_value, 0
-		) if !$is_null_window;
+		) if !$is_null_window ;
 
 		return $best_value;
 	}
@@ -699,15 +696,11 @@ sub quiesce {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
 				my $cn = $position->moveCoordinateNotation($move);
-				if ($is_null_window) {
-					$self->indent($ply, "$cn quiescence fail high ($score >= $beta) without tt store for $hex_sig");
-				} else {
-					$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score(BETA) \@depth 0 for $hex_sig");
-				}
+				$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score(BETA) \@depth 0 for $hex_sig");
 			}
 			$tt->store($signature, 0,
 				Chess::Plisco::Engine::TranspositionTable::TT_SCORE_BETA(),
-				$score, $move) if !$is_null_window;
+				$score, $move);
 
 			return $score;
 		}
@@ -732,14 +725,15 @@ sub quiesce {
 		} else {
 			$type = 'EXACT';
 		}
-		if ($is_null_window) {
+		if ($is_null_window && $tt_type == Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT()) {
 			$self->indent($ply, "quiescence returning best value $best_value without tt store for $hex_sig");
 		} else {
 			$self->indent($ply, "quiescence returning best value $best_value, store ($type) \@depth 0 for $hex_sig");
 		}
 	}
 
-	$tt->store($signature, 0, $tt_type, $best_value, $best_move) if !$is_null_window;
+	$tt->store($signature, 0, $tt_type, $best_value, $best_move)
+		if !($is_null_window && $tt_type == Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT());
 
 	return $best_value;
 }
