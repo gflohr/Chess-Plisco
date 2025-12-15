@@ -488,8 +488,8 @@ Return the shift of the square of the king of the side to move.
 
 =item B<lastMove>
 
-Returns the move (as an integer) that has led to the position.  This is only
-defined, after one of B<applyMove()>, B<doMove()>, or B<move()> has been called.
+Returns the move (as an integer) that has led to the position. It may be 0,
+when there was no prior move.
 
 =back
 
@@ -1274,7 +1274,7 @@ The macros (all starting with "cp_") are only available when you have loaded
 L<Chess::Plisco::Macro>, see there for more information.
 
 All elements of the position array are documented below under
-L</Accessor Indexes (:accessors)>.
+L</Accessor Indices (:accessors)>.
 
 =head1 EXPORT TAGS
 
@@ -1287,9 +1287,9 @@ L<Chess::Plisco::Macro>.
 
 You can import all constants with the export tag ":all".
 
-=head2 Accessor Indexes (:accessors)
+=head2 Accessor Indices (:accessors)
 
-The array indices were carefully so that the following conditions are met:
+The array indices were carefully selected so that the following conditions are met:
 
 =over 4
 
@@ -1306,6 +1306,34 @@ are guaranteed to be the same and to point to the corresponding piece bitboard.
 
 =over 4
 
+=item B<POS_E<gt>[CP_POS_HALFMOVES]>
+
+The number of halfmoves in this position.
+
+=item B<POS-E<gt>[CP_POS_PAWNS]>
+
+A bitboard of all pawns (black and white) on the board.  See also L</pawns>.
+
+=item B<POS-E<gt>[CP_POS_KNIGHTS]>
+
+A bitboard of all knights (black and white) on the board.  See also L</knights>.
+
+=item B<POS-E<gt>[CP_POS_BISHOPS]>
+
+A bitboard of all bishops (black and white) on the board.  See also L</bishops>.
+
+=item B<POS-E<gt>[CP_POS_QUEENS]>
+
+A bitboard of all rooks (black and white) on the board.  See also L</queens>.
+
+=item B<POS-E<gt>[CP_POS_KINGS]>
+
+A bitboard of all kings (black and white) on the board.  See also L</kings>.
+
+=item B<POS-E<gt>[CP_POS_ROOKS]>
+
+A bitboard of all rooks (black and white) on the board.  See also L</rooks>.
+
 =item B<POS-E<gt>[CP_POS_WHITE_PIECES]>
 
 A bitboard of all white pieces on the board. See also L</whitePieces>.
@@ -1314,40 +1342,24 @@ A bitboard of all white pieces on the board. See also L</whitePieces>.
 
 A bitboard of all black pieces on the board.  See also L</blackPieces>.
 
-=item B<POS-E<gt>[CP_POS_KINGS]>
+=item B<POS-E<gt>[CP_POS_LAST_MOVE]>
 
-A bitboard of all kings (black and white) on the board.  See also L</kings>.
+The last mvoe if any.  See also L</lastMove>.
 
-=item B<POS-E<gt>[CP_POS_QUEENS]>
+=item B<POS-E<gt>[CP_POS_MATERIAL]>
 
-A bitboard of all rooks (black and white) on the board.  See also L</queens>.
-
-=item B<POS-E<gt>[CP_POS_ROOKS]>
-
-A bitboard of all rooks (black and white) on the board.  See also L</rooks>.
-
-=item B<POS-E<gt>[CP_POS_BISHOPS]>
-
-A bitboard of all bishops (black and white) on the board.  See also L</bishops>.
-
-=item B<POS-E<gt>[CP_POS_KNIGHTS]>
-
-A bitboard of all knights (black and white) on the board.  See also L</knights>.
-
-=item B<POS-E<gt>[CP_POS_PAWNS]>
-
-A bitboard of all pawns (black and white) on the board.  See also L</pawns>.
+The raw material balance.  See also L</material>.
 
 =item B<POS-E<gt>[CP_POS_HALFMOVE_CLOCK]>
 
 The count of halfmoves for the 50-move rule. If it is 100 or more, either side
-can claim a draw.
+can claim a draw.  See also L</halfmoveClock>.
 
 =item B<POS-E<gt>[CP_POS_TURN]>
 
 =item B<POS-E<gt>[CP_POS_TO_MOVE]>
 
-The side whose turn it is.
+The side whose turn it is.   See also L</turn>.
 
 =item B<POS-E<gt>[CP_POS_EN_PASSANT_SHIFT]>
 
@@ -1355,6 +1367,8 @@ The position of a pawn where an en-passant capture is theoretically possible.
 It is theoretically possible if a pawn was pushed two squares in the last
 move. Whether it can be captured or whether the capture is legal is ignored
 in this context.
+
+See also L</enPassantShift>.
 
 =item B<POS-E<gt>[CP_POS_USR1]>
 
@@ -1370,7 +1384,7 @@ Unused. These slots can be used by a chess engine.
 
 =item B<POS-E<gt>[CP_POS_CASTLING_RIGHTS>
 
-The castling rights of the position.
+The castling rights of the position.  See also L</castlingRights>.
 
 =back
 
