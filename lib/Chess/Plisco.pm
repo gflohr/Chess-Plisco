@@ -1428,6 +1428,12 @@ sub blackQueenSideCastlingRight {
 	return cp_pos_black_queen_side_castling_right($self);
 }
 
+sub turn {
+	my ($self) = @_;
+
+	return cp_pos_turn($self);
+}
+
 sub toMove {
 	my ($self) = @_;
 
@@ -1563,6 +1569,12 @@ sub moveCoordinateNotation {
 	my (undef, $move) = @_;
 
 	return cp_move_coordinate_notation $move;
+}
+
+sub lan {
+	my ($self, $move, @options) = @_;
+
+	return $self->LAN($move, @options);
 }
 
 sub LAN {
@@ -2820,6 +2832,18 @@ sub __coerceOptions {
 sub toFEN {
 	my ($self, @options) = @_;
 
+	return $self->FEN(@options);
+}
+
+sub fen {
+	my ($self, @options) = @_;
+
+	return $self->FEN(@options);
+}
+
+sub FEN {
+	my ($self, @options) = @_;
+
 	my %options = $self->__coerceOptions(@options);
 	$options{force_en_passant_square} //= $options{force_ep_square};
 
@@ -3041,6 +3065,12 @@ sub dumpBitboard {
 	$output .= "  a b c d e f g h\n";
 
 	return $output;
+}
+
+sub san {
+	my ($self, @args) = @_;
+
+	return $self->SAN(@args);
 }
 
 sub SAN {

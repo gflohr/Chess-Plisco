@@ -183,13 +183,17 @@ check.
 
 =over 4
 
+=item B<FEN[, OPTIONS]>
+
 =item B<toFEN[, OPTIONS]>
+
+=item B<fen[, OPTIONS]>
 
 Renders the position to Forsyth-Edwards Notation.  Alternatively, you can just
 use the object as a string:
 
     $position = Chess::Plisco->new;
-    say $position->toFEN;
+    say $position->fen;
 
 B<OPTIONS> is an optional hash (or hash reference). The only supported property
 at the moment is "force_en_passant_square" (alias "force_ep_square"). The
@@ -538,6 +542,8 @@ If it has a truthy value, the move is not checked for legality.
 
 =item B<SAN(MOVE)>
 
+=item B<san(MOVE)>
+
 Renders the integer B<MOVE> into Standard-Algebraic Notation SAN, for example
 "e4", "Bxc4", "O-O", or "fxe1=Q".
 
@@ -547,6 +553,8 @@ Renders the integer B<MOVE> into coordinate notation, for example "e2e4" or
 "f2f1q".
 
 =item B<LAN(MOVE[, OPTIONS])>
+
+=item B<lan(MOVE[, OPTIONS])>
 
 Returns the Long Algebraic Notation LAN of the move.  The following optional
 options (passed as a hash or hash reference) are supported:
