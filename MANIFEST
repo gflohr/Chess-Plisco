@@ -45,6 +45,7 @@ lib/Chess/Plisco/Tablebase/Syzygy.pm
 lib/Chess/Plisco/Tablebase/Syzygy.pod
 lib/Chess/Plisco/Tutorial.pod
 perlcritic.rc
+scripts/debug-log-to-graphviz.pl
 scripts/gen-positions.pl
 scripts/moves-to-go.pl
 scripts/moves-to-go.py
@@ -53,12 +54,15 @@ t/00base.t
 t/01expand-placeholders.t
 t/01pre-process.t
 t/02bit-twiddling.t
+t/02clamp.t
 t/02piece-at.t
 t/02square-conversion.t
 t/03attacked.t
 t/03epd.t
-t/03fen.t
+t/03fen-parser.t
+t/03fen-writer.t
 t/03in-check.t
+t/03lan.t
 t/03move-attacked.t
 t/03move-pinned.t
 t/03move.t
