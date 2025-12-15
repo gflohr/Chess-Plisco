@@ -661,8 +661,9 @@ Therefore, the move generator in L<Chess::Plisco> works in two stages.
 The above example could be re-written like this:
 
     @moves = $pos->pseudoLegalMoves;
+    my @check_info = $pos->inCheck;
     foreach $move (@moves) {
-        $pos->checkPseudoLegalMove($move) or next;
+        $pos->checkPseudoLegalMove(@check_info) or next;
         print join '|', $pos->SAN($move), $pos->moveCoordinateNotation($move);
     }
 

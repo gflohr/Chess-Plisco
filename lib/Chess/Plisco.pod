@@ -33,8 +33,7 @@ The library features:
 
 =item magic bitboards for generation of sliding piece moves and attacks
 
-=item handling of moves in Standard-Algebraic Notation (SAN) as well as
-coordinate notation
+=item handling of moves in Standard-Algebraic Notation (SAN) as well as coordinate notation
 
 =item FEN (Forsyth-Edwards Notation) import and export
 
@@ -97,10 +96,10 @@ A "shift" is an integer in the range of 0-63 where 0 is the shift for "a1" and
 A bitboard is an unsigned 64-bit integer.  Each bit stands for one square of
 the chess board.
 
-=item I<Mask>
+=item I<Shift Mask>
 
-A mask is a bitboard with exactly one bit set.  The mask representing "e4" is
-a 1 shifted left 28 bits, because the shift for "e4" is 28.
+A shift mask is a bitboard with exactly one bit set.  The shift mask
+representing "e4" is a 1 shifted left 28 bits, because the shift for "e4" is 28.
 
 =item I<Move>
 
@@ -166,17 +165,6 @@ Clones B<POSITION>.
 
 =back
 
-=head1 OVERLOADED OPERATORS
-
-In string context, the position is encoded in Forsyth-Edwards Notation.  No
-other operators are overloaded.
-
-Note that the Forsyth-Edwards Notation does not cover all aspects of a chess
-position, especially the history of moves.  String-wise equality of two
-instances of a B<Chess::Plisco> does therefore not imply that the two
-positions are identical.  Use the method L</equal> for a strict equality
-check.
-
 =head1 METHODS
 
 =head2 General Methods
@@ -193,18 +181,22 @@ Renders the position to Forsyth-Edwards Notation.  Alternatively, you can just
 use the object as a string:
 
     $position = Chess::Plisco->new;
-    say $position->fen;
+    say $position->FEN;
 
 B<OPTIONS> is an optional hash (or hash reference). The only supported property
 at the moment is "force_en_passant_square" (alias "force_ep_square"). The
 original FEN standard stated that the en passant square in a FEN string should
-be set regardless of whether a pawn is possible respectively legal. The
+be set regardless of whether a pawn capture is possible respectively legal. The
 de-facto standard today is that the square should be omitted if there is no
 legal en passant capture in the particular position. Passing a truthy value
 will set the en-passant square even if there is no opponent pawn on a
 square that is able to capture or if capturing would leave the own king in
 check. The default is to do a legality check. Important! The behaviour in
 versions prior to 1.x was to follow the old convention.
+
+You should also keep in mind that the library internally uses the old
+convention. In other words, a pawn push by two squares will always set the
+en-passant shift of the position object.
 
 =item B<legalMoves>
 
@@ -219,22 +211,22 @@ The truthy value returned is a bitboard of all pieces giving check.
 In array context, the method returns extended information about the check
 that is required by checkPseudoLegalMove, see below. In detail, this is
 the bitboard of all pieces giving check,  the position of the king (0-63),
-and a so-called evasion bitboard (64 bits).  To understand the evasion
+and a so-called defence bitboard (64 bits).  To understand the defence
 bitboard, you have to recall how a check can be defended:
 
 1. The king moves out of check, eventually capturing the attacker.
 2. Another piece captures the attacker.
 3. Another piece moves between the piece giving check and the king.
 
-Option 1 will always work. In this case, the evasion bitboard will be 0 (and
+Option 1 will always work. In this case, the defence bitboard will be 0 (and
 can be ignored).
 
 Option 2 only works if there is just one piece giving check. In this case,
-the evasion bitboard is identical to the bitboard of the pieces giving check.
+the defence bitboard is identical to the bitboard of the pieces giving check.
 
 Option 3 only works if a sliding piece (queen, rook, or bishop) gives check.
 Knights jump over other pieces and a pawn can only give check from an adjacent
-square. In this case, the evasion bitboard includes all squares between the
+square. In this case, the defence bitboard includes all squares between the
 king and the piece giving check, including the square of the attacking piece.
 
 =item B<pseudoLegalMoves>
@@ -373,40 +365,20 @@ Returns the number of half-moves made.  Initially, this is 0.  After white has
 made their first move, it is 1. After black has made their first move, it is
 2, and so on.
 
-=over 4
+=item B<castlingRights>
 
-=item Pawn moves
-
-Reason: A pawn cannot move backwards.
-
-=item Captures
-
-Reason: Captured pieces are gone for good.
-
-=item First king move of each side
-
-Reason: The side to move loses the castling rights.
-
-=item First move of each rook of each side
-
-Reason: The side to move loses at least one of their castling rights.
-
-=item Castlings
-
-Reason: The side to move loses the castling rights.  This is also implied by
-the fact that they are necessarily the first king move.
-
-=back
-
-The half-move-clock is important because both players can claim a draw, when
-the half-move clock has reached 100.
+Returns the castling state of the position. This is a bitmask with four bits.
+Bit 1 is set if white can castle king-side. Bit 2 is set if white can castle
+queen-side. Bit 3 is set if black can castle king-side. Bit 4 is set if black
+can castle queen-side.
 
 =item B<halfmoveClock>
 
 Number of subsequent irreversible halfmoves. Irreversible moves in this sense
 are all captures and pawn moves. Changes to the castling state are ignored.
-This is the value that is relevant for claiming a draw according to the
-50-move rule.
+
+The half-move-clock is important because both players can claim a draw, when
+the half-move clock has reached 100.
 
 =item B<signature>
 
@@ -443,6 +415,10 @@ check whether an en-passant capture is actually possible or legal.
 Returns the shift of the en passant square or 0 if en passant is not possible
 0 happens to be the shift for a1 but since en passant is never possible on a1,
 this is not a problem.
+
+Note that this returns a non-zero value even if an en-passant capture is
+not possible or not legal. It is sufficient that a pawns had been pushed
+two squares in the last move.
 
 =item B<material>
 
