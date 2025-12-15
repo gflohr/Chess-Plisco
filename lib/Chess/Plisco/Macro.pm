@@ -65,7 +65,9 @@ sub cp_pos_black_king_side_castling_right {}
 _define cp_pos_black_queen_side_castling_right => '$p',
 		'($p->[CP_POS_CASTLING_RIGHTS] & 8)';
 sub cp_pos_black_queen_side_castling_right {}
-_define cp_pos_to_move => '$p', '$p->[CP_POS_TO_MOVE]';
+_define cp_pos_turn => '$p', '$p->[CP_POS_TURN]';
+sub cp_pos_turn {}
+_define cp_pos_to_move => '$p', '$p->[CP_POS_TURN]';
 sub cp_pos_to_move {}
 _define cp_pos_en_passant_shift => '$p', '$p->[CP_POS_EN_PASSANT_SHIFT]';
 sub cp_pos_en_passant_shift {}
@@ -118,6 +120,10 @@ _define cp_move_set_to => '$m', '$t',
 		'(($m) = (($m) & ~0x1f8000) | (($t)) << 15)';
 sub cp_move_set_to {}
 
+_define cp_move_colour => '$m', '((($m) >> 21) & 0x1)';
+sub cp_move_colour {}
+_define cp_move_set_colour => '$m', '$c',
+		'(($m) = (($m) & ~0x200000) | (($c)) << 21)';
 _define cp_move_color => '$m', '((($m) >> 21) & 0x1)';
 sub cp_move_color {}
 _define cp_move_set_color => '$m', '$c',
@@ -184,7 +190,7 @@ _define_from_file _cp_promotion_moves_from_mask => '$t', '@m', '$b',
 	'promotionMovesFromMask.pm';
 _define_from_file _cp_pos_move_pinned =>
 	'$p', '$from', '$to', '$ks', '$mp', '$hp', 'movePinned.pm';
-_define_from_file _cp_pos_color_attacked => '$p', '$c', '$shift', 'attacked.pm';
+_define_from_file _cp_pos_colour_attacked => '$p', '$c', '$shift', 'attacked.pm';
 _define_from_file _cp_pos_move_attacked => '$p', '$from', '$to', 'moveAttacked.pm';
 _define _cp_pawn_double_step => '$f', '$t', '(!(($t - $f) & 0x9))';
 

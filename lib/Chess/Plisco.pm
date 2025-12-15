@@ -51,7 +51,7 @@ use Chess::Plisco::Macro;
 
 use base qw(Exporter);
 
-# Colors.
+# Colours.
 use constant CP_WHITE => 0;
 use constant CP_BLACK => 1;
 
@@ -72,7 +72,7 @@ use constant CP_QUEEN_VALUE => 900;
 # Accessor indices.  The layout is selected in such a way that piece types
 # can be used directly as indices in order to get the corresponding bitboard,
 # and getting the pieces for the side to move and the side not to move can
-# be simplified by just adding the color or the negated color to the index
+# be simplified by just adding the colour or the negated colour to the index
 # of the white pieces.  This must not change in future versions!
 use constant CP_POS_HALFMOVES => 0;
 use constant CP_POS_PAWNS => CP_PAWN;
@@ -86,6 +86,7 @@ use constant CP_POS_BLACK_PIECES => 8;
 use constant CP_POS_LAST_MOVE => 9;
 use constant CP_POS_MATERIAL => 10;
 use constant CP_POS_HALFMOVE_CLOCK => 11;
+use constant CP_POS_TURN => 12;
 use constant CP_POS_TO_MOVE => 12;
 use constant CP_POS_EN_PASSANT_SHIFT => 13;
 # 5 reserved slots.
@@ -343,7 +344,7 @@ my @castling_rook_to_mask;
 
 my @castling_rook_zk_updates;
 
-# Change in material.  Looked up via a combined mask of color to move,
+# Change in material.  Looked up via a combined mask of colour to move,
 # captured and promotion piece.
 my @material_deltas;
 
@@ -362,7 +363,7 @@ my @obscured_masks;
 my @zk_pieces;
 my @zk_castling;
 my @zk_ep_files;
-my $zk_color;
+my $zk_colour;
 
 my @move_numbers;
 
@@ -390,6 +391,7 @@ use constant CP_MOVE_TO_OFFSET => 15;
 # The significant part ends here. The start square, the destination square,
 # and a possible promotion piece are sufficient to reconstruct any move
 # for a given position.
+use constant CP_MOVE_COLOUR_OFFSET => 21;
 use constant CP_MOVE_COLOR_OFFSET => 21;
 use constant CP_MOVE_EN_PASSANT_OFFSET => 22;
 
@@ -426,7 +428,7 @@ sub new {
 	cp_pos_pawns($self) = CP_2_MASK | CP_7_MASK;
 	cp_pos_material($self) = 0;
 	cp_pos_halfmove_clock($self) = 0;
-	cp_pos_to_move($self) = CP_WHITE;
+	cp_pos_turn($self) = CP_WHITE;
 	cp_pos_en_passant_shift($self) = 0;
 	cp_pos_castling_rights($self) = 0xf;
 	
@@ -436,14 +438,14 @@ sub new {
 sub newFromFEN {
 	my ($class, $fen, $relaxed) = @_;
 
-	my ($pieces, $color, $castling, $ep_square, $hmc, $moveno)
+	my ($pieces, $colour, $castling, $ep_square, $hmc, $moveno)
 			= split /[ \t]+/, $fen;
 	$moveno = 1 if !defined $moveno;
 	$hmc = 0 if !defined $hmc;
 	$ep_square = '-' if !defined $ep_square;
 	$castling = '-' if !defined $castling;
 
-	if (!(defined $pieces && defined $color)) {
+	if (!(defined $pieces && defined $colour)) {
 		die __"Illegal FEN: Incomplete.\n";
 	}
 
@@ -545,10 +547,10 @@ sub newFromFEN {
 	$self->[CP_POS_PAWNS] = $pawns;
 	$self->[CP_POS_MATERIAL] = $material;
 
-	if ('w' eq lc $color) {
-		$self->[CP_POS_TO_MOVE] = CP_WHITE;
-	} elsif ('b' eq lc $color) {
-		$self->[CP_POS_TO_MOVE] = CP_BLACK;
+	if ('w' eq lc $colour) {
+		$self->[CP_POS_TURN] = CP_WHITE;
+	} elsif ('b' eq lc $colour) {
+		$self->[CP_POS_TURN] = CP_BLACK;
 	} else {
 		die __x"Illegal FEN: Side to move is neither 'w' nor 'b'.\n";
 	}
@@ -581,7 +583,7 @@ sub newFromFEN {
 
 	cp_pos_castling_rights($self) = $castling_rights;
 
-	my $to_move = cp_pos_to_move($self);
+	my $to_move = cp_pos_turn($self);
 
 	$self->__checkEnPassantState($ep_square, $to_move);
 
@@ -615,11 +617,11 @@ sub __checkIllegalCheck {
 	my $king_shift = cp_bitboard_count_trailing_zbits $king_bb;
 
 	if ($to_move == CP_WHITE) {
-		if (_cp_pos_color_attacked $self, CP_BLACK, $king_shift) {
+		if (_cp_pos_colour_attacked $self, CP_BLACK, $king_shift) {
 			die __"Illegal FEN: side not to move is in check!\n";
 		}
 	} else {
-		if (_cp_pos_color_attacked $self, CP_WHITE, $king_shift) {
+		if (_cp_pos_colour_attacked $self, CP_WHITE, $king_shift) {
 			die __"Illegal FEN: side not to move is in check!\n";
 		}
 	}
@@ -630,7 +632,7 @@ sub __checkIllegalCheck {
 sub __checkPieceCounts {
 	my ($self) = @_;
 
-	my $to_move = cp_pos_to_move $self;
+	my $to_move = cp_pos_turn $self;
 
 	my $kings = $self->[CP_POS_KINGS];
 	my $w_pieces = $self->[CP_POS_WHITE_PIECES];
@@ -802,8 +804,8 @@ sub __checkCastlingState {
 sub pseudoLegalMoves {
 	my ($self) = @_;
 
-	my $to_move = cp_pos_to_move $self;
-	my $turn_mask = $to_move << (CP_MOVE_COLOR_OFFSET);
+	my $to_move = cp_pos_turn $self;
+	my $turn_mask = $to_move << (CP_MOVE_COLOUR_OFFSET);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
@@ -839,7 +841,7 @@ sub pseudoLegalMoves {
 	my (@moves, $target_mask, $base_move);
 
 	# Generate king moves.  We take advantage of the fact that there is always
-	# exactly one king of each color on the board.  So there is no need for a
+	# exactly one king of each colour on the board.  So there is no need for a
 	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
 
@@ -1008,8 +1010,8 @@ sub pseudoLegalMoves {
 sub pseudoLegalAttacks {
 	my ($self) = @_;
 
-	my $to_move = cp_pos_to_move $self;
-	my $turn_mask = $to_move << (CP_MOVE_COLOR_OFFSET);
+	my $to_move = cp_pos_turn $self;
+	my $turn_mask = $to_move << (CP_MOVE_COLOUR_OFFSET);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $occupancy = $my_pieces | $her_pieces;
@@ -1045,7 +1047,7 @@ sub pseudoLegalAttacks {
 	my (@moves, $target_mask, $base_move);
 
 	# Generate king moves.  We take advantage of the fact that there is always
-	# exactly one king of each color on the board.  So there is no need for a
+	# exactly one king of each colour on the board.  So there is no need for a
 	# loop.
 	my $king_mask = $my_pieces & cp_pos_kings $self;
 
@@ -1173,7 +1175,7 @@ sub pseudoLegalAttacks {
 sub attacked {
 	my ($self, $shift) = @_;
 
-	return _cp_pos_color_attacked $self, $self->[CP_POS_TO_MOVE], $shift;
+	return _cp_pos_colour_attacked $self, $self->[CP_POS_TURN], $shift;
 }
 
 sub moveAttacked {
@@ -1199,7 +1201,7 @@ sub moveGivesCheck {
 	my $to_mask = 1 << $to;
 
 	my $piece = cp_move_piece $move;
-	my $to_move = cp_pos_to_move $self;
+	my $to_move = cp_pos_turn $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my $her_king_mask = $self->[CP_POS_KINGS] & $her_pieces;
@@ -1253,7 +1255,7 @@ sub movePinned {
 		$move = $self->parseMove($move, $pseudo_legal);
 	}
 
-	my $to_move = cp_pos_to_move $self;
+	my $to_move = cp_pos_turn $self;
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 	my ($from, $to) = (cp_move_from($move), cp_move_to($move));
@@ -1284,7 +1286,7 @@ sub move {
 		(cp_move_from($move), cp_move_to($move), cp_move_promote($move),
 		 cp_move_piece($move));
 
-	my $to_move = cp_pos_to_move $self;
+	my $to_move = cp_pos_turn $self;
 	my $to_mask = 1 << $to;
 	my $move_mask = (1 << $from) | $to_mask;
 	my $my_idx = CP_POS_WHITE_PIECES + $to_move;
@@ -1358,7 +1360,7 @@ sub move {
 	}
 
 	++$self->[CP_POS_HALFMOVES];
-	$self->[CP_POS_TO_MOVE] = !$to_move;
+	$self->[CP_POS_TURN] = !$to_move;
 
 	$self->[CP_POS_MATERIAL] += $material_deltas[$to_move | ($promote << 1) | ($captured << 4)];
 	$self->[CP_POS_LAST_MOVE] = $move;
@@ -1429,7 +1431,7 @@ sub blackQueenSideCastlingRight {
 sub toMove {
 	my ($self) = @_;
 
-	return cp_pos_to_move($self);
+	return cp_pos_turn($self);
 }
 
 sub enPassantShift {
@@ -1515,16 +1517,30 @@ sub moveSetCaptured {
 	return $move;
 }
 
+sub moveColour {
+	my (undef, $move) = @_;
+
+	return cp_move_colour $move;
+}
+
 sub moveColor {
 	my (undef, $move) = @_;
 
-	return cp_move_color $move;
+	return cp_move_colour $move;
+}
+
+sub moveSetColour {
+	my (undef, $move, $colour) = @_;
+
+	cp_move_set_colour $move, $colour;
+
+	return $move;
 }
 
 sub moveSetColor {
-	my (undef, $move, $color) = @_;
+	my (undef, $move, $colour) = @_;
 
-	cp_move_set_color $move, $color;
+	cp_move_set_colour $move, $colour;
 
 	return $move;
 }
@@ -1609,7 +1625,7 @@ sub SEE {
 	my $to = cp_move_to $move;
 	my $from = cp_move_from $move;
 	my $not_from_mask = ~(1 << ($from));
-	my $to_move = cp_pos_to_move $self;
+	my $to_move = cp_pos_turn $self;
 	my $ep_shift = cp_pos_en_passant_shift($self);
 	my $move_is_ep = ($ep_shift && $to == $ep_shift
 		&& cp_move_piece($move) == CP_PAWN);
@@ -1797,11 +1813,11 @@ sub SEE {
 					$piece_mask = cp_bitboard_clear_but_least_set($obscured_mask & $mask);
 				}
 				if ($piece_mask) {
-					my $color;
+					my $colour;
 					if ($piece_mask & $white) {
-						$color = CP_WHITE;
+						$colour = CP_WHITE;
 					} else {
-						$color = CP_BLACK;
+						$colour = CP_BLACK;
 					}
 					if ($piece_mask & $queens) {
 						$piece = CP_QUEEN;
@@ -1810,7 +1826,7 @@ sub SEE {
 					# Now insert the x-ray attacker into the list.  Since the
 					# piece is encoded in the upper bytes, we can do a simple,
 					# unmasked comparison.
-					my $attackers_array = $attackers[$color];
+					my $attackers_array = $attackers[$colour];
 					my $item = ($piece_values[$piece] << 8)
 						| cp_bitboard_count_isolated_trailing_zbits($piece_mask);
 					unshift @$attackers_array, $item;
@@ -1900,7 +1916,7 @@ sub parseMove {
 		cp_move_set_en_passant $move, 1;
 	}
 	cp_move_set_captured $move, $captured;
-	cp_move_set_color $move, $self->toMove;
+	cp_move_set_colour $move, $self->toMove;
 
 	if (!$pseudo_legal) {
 		foreach my $candidate ($self->legalMoves) {
@@ -1988,7 +2004,7 @@ sub gameOver {
 	if (!@legal) {
 		$state |= CP_GAME_OVER;
 		if ($self->inCheck) {
-			if (CP_WHITE == cp_pos_to_move $self) {
+			if (CP_WHITE == cp_pos_turn $self) {
 				$state |= CP_GAME_BLACK_WINS;
 			} else {
 				$state |= CP_GAME_WHITE_WINS;
@@ -2106,8 +2122,8 @@ sub signature {
 	my $castling = cp_pos_castling_rights $self;
 	$signature ^= $zk_castling[$castling];
 
-	if (cp_pos_to_move $self) {
-		$signature ^= $zk_color;
+	if (cp_pos_turn $self) {
+		$signature ^= $zk_colour;
 	}
 
 	return $signature;
@@ -2125,14 +2141,14 @@ sub _zkCastling {
 	return @zk_castling
 }
 
-sub _zkColor {
-	return $zk_color;
+sub _zkColour {
+	return $zk_colour;
 }
 
 sub __zobristKeyLookup {
-	my ($self, $piece, $color, $shift) = @_;
+	my ($self, $piece, $colour, $shift) = @_;
 
-	return _cp_zk_lookup($piece, $color, $shift);
+	return _cp_zk_lookup($piece, $colour, $shift);
 }
 
 sub __zobristKeyLookupByIndex {
@@ -2145,8 +2161,8 @@ sub __dumpMove {
 	my ($self, $move) = @_;
 
 	my $bits = sprintf "move (0b%b): $move", $move;
-	my $colour = cp_move_color($move) == CP_WHITE ? 'white' : 'black';
-	$colour = sprintf "turn (0b%b): $colour", cp_move_color $move;
+	my $colour = cp_move_colour($move) == CP_WHITE ? 'white' : 'black';
+	$colour = sprintf "turn (0b%b): $colour", cp_move_colour $move;
 	my $to = cp_move_to($move);
 	my $from = cp_move_from($move);
 	my $from_bits = sprintf '0b%b', $from;
@@ -2216,8 +2232,8 @@ sub __zobristKeyDump {
 		$output .= sprintf "% 2u:% 4s: 0x%016x (%d)\n", $castling, $castle, $zk_castling[$castling], $zk_castling[$castling];
 	}
 
-	$output .= "\nColor\n=====\n\n";
-	$output .= sprintf "1:black: 0x%016x (%d)\n", $zk_color, $zk_color;
+	$output .= "\nColour\n=====\n\n";
+	$output .= sprintf "1:black: 0x%016x (%d)\n", $zk_colour, $zk_colour;
 
 	return $output;
 }
@@ -2324,12 +2340,12 @@ sub insufficientMaterial {
 sub inCheck {
 	my ($self) = @_;
 
-	my $turn = cp_pos_to_move($self);
+	my $turn = cp_pos_turn($self);
 	my $kings_bb = cp_pos_kings($self)
 		& ($turn ? cp_pos_black_pieces($self) : cp_pos_white_pieces($self));
 	my $king_shift = cp_bitboard_count_isolated_trailing_zbits($kings_bb);
 
-	my $checkers = _cp_pos_color_attacked $self, $turn, $king_shift;
+	my $checkers = _cp_pos_colour_attacked $self, $turn, $king_shift;
 
 	if (wantarray) {
 		my $defence_bb;
@@ -2389,7 +2405,7 @@ sub checkPseudoLegalMove {
 	my $from = cp_move_from $move;
 	my $to = cp_move_to $move;
 	my $piece = cp_move_piece $move;
-	my $to_move = cp_pos_to_move($self);
+	my $to_move = cp_pos_turn($self);
 	my $my_pieces = $self->[CP_POS_WHITE_PIECES + $to_move];
 	my $her_pieces = $self->[CP_POS_WHITE_PIECES + !$to_move];
 
@@ -2419,7 +2435,7 @@ sub checkPseudoLegalMove {
 			return if $in_check;
 
 			# Is the field that the king has to cross attacked?
-			return if _cp_pos_color_attacked $self, $to_move, ($from + $to) >> 1;
+			return if _cp_pos_colour_attacked $self, $to_move, ($from + $to) >> 1;
 		}
 	} elsif ($in_check) {
 		# We are in check but the piece that moves is not a king. We must
@@ -2474,7 +2490,7 @@ sub checkPseudoLegalMove {
 	}
 
 	cp_move_set_captured $move, $captured;
-	cp_move_set_color $move, $to_move;
+	cp_move_set_colour $move, $to_move;
 
 	return $move;
 }
@@ -2508,7 +2524,7 @@ my @export_accessors = qw(
 	CP_POS_KINGS CP_POS_QUEENS
 	CP_POS_ROOKS CP_POS_BISHOPS CP_POS_KNIGHTS CP_POS_PAWNS
 	CP_POS_HALFMOVE_CLOCK CP_POS_HALFMOVES
-	CP_POS_LAST_MOVE CP_POS_MATERIAL CP_POS_TO_MOVE CP_POS_EN_PASSANT_SHIFT
+	CP_POS_LAST_MOVE CP_POS_MATERIAL CP_POS_TURN CP_POS_TO_MOVE CP_POS_EN_PASSANT_SHIFT
 	CP_POS_USR1 CP_POS_USR2 CP_POS_USR3 CP_POS_USR4 CP_POS_USR5
 	CP_POS_CASTLING_RIGHTS
 );
@@ -2563,6 +2579,7 @@ my @export_moves = qw(
 	CP_MOVE_CAPTURED_OFFSET
 	CP_MOVE_PROMOTE_OFFSET
 	CP_MOVE_COLOR_OFFSET
+	CP_MOVE_COLOUR_OFFSET
 	CP_MOVE_FROM_OFFSET
 	CP_MOVE_TO_OFFSET
 	CP_MOVE_EN_PASSANT_OFFSET
@@ -3546,14 +3563,14 @@ sub pieceAtShift {
 	return if $shift > 63;
 
 	my $mask = 1 << $shift;
-	my ($piece, $color) = (CP_NO_PIECE);
+	my ($piece, $colour) = (CP_NO_PIECE);
 	if ($mask & $self->[CP_POS_WHITE_PIECES]) {
-		$color = CP_WHITE;
+		$colour = CP_WHITE;
 	} elsif ($mask & $self->[CP_POS_BLACK_PIECES]) {
-		$color = CP_BLACK;
+		$colour = CP_BLACK;
 	}
 
-	if (defined $color) {
+	if (defined $colour) {
 		if ($mask & $self->[CP_POS_PAWNS]) {
 			$piece = CP_PAWN;
 		} elsif ($mask & $self->[CP_POS_KNIGHTS]) {
@@ -3570,7 +3587,7 @@ sub pieceAtShift {
 	}
 
 	if (wantarray) {
-		return $piece, $color;
+		return $piece, $colour;
 	} else {
 		return $piece;
 	}
@@ -3972,7 +3989,7 @@ for (my $i = 0; $i < 16; ++$i) {
 for (my $i = 0; $i < 8; ++$i) {
 	push @zk_ep_files, RNG();
 }
-$zk_color = RNG();
+$zk_colour = RNG();
 
 $castling_rook_zk_updates[CP_C1] = $zk_pieces[384] ^ $zk_pieces[387];
 $castling_rook_zk_updates[CP_G1] = $zk_pieces[389] ^ $zk_pieces[391];
@@ -4041,11 +4058,11 @@ foreach my $from (0 .. 63) {
 # 6-8: promote
 # 9-14: from
 # 15-20: to
-# 21: color
+# 21: colour
 # 22: en passant
 my $gen_moves = sub {
-	my ($moves, $piece, $from, $to, $color) = @_;
-	my $move = ($to << (CP_MOVE_TO_OFFSET)) | ($from << (CP_MOVE_FROM_OFFSET)) | $piece | ($color << (CP_MOVE_COLOR_OFFSET));
+	my ($moves, $piece, $from, $to, $colour) = @_;
+	my $move = ($to << (CP_MOVE_TO_OFFSET)) | ($from << (CP_MOVE_FROM_OFFSET)) | $piece | ($colour << (CP_MOVE_COLOUR_OFFSET));
 	push @$moves, $move if $piece != CP_PAWN;
 	push @$moves, $move | (CP_PAWN << (CP_MOVE_CAPTURED_OFFSET));
 	push @$moves, $move | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
@@ -4054,16 +4071,16 @@ my $gen_moves = sub {
 	push @$moves, $move | (CP_QUEEN << (CP_MOVE_CAPTURED_OFFSET));
 
 	# En passant.
-	if ($color == CP_WHITE && $piece == CP_PAWN && $to >= CP_A6 && $to <= CP_H6) {
+	if ($colour == CP_WHITE && $piece == CP_PAWN && $to >= CP_A6 && $to <= CP_H6) {
 		push @$moves, $move | (CP_KING << (CP_MOVE_CAPTURED_OFFSET));
-	} elsif ($color == CP_BLACK && $piece == CP_PAWN && $to >= CP_A3 && $to <= CP_H3) {
+	} elsif ($colour == CP_BLACK && $piece == CP_PAWN && $to >= CP_A3 && $to <= CP_H3) {
 		push @$moves, $move | (CP_KING << (CP_MOVE_CAPTURED_OFFSET));
 	}
 };
 my $gen_promotions = sub {
-	my ($moves, $from, $color) = @_;
-	my $move = ($from << (CP_MOVE_FROM_OFFSET)) | (CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($color << (CP_MOVE_COLOR_OFFSET));
-	my $to = ($color ? $from - 8 : $from + 8) << (CP_MOVE_TO_OFFSET);
+	my ($moves, $from, $colour) = @_;
+	my $move = ($from << (CP_MOVE_FROM_OFFSET)) | (CP_PAWN << (CP_MOVE_PIECE_OFFSET)) | ($colour << (CP_MOVE_COLOUR_OFFSET));
+	my $to = ($colour ? $from - 8 : $from + 8) << (CP_MOVE_TO_OFFSET);
 	# Normal promotions.
 	push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to;
 	push @$moves, $move | (CP_ROOK << (CP_MOVE_PROMOTE_OFFSET)) | $to;
@@ -4071,7 +4088,7 @@ my $gen_promotions = sub {
 	push @$moves, $move | (CP_KNIGHT << (CP_MOVE_PROMOTE_OFFSET)) | $to;
 	# Promotions with captures to the left-side.
 	if (($from & 0x7) != CP_FILE_A) {
-		$to = ($color ? $from - 9 : $from + 7) << (CP_MOVE_TO_OFFSET);
+		$to = ($colour ? $from - 9 : $from + 7) << (CP_MOVE_TO_OFFSET);
 		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
 		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
 		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
@@ -4091,7 +4108,7 @@ my $gen_promotions = sub {
 	}
 	# Promotions with captures to the right-side.
 	if (($from & 0x7) != CP_FILE_H) {
-		$to = ($color ? $from - 7 : $from + 9) << (CP_MOVE_TO_OFFSET);
+		$to = ($colour ? $from - 7 : $from + 9) << (CP_MOVE_TO_OFFSET);
 		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_KNIGHT << (CP_MOVE_CAPTURED_OFFSET));
 		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_BISHOP << (CP_MOVE_CAPTURED_OFFSET));
 		push @$moves, $move | (CP_QUEEN << (CP_MOVE_PROMOTE_OFFSET)) | $to | (CP_ROOK << (CP_MOVE_CAPTURED_OFFSET));
@@ -4112,7 +4129,7 @@ my $gen_promotions = sub {
 };
 
 foreach my $file (CP_FILE_A .. CP_FILE_H) {
-	my $mb = 1 << (CP_MOVE_COLOR_OFFSET);
+	my $mb = 1 << (CP_MOVE_COLOUR_OFFSET);
 	foreach my $rank (CP_RANK_1 .. CP_RANK_8) {
 		my @moves;
 		my $from = coordinatesToShift(undef, $file, $rank);

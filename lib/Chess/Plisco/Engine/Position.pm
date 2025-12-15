@@ -221,7 +221,7 @@ $castling_rook_zk_updates[CP_G8] = $zk_pieces[509] ^ $zk_pieces[511];
 
 my @zk_ep_files = Chess::Plisco->_zkEpFiles;
 my @zk_castling = Chess::Plisco->_zkCastling;
-my $zk_color = Chess::Plisco->_zkColor;
+my $zk_colour = Chess::Plisco->_zkColour;
 
 # Init tables.
 for (my $piece = CP_PAWN; $piece <= CP_KING; ++$piece) {
@@ -242,9 +242,9 @@ for (my $i = 0; $i < @op_table; ++$i) {
 	my $eg_score = $eg_table[$i];
 	my $shift = $i & 0x3f;
 	my $piece = ($i >> 6) & 0x7;
-	my $color = ($i >> 9);
+	my $colour = ($i >> 9);
 	my $piece_char = $pieces[$piece];
-	$piece_char = lc $piece_char if $color;
+	$piece_char = lc $piece_char if $colour;
 	my $square = Chess::Plisco->shiftToSquare($shift);
 }
 
@@ -271,7 +271,7 @@ my @endgame_deltas;
 
 foreach my $move (Chess::Plisco->moveNumbers) {
 	my $is_ep;
-	my $color = 1 & ($move >> CP_MOVE_COLOR_OFFSET);
+	my $colour = 1 & ($move >> CP_MOVE_COLOUR_OFFSET);
 	my $captured = 0x7 & ($move >> CP_MOVE_CAPTURED_OFFSET);
 	if ($captured == CP_KING) {
 		$captured = CP_PAWN;
@@ -284,30 +284,30 @@ foreach my $move (Chess::Plisco->moveNumbers) {
 		Chess::Plisco->movePiece($move),
 	);
 
-	my $from_index = ($color << 9) | ($piece << 6) | $from;
-	my $to_index = ($color << 9) | ($piece << 6) | $to;
+	my $from_index = ($colour << 9) | ($piece << 6) | $from;
+	my $to_index = ($colour << 9) | ($piece << 6) | $to;
 	my $opening_delta = $op_table[$from_index] - $op_table[$to_index];
 	my $endgame_delta = $eg_table[$from_index] - $eg_table[$to_index];
 	if ($is_ep) {
 		my $ep_to;
-		if ($color == CP_WHITE) {
+		if ($colour == CP_WHITE) {
 			$ep_to = $to - 8;
 		} else {
 			$ep_to = $to + 8;
 		}
-		my $ep_index = ($color << 9) | (CP_PAWN) << 6 | $ep_to;
+		my $ep_index = ($colour << 9) | (CP_PAWN) << 6 | $ep_to;
 		$opening_delta -= $op_table[$ep_index];
 		$endgame_delta -= $eg_table[$ep_index];
 	} elsif ($captured) {
 		# The captured piece must be viewed from the other side.
-		my $captured_index = ((!$color) << 9) | ($captured << 6) | $to;
+		my $captured_index = ((!$colour) << 9) | ($captured << 6) | $to;
 		$opening_delta -= $op_table[$captured_index];
 		$endgame_delta -= $eg_table[$captured_index];
 	}
 
 	if ($promote) {
-		my $promote_index = ($color << 9) | ($promote << 6) | $to;
-		my $promote_pawn_index = ($color << 9) | (CP_PAWN << 6) | $to;
+		my $promote_index = ($colour << 9) | ($promote << 6) | $to;
+		my $promote_pawn_index = ($colour << 9) | (CP_PAWN << 6) | $to;
 		$opening_delta -= $op_table[$promote_index]
 			- $op_table[$promote_pawn_index];
 		$endgame_delta -= $eg_table[$promote_index]
@@ -349,8 +349,8 @@ foreach my $move (Chess::Plisco->moveNumbers) {
 		}
 	}
 
-	$opening_deltas[$move] = $color ? $opening_delta : -$opening_delta;
-	$endgame_deltas[$move] = $color ? $endgame_delta : -$endgame_delta;
+	$opening_deltas[$move] = $colour ? $opening_delta : -$opening_delta;
+	$endgame_deltas[$move] = $colour ? $endgame_delta : -$endgame_delta;
 }
 
 # __BEGIN_MACROS__
@@ -467,12 +467,12 @@ sub move {
 		$zk_update ^= $zk_ep_files[$from & 0x7];
 	}
 
-	$zk_update ^= $zk_color;
+	$zk_update ^= $zk_colour;
 
 	$self->[CP_POS_GAME_PHASE] += $move_phase_deltas[
 		(cp_move_captured($move) << 3) | cp_move_promote($move)
 	];
-	my $score_index = ($move & 0x3fffff & ~(1 << (CP_MOVE_COLOR_OFFSET))) | (!(cp_pos_to_move($self)) << (CP_MOVE_COLOR_OFFSET));
+	my $score_index = ($move & 0x3fffff & ~(1 << (CP_MOVE_COLOUR_OFFSET))) | (!(cp_pos_to_move($self)) << (CP_MOVE_COLOUR_OFFSET));
 	$self->[CP_POS_OPENING_SCORE] += $opening_deltas[$score_index];
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
 

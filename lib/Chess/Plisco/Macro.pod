@@ -325,13 +325,17 @@ Same as L<Chess::Plisco/moveCaptured>.
 
 Same as L<Chess::Plisco/moveSetCaptured> but modifies B<MOVE> directly.
 
+=item B<cp_move_colour(MOVE)>
+
 =item B<cp_move_color(MOVE)>
 
 Same as L<Chess::Plisco/moveCaptured>.
 
+=item B<cp_move_set_colour(MOVE, COLOUR)>
+
 =item B<cp_move_set_color(MOVE, COLOR)>
 
-Same as L<Chess::Plisco/moveSetColor> but modifies B<MOVE> directly.
+Same as L<Chess::Plisco/moveSetColour> but modifies B<MOVE> directly.
 
 =item B<cp_move_en_passant(MOVE)>
 

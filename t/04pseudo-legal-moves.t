@@ -325,7 +325,7 @@ foreach my $test (@tests) {
 		my $exp_is_ep = $ep_moves->{$cn} || 0;
 		is $got_is_ep, $exp_is_ep, "$test->{name} $cn is en passant";
 
-		my $got_colour = $pos->moveColor($move);
+		my $got_colour = $pos->moveColour($move);
 		is $got_colour, $exp_colour, "$test->{name} $cn colour";
 	}
 }

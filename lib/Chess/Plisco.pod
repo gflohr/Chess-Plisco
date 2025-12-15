@@ -240,14 +240,6 @@ Generates all pseudo-legal moves for the current position.
 Pseudo-legal are all moves that can be executed by the pieces on the side to
 move ignoring whether the side to move is in check after the move.
 
-Only the lower 15 bits of the move are set, that means the start and destination
-square, and a possible promotion piece.
-
-If you also need the captured piece and the color, you either have to call
-L</legalMoves> or you must use the state information returned from L</doMove>
-to retrieve the enriched move.  The first element of the state array is the
-enriched move.
-
 The only reason why you want to call pseudoLegalMoves is performance because
 filtering out those moves that will leave the king in check is somewhat
 expensive. In a search with alpha beta pruning, it is more efficient to delay
@@ -289,7 +281,7 @@ standard chess.  These move numbers have the following structure:
 
 =over 8
 
-=item B<color (1 bit)>: Either L</CP_BLACK> or L</CP_WHITE>.
+=item B<colour (1 bit)>: Either L</CP_BLACK> or L</CP_WHITE>.
 
 =item B<capture (3 bits)>: The captured piece if any, one of L</CP_NONE>,
 L</CP_PAWN>, L</CP_KNIGHT>, L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>,
@@ -365,6 +357,8 @@ Returns the bitboard of all knights (black and white).
 
 Returns the bitboard of all pawns (black and white).
 
+=item B<turn>
+
 =item B<toMove>
 
 Returns the side to move, either L</CP_BLACK> or L</CP_WHITE>.
@@ -419,7 +413,7 @@ Properties taken into account are:
 
 =item B<piece positions>
 
-=item B<color to move>
+=item B<colour to move>
 
 =item B<castling rights>
 
@@ -436,6 +430,9 @@ you have to override either the pseudo-random number generator L</RNG> or its
 seed L</CP_RANDOM_SEED>.  If you turn the constant L</CP_RANDOM_SEED> into
 a non-constant subroutine, you can also get different signatures, whenever
 you re-load the library.
+
+The en-passant status only takes a double pawn push into account and does not
+check whether an en-passant capture is actually possible or legal.
 
 =item B<enPassantShift>
 
@@ -642,13 +639,17 @@ Sets the piece that gets captured in B<MOVE> to B<PIECE> and returns
 the move.  The piece should be one of L</CP_QUEEN>,
 L</CP_ROOK>, L</CP_BISHOP>, L</CP_KNIGHT>, L</CP_PAWN>, L</CP_NO_PIECE>.
 
+=item B<moveColour(MOVE)>
+
 =item B<moveColor(MOVE)>
 
-Extracts the color that does the move.
+Extracts the colour that does the move.
+
+=item B<moveSetColour(MOVE, COLOUR)>
 
 =item B<moveSetColor(MOVE, COLOR)>
 
-Sets the color in B<MOVE> to B<COLOR> and returns the move.
+Sets the colour in B<MOVE> to B<COLOUR> and returns the move.
 
 =item B<moveEnPassant(MOVE)>
 
@@ -656,7 +657,7 @@ Returns 1 if the move is an en passant capture, 0 otherwise.
 
 =item B<moveSetEnPassant(MOVE, FLAG)>
 
-Sets the en passant flag in B<MOVE> to B<COLOR> and returns the move.
+Sets the en passant flag in B<MOVE> to B<FLAG> and returns the move.
 
 =item B<checkPseudoLegalMove(MOVE)>
 
@@ -801,44 +802,44 @@ This is a class method.
 
 =head2 Methods for Inspecting a Square
 
-The following methods answer the question which piece of which color occupies
+The following methods answer the question which piece of which colour occupies
 a particular location on the chess board.
 
 =over 4
 
 =item B<pieceAtSquare(SQUARE)>
 
-In array context returns a pair of a piece and a color.  In scalar context,
+In array context returns a pair of a piece and a colour.  In scalar context,
 only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
 L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>, L</CP_KING>, or L</CP_NO_PIECE> if
 the square is empty.
 
-The color is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
-C<undef> is returned instead of a color.
+The colour is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
+C<undef> is returned instead of a colour.
 
 This method is relatively expensive!
 
 =item B<pieceAtCoordinates(FILE, RANK)>
 
-In array context returns a pair of a piece and a color.  In scalar context,
+In array context returns a pair of a piece and a colour.  In scalar context,
 only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
 L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>, L</CP_KING>, or L</CP_NO_PIECE> if
 the square is empty.
 
-The color is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
-C<undef> is returned instead of a color.
+The colour is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
+C<undef> is returned instead of a colour.
 
 This method is relatively expensive!
 
 =item B<pieceAtShift(SHIFT)>
 
-In array context returns a pair of a piece and a color.  In scalar context,
+In array context returns a pair of a piece and a colour.  In scalar context,
 only the piece is returned.  The piece is one of L</CP_PAWN>, L</CP_KNIGHT>,
 L</CP_BISHOP>, L</CP_ROOK>, L</CP_QUEEN>, L</CP_KING>, or L</CP_NO_PIECE> if
 the square is empty.
 
-The color is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
-C<undef> is returned instead of a color.
+The colour is one of L</CP_BLACK> or L</CP_WHITE>.  If the square is empty,
+C<undef> is returned instead of a colour.
 
 This method is relatively expensive!
 
@@ -1353,9 +1354,39 @@ A bitboard of all knights (black and white) on the board.  See also L</knights>.
 
 A bitboard of all pawns (black and white) on the board.  See also L</pawns>.
 
-=item B<POS-E<gt>[CP_POS_HALFMOVES]>
+=item B<POS-E<gt>[CP_POS_HALFMOVE_CLOCK]>
 
-The number of half-moves made.  See also L</halfmoves>.
+The count of halfmoves for the 50-move rule. If it is 100 or more, either side
+can claim a draw.
+
+=item B<POS-E<gt>[CP_POS_TURN]>
+
+=item B<POS-E<gt>[CP_POS_TO_MOVE]>
+
+The side whose turn it is.
+
+=item B<POS-E<gt>[CP_POS_EN_PASSANT_SHIFT]>
+
+The position of a pawn where an en-passant capture is theoretically possible.
+It is theoretically possible if a pawn was pushed two squares in the last
+move. Whether it can be captured or whether the capture is legal is ignored
+in this context.
+
+=item B<POS-E<gt>[CP_POS_USR1]>
+
+=item B<POS-E<gt>[CP_POS_USR2]>
+
+=item B<POS-E<gt>[CP_POS_USR3]>
+
+=item B<POS-E<gt>[CP_POS_USR4]>
+
+=item B<POS-E<gt>[CP_POS_USR5]>
+
+Unused. These slots can be used by a chess engine.
+
+=item B<POS-E<gt>[CP_POS_CASTLING_RIGHTS>
+
+The castling rights of the position.
 
 =back
 
@@ -1555,6 +1586,10 @@ A pretty arbitrary value used to initialize the pseudo-random number
 generator L</RNG>.
 
 =head1 FAQ
+
+=head2 Is It Colour or Color?
+
+That does not have to be decided. You can use either spelling in this library.
 
 =head2 What Does Plisco Mean?
 
