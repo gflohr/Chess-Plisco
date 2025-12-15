@@ -14,7 +14,7 @@
 
 use strict;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
@@ -78,3 +78,8 @@ ok defined $best_move, 'best move was returned';
 is(cp_move_from($best_move), $from, 'from square not tampered');
 is(cp_move_to($best_move), $to, 'to square not tampered');
 is(cp_move_promote($best_move), $promote, 'promote piece not tampered');
+
+$tt->clear;
+$tt->store($key, 0, TT_SCORE_EXACT, 42, 1234);
+ok !defined $tt->probe($key, 3, -100, 100, \$best_move),
+	'table does not return quiescence entries during normal search';
