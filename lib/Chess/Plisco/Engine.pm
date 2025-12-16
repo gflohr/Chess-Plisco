@@ -803,7 +803,7 @@ sub __onUciCmdUci {
 	my ($self) = @_;
 
 	my $version = $Chess::Plisco::Engine::VERSION || 'development version';
-	$self->__output("id Plisco $version");
+	$self->__output("id name Plisco $version");
 	$self->__output("id author Guido Flohr <guido.flohr\@cantanea.com>");
 
 	my $options = UCI_OPTIONS;
