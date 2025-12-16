@@ -96,7 +96,7 @@ sub allocateTime {
 	my $time_left = $params->{mytime} + $mtg * $params->{myinc};
 
 	# FIXME! Depending on the volatility of the position, there should be
-	# a time cushion that can be used if the evaluation changes a lot between      
+	# a time cushion that can be used if the evaluation changes a lot between
 	# iterations.
 	$tree->{allocated_time} = int (0.5 + $time_left / $mtg);
 }

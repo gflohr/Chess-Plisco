@@ -68,6 +68,8 @@ sub new {
 		$position->[CP_POS_REVERSIBLE_CLOCK] = @$signatures - 1;
 	}
 
+	no integer;
+
 	my @killers = map { [] } 0 .. MAX_PLY - 1;
 	my $self = {
 		position => $position,
@@ -80,6 +82,9 @@ sub new {
 		book_depth => $options{book_depth},
 		killers => \@killers,
 		cutoff_moves => [[], []], # History heuristic, one slot for each side.
+		best_previous_average_score => INF,
+		previous_time_reduction => 0.85,
+		average_score => -INF,
 	};
 
 	bless $self, $class;
@@ -467,6 +472,10 @@ sub alphabeta {
 		@$position = @backup;
 		if (DEBUG) {
 			pop @{$self->{line}};
+		}
+		if ($ply == 1) {
+			$self->{average_score} =
+				$self->{average_score} != -INF ? ($score + $self->{average_score}) >> 1 : $score;
 		}
 		if ($score > $best_value) {
 			$best_value = $score;

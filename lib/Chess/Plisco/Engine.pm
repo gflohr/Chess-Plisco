@@ -74,6 +74,20 @@ use constant UCI_OPTIONS => [
 		type => 'check',
 		default => 'false',
 	},
+	{
+		name => 'Move Overhead',
+		type => 'spin',
+		min => 0,
+		max => 5000,
+		default => 10,
+	},
+	{
+		name => 'nodestime',
+		type => 'spin',
+		default => 0,
+		min => 0,
+		max => 10000,
+	},
 ];
 
 my $uci_options = UCI_OPTIONS;
@@ -94,7 +108,7 @@ sub new {
 		__started => undef,
 		__moves => [],
 		__continued => 0,
-		__move_overheads => [],
+		__move_overheads => [10, 10, 10],
 		__last_params => {},
 	};
 
@@ -490,7 +504,11 @@ sub __onUciCmdGo {
 	}
 	$self->{__last_params} = {%params};
 
-	my $tc = $self->{__tc} = Chess::Plisco::Engine::TimeControl->new($tree, %params);
+	my $tc = $self->{__tc} = Chess::Plisco::Engine::TimeControl->new($tree,
+		%params,
+		move_overhead => $self->{__options}->{'Move Overhead'},
+		nodestime => $self->{__options}->{nodestime},
+	);
 
 	$self->{__tree} = $tree;
 
@@ -542,7 +560,10 @@ sub __measureMoveOverhead {
 	my $overhead = $expected_time - $params{$my_time};
 	if ($overhead >= 0) {
 		push @{$self->{__move_overheads}}, $overhead;
+		push @{$self->{__move_overheads}}, $overhead if @{$self->{__move_overheads}} < 2;
 		shift @{$self->{__move_overheads}} if @{$self->{__move_overheads}} > 3;
+		my @values = sort { $a <=> $b } @{$self->{__move_overheads}};
+		$self->{__options}->{'Move Overhead'} = $values[1];
 	}
 
 	return $self;
@@ -577,6 +598,7 @@ sub __onUciCmdSetoption {
 	}
 
 	my ($name, $value) = map { $self->__trim($_) } ($1, $2);
+	$name = 'Move Overhead' if $name eq 'MoveOverhead';
 	if (!exists $uci_options{$name}) {
 		$self->__output("info Error: unsupported option '$name'");
 		return $self;
