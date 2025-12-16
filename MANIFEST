@@ -104,6 +104,7 @@ t/30dm1-epd.t
 t/30dm2-epd.t
 t/30dm3-epd.t
 t/30draw.t
+t/31engine-time-management.t
 t/Flohr.pgn
 t/author-critic.t
 t/author-pod-syntax.t
