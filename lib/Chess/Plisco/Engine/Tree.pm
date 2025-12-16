@@ -272,7 +272,7 @@ sub alphabeta {
 		my $hex_sig = sprintf '%016x', $signature;
 		$self->indent($ply, "TT probe $hex_sig \@depth $depth, alpha = $alpha, beta = $beta");
 	}
-	my $tt_value = $tt->probe($signature, $depth, $alpha, $beta, \$tt_move);
+	my $tt_value = $tt->probe($signature, $ply, $depth, $alpha, $beta, \$tt_move);
 
 	if (DEBUG) {
 		if ($tt_move) {
@@ -530,14 +530,17 @@ sub alphabeta {
 		}
 	}
 
+	my $hash_value = $best_value;
 	if (!$legal) {
 		# Mate or stalemate.
 		if (!$position->inCheck) {
-			$best_value = DRAW;
+			$hash_value = $best_value = DRAW;
 		} else {
-			#$alpha = MATE + $self->{depth} - $depth + 1;
+			$hash_value = MATE;
 			$best_value = MATE + $ply;
 		}
+		$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
+
 		if (DEBUG) {
 			$self->indent($ply, "mate/stalemate, score: $best_value");
 		}
@@ -558,7 +561,7 @@ sub alphabeta {
 		}
 	}
 
-	$tt->store($signature, $depth, $tt_type, $best_value, $best_move)
+	$tt->store($signature, $depth, $tt_type, $hash_value, $best_move)
 		if !($is_null_window && $tt_type == Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT());
 
 	return $best_value;
@@ -597,7 +600,7 @@ sub quiesce {
 		my $hex_sig = sprintf '%016x', $signature;
 		$self->indent($ply, "quiescence TT probe $hex_sig \@depth 0, alpha = $alpha, beta = $beta");
 	}
-	my $tt_value = $tt->probe($signature, 0, $alpha, $beta, \$tt_move);
+	my $tt_value = $tt->probe($signature, $ply, 0, $alpha, $beta, \$tt_move);
 	if (DEBUG) {
 		if ($tt_move) {
 			my $cn = $position->moveCoordinateNotation($tt_move);
@@ -897,7 +900,7 @@ sub getPonderMove {
 		$self->debug("probing transposition table for ponder move");
 	}
 	# We're not interested in the value.
-	$tt->probe($signature, MAX_PLY + 1, 0, 0, \$tt_move);
+	$tt->probe($signature, 1, MAX_PLY + 1, 0, 0, \$tt_move);
 
 	if (DEBUG) {
 		if ($tt_move) {
