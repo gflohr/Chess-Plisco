@@ -16,6 +16,7 @@ use integer;
 
 use POSIX qw(:sys_wait_h);
 use Locale::TextDomain qw(Chess-Plisco);
+use Time::HiRes qw(tv_interval);
 
 use Chess::Plisco qw(:all);
 
@@ -92,6 +93,9 @@ sub new {
 		__turn => CP_WHITE,
 		__started => undef,
 		__moves => [],
+		__continued => 0,
+		__move_overheads => [],
+		__last_params => {},
 	};
 
 	my $options = UCI_OPTIONS;
@@ -481,6 +485,11 @@ sub __onUciCmdGo {
 	$tree->{debug} = 1 if $self->{__debug};
 	$tree->{ponder} = 1 if $params{ponder};
 
+	if ($self->{__continued}) {
+		$self->{__continued} = $self->__measureMoveOverhead(%params)
+	}
+	$self->{__last_params} = {%params};
+
 	my $tc = $self->{__tc} = Chess::Plisco::Engine::TimeControl->new($tree, %params);
 
 	$self->{__tree} = $tree;
@@ -492,6 +501,11 @@ sub __onUciCmdGo {
 	if ($@) {
 		$self->__output("unexpected exception: $@");
 	}
+	{
+		no integer;
+		$self->{__last_search_time} = 1000 * tv_interval($tree->{start_time});
+	}
+
 	delete $self->{__tree};
 	delete $self->{__tc};
 
@@ -508,6 +522,28 @@ sub __onUciCmdGo {
 
 	$self->{__watcher}->setBatchMode(0);
 
+
+	return $self;
+}
+
+sub __measureMoveOverhead {
+	my ($self, %params) = @_;
+
+	return if !defined $self->{__last_search_time};
+
+	my $my_time = $self->{__position}->turn == CP_WHITE ? 'wtime' : 'btime';
+	my $my_inc = $self->{__position}->turn == CP_WHITE ? 'winc' : 'binc';
+
+	my $last_params = $self->{__last_params};
+	return if !($params{$my_time} && $last_params->{$my_time});
+	return if $params{$my_inc} != $last_params->{$my_inc};
+
+	my $expected_time = $last_params->{$my_time} + $params{$my_inc} - $self->{__last_search_time};
+	my $overhead = $expected_time - $params{$my_time};
+	if ($overhead >= 0) {
+		push @{$self->{__move_overheads}}, $overhead;
+		shift @{$self->{__move_overheads}} if @{$self->{__move_overheads}} > 3;
+	}
 
 	return $self;
 }
@@ -634,6 +670,18 @@ sub __onUciCmdStop {
 	return $self;
 }
 
+sub __movelistContinuous {
+	my ($self, $last_moves) = @_;
+
+	return if @{$self->{__moves}} - @$last_moves != 1;
+
+	for (my $i = 0; $i < @$last_moves; ++$i) {
+		return if $self->{__moves}->[$i] ne $last_moves->[$i];
+	}
+
+	return $self;
+}
+
 sub __onUciCmdPosition {
 	my ($self, $args) = @_;
 
@@ -647,6 +695,11 @@ sub __onUciCmdPosition {
 	my ($type, @moves) = split /[ \t]+/, $args;
 	my $position;
 	$self->{__started} = time;
+
+	my $last_setup = $self->{__setup};
+	my $last_fen = $self->{__fen};
+	my @last_moves = @{$self->{__moves}};
+
 	if ('fen' eq lc $type) {
 		my $fen = shift @moves;
 		unless (defined $fen && length $fen) {
@@ -671,7 +724,7 @@ sub __onUciCmdPosition {
 		}
 		$self->{__setup} = 1;
 		$self->{__fen} = $fen;
-		$self->{__turn} = $position->toMove;
+		$self->{__turn} = $position->turn;
 	} elsif ('startpos' eq lc $type) {
 		$self->{__setup} = 0;
 		$self->{__turn} = CP_WHITE;
@@ -698,6 +751,11 @@ sub __onUciCmdPosition {
 			push @signatures, $position->signature;
 		}
 	}
+
+	# Check whether this continues an ongoing game.
+	$self->{__continued} = $self->{__fen} eq $last_fen
+		&& $self->{__setup} == $last_setup
+		&& $self->__movelistContinuous(\@last_moves);
 
 	$self->{__position} = $position;
 	$self->{__signatures} = \@signatures;
