@@ -82,9 +82,10 @@ sub new {
 		book_depth => $options{book_depth},
 		killers => \@killers,
 		cutoff_moves => [[], []], # History heuristic, one slot for each side.
-		best_previous_average_score => INF,
-		previous_time_reduction => 0.85,
 		average_score => -INF,
+		previous_average_score => INF,
+		iter_scores => [],
+		previous_time_reduction => 0.85,
 	};
 
 	bless $self, $class;
@@ -796,6 +797,16 @@ sub rootSearch {
 				$beta = $score + ASPIRATION_WINDOW;
 				redo;
 			}
+
+			my $iter_idx = ($depth - 1) & 3;
+			$self->{iter_scores}->[$iter_idx] = $score;
+
+			no integer;
+			my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $score)
+				+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $score)) / 100.0;
+			$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
+
+			$self->{previous_average_score} = $self->{average_score};
 		}
 	};
 	if ($@) {
