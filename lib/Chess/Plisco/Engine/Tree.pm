@@ -767,6 +767,9 @@ sub rootSearch {
 	my $alpha = -INF;
 	my $beta = +INF;
 
+	my $last_best_move;
+	my $last_best_move_depth = 0;
+
 	if (DEBUG) {
 		my $fen = $position->toFEN;
 		$self->debug("Searching $fen");
@@ -805,8 +808,17 @@ sub rootSearch {
 			my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $score)
 				+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $score)) / 100.0;
 			$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
+			if ($line[0] != $last_best_move) {
+				$last_best_move_depth = $depth;
+			}
+
+			my $k = 0.51; # FIXME! Lower that to 0.25?
+			my $center = $last_best_move_depth + 2.86; # Originally 12.15.
+
+			my $time_reduction = 0.66 + 0.85 / (0.98 + exp(-$k * ($depth - $center)));
 
 			$self->{previous_average_score} = $self->{average_score};
+			$last_best_move = $line[0];
 		}
 	};
 	if ($@) {
