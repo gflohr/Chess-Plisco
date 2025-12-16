@@ -86,6 +86,8 @@ sub new {
 		previous_average_score => INF,
 		iter_scores => [],
 		previous_time_reduction => 0.85,
+		move_efforts => {},
+		total_best_move_changes => 0,
 	};
 
 	bless $self, $class;
@@ -144,7 +146,7 @@ sub checkTime {
 	} else {
 		use integer;
 
-		my $allocated = $self->{allocated_time};
+		my $allocated = $self->{maximum};
 		my $eta = $allocated - $elapsed;
 		if ($eta < SAFETY_MARGIN) {
 			die "PLISCO_ABORTED\n";
@@ -438,7 +440,7 @@ sub alphabeta {
 		my @line;
 		$position->move($move, 1);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
-		++$self->{nodes};
+		my $nodes_before = $self->{nodes}++;
 		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
 		my $score;
 		if (DEBUG) {
@@ -477,6 +479,8 @@ sub alphabeta {
 		if ($ply == 1) {
 			$self->{average_score} =
 				$self->{average_score} != -INF ? ($score + $self->{average_score}) >> 1 : $score;
+			$self->{move_efforts}->{$move} += $self->{nodes} - $nodes_before;
+			++$self->{total_best_move_changes} if $score > $best_value && $score > $alpha;
 		}
 		if ($score > $best_value) {
 			$best_value = $score;
@@ -776,6 +780,10 @@ sub rootSearch {
 	}
 	eval {
 		while (++$depth <= $max_depth) {
+			no integer;
+
+			$self->{total_best_move_changes} /= 2;
+
 			my @lower_windows = (-50, -100, -INF);
 			my @upper_windows = (50, 100, +INF);
 
@@ -801,24 +809,45 @@ sub rootSearch {
 				redo;
 			}
 
-			my $iter_idx = ($depth - 1) & 3;
-			$self->{iter_scores}->[$iter_idx] = $score;
+			if ($self->{use_time_management}) {
+				my $iter_idx = ($depth - 1) & 3;
+				$self->{iter_scores}->[$iter_idx] = $score;
 
-			no integer;
-			my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $score)
-				+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $score)) / 100.0;
-			$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
-			if ($line[0] != $last_best_move) {
-				$last_best_move_depth = $depth;
+				no integer;
+				my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $score)
+					+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $score)) / 100.0;
+				$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
+				if ($line[0] != $last_best_move) {
+					$last_best_move_depth = $depth;
+				}
+
+				my $k = 0.51; # FIXME! Lower that to 0.25?
+				my $center = $last_best_move_depth + 2.86; # Originally 12.15.
+
+				my $time_reduction = 0.66 + 0.85 / (0.98 + exp(-$k * ($depth - $center)));
+				my $reduction = (1.43 + $self->{previous_time_reduction}) / (2.28 * $time_reduction);
+				my $best_move_instability = 1.02 + 2.14 * $self->{total_best_move_changes};
+				my $nodes_effort = $self->{move}->{$line[0]} * 100000 / cp_max(1, $self->{nodes});
+				my $high_best_move_effort = $nodes_effort >= 93340 ? 0.76 : 1.0;
+				my $total_time = $self->{optimum} * $falling_eval * $reduction
+					* $best_move_instability * $high_best_move_effort;
+
+				my $elapsed = 1000 * tv_interval($self->{start_time});
+
+				if ($elapsed > cp_min($total_time, $self->{maximum})) {
+					if (!$self->{ponder}) {
+						last;
+					}
+				} elsif (!$self->{ponder}) {
+					if ($elapsed > 0.5 * $total_time) {
+						last;
+					}
+				}
+
+				$self->{previous_average_score} = $self->{average_score};
+				$self->{previous_time_reduction} = $time_reduction;
+				$last_best_move = $line[0];
 			}
-
-			my $k = 0.51; # FIXME! Lower that to 0.25?
-			my $center = $last_best_move_depth + 2.86; # Originally 12.15.
-
-			my $time_reduction = 0.66 + 0.85 / (0.98 + exp(-$k * ($depth - $center)));
-
-			$self->{previous_average_score} = $self->{average_score};
-			$last_best_move = $line[0];
 		}
 	};
 	if ($@) {
@@ -827,10 +856,10 @@ sub rootSearch {
 		}
 	}
 
-	if ($self->{allocated_time} && !$self->{ponderhit}) {
+	if ($self->{maximum} && !$self->{ponderhit}) {
 		my $elapsed = 1000 * tv_interval($self->{start_time});
-		if ($elapsed > $self->{allocated_time}) {
-			$self->{info}->(__"Error: used $elapsed ms instead of $self->{allocated_time} ms.");
+		if ($elapsed > $self->{maximum}) {
+			$self->{info}->(__"Error: used $elapsed ms instead of $self->{maximum} ms.");
 		}
 	}
 
@@ -847,6 +876,7 @@ sub printCurrentMove {
 	my $cn = $position->moveCoordinateNotation($move);
 	my $elapsed = int(1000 * tv_interval($self->{start_time}));
 
+	$moveno += 1;
 	$self->{info}->("depth $depth currmove $cn currmovenumber $moveno"
 		. " time $elapsed");
 }
@@ -881,7 +911,7 @@ sub think {
 	$self->{tt_hits} = 0;
 
 	if ($self->{debug}) {
-		$self->{info}->("allocated time: $self->{allocated_time}");
+		$self->{info}->("allocated time: $self->{optimum} .. $self->{maximum}");
 	}
 
 	$self->rootSearch(\@line);
