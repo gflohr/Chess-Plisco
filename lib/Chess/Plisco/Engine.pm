@@ -116,6 +116,38 @@ sub new {
 	$self->{__tt} = Chess::Plisco::Engine::TranspositionTable->new($tt_size);
 
 	bless $self, $class;
+
+	$self->__calibrateNPS;
+
+	return $self;
+}
+
+sub __calibrateNPS {
+	my ($self) = @_;
+
+	no integer;
+
+	my $position = Chess::Plisco::Engine::Position->new;
+
+	my $watcher = Chess::Plisco::Engine::InputWatcher->new(\*STDIN);
+	$watcher->setBatchMode(1);
+
+	my %options = (
+		position => $position,
+		tt => $self->{__tt},
+		watcher => $watcher,
+		info => sub { my ($msg) = @_; warn "msg: $msg "},
+		signatures => [],
+	);
+	my $tree = Chess::Plisco::Engine::Tree->new(%options);
+	$tree->{max_depth} = 3;
+	$tree->{start_time} = [gettimeofday];
+
+	$tree->think;
+
+	my $elapsed = 1000 * tv_interval($tree->{start_time});
+	$elapsed ||= 1;
+	$self->{__nps} = $tree->{nodes} / $elapsed;
 }
 
 sub uci {
@@ -497,7 +529,6 @@ sub __onUciCmdGo {
 	$tree->{debug} = 1 if $self->{__debug};
 	$tree->{ponder} = 1 if $params{ponder};
 	$tree->{start_time} = $self->{__start_time};
-	$tree->{nodes_to_tc} = 5000; # Initial value for calibration.
 	if ($params{depth}) {
 		$tree->{max_depth} = $params{depth};
 	} elsif ($params{mate}) {
@@ -534,7 +565,7 @@ sub __onUciCmdGo {
 	$limits->{ponder} = $params{ponder};
 	$limits->{nodes} = $params{nodes};
 
-	$params{move_overhead} = $self->{__options}->{move_overhead};
+	$params{move_overhead} = $self->{__options}->{'Move Overhead'};
 
 	$tc->init(
 		$limits, $tree->{position}->turn,
@@ -542,6 +573,21 @@ sub __onUciCmdGo {
 		\%params, \$self->{__original_time_adjust},
 	);
 
+	# This is the logic from checkTime() of the tree.
+	{
+		no integer;
+		my $max_nodes = $self->{__nps} >> 2;
+		my $dyn_nodes = ($tree->{maximum} * $self->{__nps}) >> 12;
+		$tree->{nodes_to_tc} = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
+		$tree->{nodes_to_tc} = 50 if $tree->{nodes_to_tc} < 50;
+		$tree->{nodes_to_tc} = 5000 if $tree->{nodes_to_tc} > 500;
+	}
+
+my $turn = $tree->{position}->turn;
+my $colour = $turn ? 'black' : 'white';
+my $time = $limits->{time}->[$turn];
+my $inc = $limits->{inc}->[$turn];
+$self->__info("$colour mytime $time myinc $inc halfmoves 1 + $tree->{position}->[CP_POS_HALFMOVES] original_time_adjust $self->{__original_time_adjust} optimum $tree->{optimum} maximum $tree->{maximum}");
 	$self->{__tree} = $tree;
 
 	my ($bestmove, $ponder);
@@ -555,6 +601,8 @@ sub __onUciCmdGo {
 		no integer;
 		$self->{__last_search_time} = int(1000 * tv_interval($self->{__start_time}));
 	}
+	my $elapsed = $self->{__last_search_time} || 1;
+	$self->{__nps} = (1000 * $tree->{nodes}) / $elapsed;
 
 	delete $self->{__tree};
 	delete $self->{__tc};

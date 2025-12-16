@@ -149,6 +149,7 @@ sub checkTime {
 		my $allocated = $self->{maximum};
 		my $eta = $allocated - $elapsed;
 		if ($eta < SAFETY_MARGIN) {
+$self->{info}->("aborting with ETA $eta ms nps $nps nodes_to_tc $self->{nodes_to_tc}");
 			die "PLISCO_ABORTED\n";
 		}
 
@@ -811,7 +812,6 @@ sub rootSearch {
 
 			if ($self->{use_time_management}) {
 				my $iter_idx = ($depth - 1) & 3;
-				$self->{iter_scores}->[$iter_idx] = $score;
 
 				no integer;
 				my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $score)
@@ -834,6 +834,8 @@ sub rootSearch {
 
 				my $elapsed = 1000 * tv_interval($self->{start_time});
 
+$self->{info}->("score $score nodes_to_tc $self->{nodes_to_tc} last_best_move_depth $last_best_move_depth falling_eval $falling_eval center $center reduction $reduction best_move_instability $best_move_instability high_best_move_effort $high_best_move_effort total_time $total_time elapsed $elapsed optimum $self->{optimum} maximum $self->{maximum}");
+
 				if ($elapsed > cp_min($total_time, $self->{maximum})) {
 					if (!$self->{ponder}) {
 						last;
@@ -847,6 +849,7 @@ sub rootSearch {
 				$self->{previous_average_score} = $self->{average_score};
 				$self->{previous_time_reduction} = $time_reduction;
 				$last_best_move = $line[0];
+				$self->{iter_scores}->[$iter_idx] = $score;
 			}
 		}
 	};
