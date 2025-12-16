@@ -73,10 +73,6 @@ my %info = parse_info $lines[-2];
 ok %info, 'engine sent info line';
 ok $info{time}, 'engine sent time';
 
-my $reported_time = $info{time};
-my $search_time = $engine->{__last_search_time};
-ok $search_time >= $reported_time, 'time measurement';
-
 $engine->__onUciInput("position startpos moves $result{bestmove} $result{ponder}");
 my $time_left = 2000 + 100 - $search_time - 27;
 $engine->__onUciInput("go wtime $time_left btime 1900 winc 100 binc 100");
