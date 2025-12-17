@@ -136,7 +136,7 @@ sub __calibrateNPS {
 		position => $position,
 		tt => $self->{__tt},
 		watcher => $watcher,
-		info => sub { my ($msg) = @_; warn "msg: $msg "},
+		info => sub {},
 		signatures => [],
 	);
 	my $tree = Chess::Plisco::Engine::Tree->new(%options);
@@ -148,6 +148,8 @@ sub __calibrateNPS {
 	my $elapsed = 1000 * tv_interval($tree->{start_time});
 	$elapsed ||= 1;
 	$self->{__nps} = $tree->{nodes} / $elapsed;
+
+	$tree->{tt}->clear;
 }
 
 sub uci {
@@ -577,17 +579,12 @@ sub __onUciCmdGo {
 	{
 		no integer;
 		my $max_nodes = $self->{__nps} >> 2;
-		my $dyn_nodes = ($tree->{maximum} * $self->{__nps}) >> 12;
+		my $dyn_nodes = ($tree->{maximum} * $self->{__nps}) >> 13;
 		$tree->{nodes_to_tc} = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
 		$tree->{nodes_to_tc} = 50 if $tree->{nodes_to_tc} < 50;
 		$tree->{nodes_to_tc} = 5000 if $tree->{nodes_to_tc} > 500;
 	}
 
-my $turn = $tree->{position}->turn;
-my $colour = $turn ? 'black' : 'white';
-my $time = $limits->{time}->[$turn];
-my $inc = $limits->{inc}->[$turn];
-$self->__info("$colour mytime $time myinc $inc halfmoves 1 + $tree->{position}->[CP_POS_HALFMOVES] original_time_adjust $self->{__original_time_adjust} optimum $tree->{optimum} maximum $tree->{maximum}");
 	$self->{__tree} = $tree;
 
 	my ($bestmove, $ponder);

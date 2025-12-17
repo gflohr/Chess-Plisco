@@ -149,7 +149,6 @@ sub checkTime {
 		my $allocated = $self->{maximum};
 		my $eta = $allocated - $elapsed;
 		if ($eta < SAFETY_MARGIN) {
-$self->{info}->("aborting with ETA $eta ms nps $nps nodes_to_tc $self->{nodes_to_tc}");
 			die "PLISCO_ABORTED\n";
 		}
 
@@ -170,11 +169,11 @@ $self->{info}->("aborting with ETA $eta ms nps $nps nodes_to_tc $self->{nodes_to
 		#
 		# We can expect to process $eta * $nps / 1000 nodes in the remaining
 		# time. In order to play safe, should the performance suddenly drop,
-		# we divide that number by 4. A division by 1000 is roughly a
+		# we divide that number by 8. A division by 1000 is roughly a
 		# right shift of 10, a division by 4 a right-shift by 2. We can
-		# therefore just right-shift the product by 12.
+		# therefore just right-shift the product by 13.
 		if (!($was_ponder && !$self->{ponder})) {
-			my $dyn_nodes = ($eta * $nps) >> 12;
+			my $dyn_nodes = ($eta * $nps) >> 13;
 
 			my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
 			$self->{nodes_to_tc} = $nodes + $nodes_to_go;
@@ -479,9 +478,9 @@ sub alphabeta {
 		}
 		if ($ply == 1) {
 			$self->{average_score} =
-				$self->{average_score} != -INF ? ($score + $self->{average_score}) >> 1 : $score;
+				$self->{average_score} != -INF ? ($score + $self->{average_score}) >> 1 : 3.75 * $score;
 			$self->{move_efforts}->{$move} += $self->{nodes} - $nodes_before;
-			++$self->{total_best_move_changes} if $score > $best_value && $score > $alpha;
+			++$self->{total_best_move_changes} if $score > $best_value && $score > $alpha && $legal > 1;
 		}
 		if ($score > $best_value) {
 			$best_value = $score;
@@ -783,6 +782,7 @@ sub rootSearch {
 		while (++$depth <= $max_depth) {
 			no integer;
 
+			# Age out instability.
 			$self->{total_best_move_changes} /= 2;
 
 			my @lower_windows = (-50, -100, -INF);
@@ -814,27 +814,39 @@ sub rootSearch {
 				my $iter_idx = ($depth - 1) & 3;
 
 				no integer;
-				my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $score)
-					+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $score)) / 100.0;
+
+				# The constants are taken from Stockfish and they use their own units
+				# which seem to be 3.5-4.0 centipawns.
+				my $best_value = 3.75 * $score;
+
+				my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $best_value)
+					+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $best_value)) / 100.0;
 				$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
 				if ($line[0] != $last_best_move) {
 					$last_best_move_depth = $depth;
 				}
 
+				# Idea: Try to move the center based on the average completed
+				# search depth. But the average search depth should probably
+				# be aged out.
+				# my $depth_scale = $self->{avg_completed_depth} / 40.0; # SF baseline
+				# my $center = $last_best_move_depth + 12.15 * $depth_scale;
 				my $k = 0.51; # FIXME! Lower that to 0.25?
-				my $center = $last_best_move_depth + 2.86; # Originally 12.15.
+				my $center = $last_best_move_depth + 12.15; # Divide by 4.25?
 
 				my $time_reduction = 0.66 + 0.85 / (0.98 + exp(-$k * ($depth - $center)));
 				my $reduction = (1.43 + $self->{previous_time_reduction}) / (2.28 * $time_reduction);
 				my $best_move_instability = 1.02 + 2.14 * $self->{total_best_move_changes};
-				my $nodes_effort = $self->{move}->{$line[0]} * 100000 / cp_max(1, $self->{nodes});
-				my $high_best_move_effort = $nodes_effort >= 93340 ? 0.76 : 1.0;
+				my $nodes_effort = $self->{move_efforts}->{$line[0]} * 100000 / cp_max(1, $self->{nodes});
+
+				# The original value is 93340. But we will not reach that
+				# with only safe prunings.
+				my $high_best_move_effort = $nodes_effort >= 30000 ? 0.76 : 1.0;
+
 				my $total_time = $self->{optimum} * $falling_eval * $reduction
 					* $best_move_instability * $high_best_move_effort;
 
 				my $elapsed = 1000 * tv_interval($self->{start_time});
-
-$self->{info}->("score $score nodes_to_tc $self->{nodes_to_tc} last_best_move_depth $last_best_move_depth falling_eval $falling_eval center $center reduction $reduction best_move_instability $best_move_instability high_best_move_effort $high_best_move_effort total_time $total_time elapsed $elapsed optimum $self->{optimum} maximum $self->{maximum}");
 
 				if ($elapsed > cp_min($total_time, $self->{maximum})) {
 					if (!$self->{ponder}) {
@@ -849,7 +861,7 @@ $self->{info}->("score $score nodes_to_tc $self->{nodes_to_tc} last_best_move_de
 				$self->{previous_average_score} = $self->{average_score};
 				$self->{previous_time_reduction} = $time_reduction;
 				$last_best_move = $line[0];
-				$self->{iter_scores}->[$iter_idx] = $score;
+				$self->{iter_scores}->[$iter_idx] = $best_value;
 			}
 		}
 	};
@@ -869,6 +881,22 @@ $self->{info}->("score $score nodes_to_tc $self->{nodes_to_tc} last_best_move_de
 	@$pline = @line;
 }
 # __END_MACROS__
+
+sub outputMoveEfforts {
+	my ($self) = @_;
+
+	my $sum = 0;
+	my $all_nodes = $self->{nodes} || 1;
+	foreach my $move (sort { $self->{move_efforts}->{$b} <=> $self->{move_efforts}->{$a} } keys %{$self->{move_efforts}}) {
+		my $san = $self->{position}->SAN($move);
+		my $nodes = $self->{move_efforts}->{$move};
+		$sum += $nodes;
+		my $effort = int(0.5 + (100000 * $nodes / $all_nodes));
+		$self->{info}->("Move effort $san: $effort ($nodes nodes)");
+	}
+
+	$self->{info}->("Move effort sum: $sum");
+}
 
 sub printCurrentMove {
 	my ($self, $depth, $move, $moveno) = @_;
