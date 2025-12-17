@@ -58,7 +58,7 @@ sub init {
 	return if !$my_time;
 
 	my $move_overhead = $params->{move_overhead};
-print "info: move overhead $move_overhead ms\n"
+print "info: move overhead $move_overhead ms\n";
 	my ($opt_scale, $max_scale);
 
 	my $scaled_time = $my_time;
