@@ -853,7 +853,9 @@ sub rootSearch {
 						last;
 					}
 				} elsif (!$self->{ponder}) {
-					if ($elapsed > 0.5 * $total_time) {
+					# Stockfish sets the threshold to half of the total time.
+					# We use less.
+					if ($elapsed > $total_time * 0.25) {
 						last;
 					}
 				}
