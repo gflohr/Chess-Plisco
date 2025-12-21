@@ -86,7 +86,7 @@ sub new {
 		previous_average_score => INF,
 		iter_scores => [],
 		previous_time_reduction => 0.85,
-		move_efforts => {},
+		root_moves => {},
 		total_best_move_changes => 0,
 	};
 
@@ -476,10 +476,15 @@ sub alphabeta {
 		if (DEBUG) {
 			pop @{$self->{line}};
 		}
+		my $root_move;
 		if ($ply == 1) {
-			$self->{average_score} =
-				$self->{average_score} != -INF ? ($score + $self->{average_score}) >> 1 : 3.75 * $score;
-			$self->{move_efforts}->{$move} += $self->{nodes} - $nodes_before;
+			$root_move = $self->{root_moves}->{$move};
+			# The constants for the time management are taken from Stockfish
+			# and they use their own units which seem to be 3.5-4.0 centipawns.
+			my $sf_score = $root_move->{score} = 3.75 * $score;
+			$root_move->{average_score} =
+				$root_move->{average_score} != -INF ? ($score + $root_move->{average_score}) >> 1 : $sf_score;
+			$root_move->{move_effort} += $self->{nodes} - $nodes_before;
 			++$self->{total_best_move_changes} if $score > $best_value && $score > $alpha && $legal > 1;
 		}
 		if ($score > $best_value) {
@@ -815,11 +820,10 @@ sub rootSearch {
 
 				no integer;
 
-				# The constants are taken from Stockfish and they use their own units
-				# which seem to be 3.5-4.0 centipawns.
-				my $best_value = 3.75 * $score;
+				my $root_move = $self->{root_moves}->{$line[0]};
+				my $best_value = $root_move->{score};
 
-				my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $best_value)
+				my $falling_eval = (11.85 + 2.24 * ($root_move->{previous_average_score} - $best_value)
 					+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $best_value)) / 100.0;
 				$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
 				if ($line[0] != $last_best_move) {
@@ -837,7 +841,7 @@ sub rootSearch {
 				my $time_reduction = 0.66 + 0.85 / (0.98 + exp(-$k * ($depth - $center)));
 				my $reduction = (1.43 + $self->{previous_time_reduction}) / (2.28 * $time_reduction);
 				my $best_move_instability = 1.02 + 2.14 * $self->{total_best_move_changes};
-				my $nodes_effort = $self->{move_efforts}->{$line[0]} * 100000 / cp_max(1, $self->{nodes});
+				my $nodes_effort = $root_move->{move_effort} * 100000 / cp_max(1, $self->{nodes});
 
 				# The original value is 93340. But we will not reach that
 				# with only safe prunings.
@@ -863,7 +867,7 @@ sub rootSearch {
 					}
 				}
 
-				$self->{previous_average_score} = $self->{average_score};
+				$root_move->{previous_average_score} = $root_move->{average_score};
 				$self->{previous_time_reduction} = $time_reduction;
 				$last_best_move = $line[0];
 				$self->{iter_scores}->[$iter_idx] = $best_value;
@@ -892,9 +896,9 @@ sub outputMoveEfforts {
 
 	my $sum = 0;
 	my $all_nodes = $self->{nodes} || 1;
-	foreach my $move (sort { $self->{move_efforts}->{$b} <=> $self->{move_efforts}->{$a} } keys %{$self->{move_efforts}}) {
+	foreach my $move (sort { $self->{root_moves}->{$b}->{move_effort} <=> $self->{root_moves}->{$a}->{move_effort} } keys %{$self->{root_moves}}) {
 		my $san = $self->{position}->SAN($move);
-		my $nodes = $self->{move_efforts}->{$move};
+		my $nodes = $self->{root_moves}->{$move}->{move_effort};
 		$sum += $nodes;
 		my $effort = int(0.5 + (100000 * $nodes / $all_nodes));
 		$self->{info}->("Move effort $san: $effort ($nodes nodes)");
@@ -931,6 +935,18 @@ sub think {
 		$self->printCurrentMove(1, $move, 1);
 		$self->printPV([$move]);
 		return $move;
+	} else {
+		# Initialize root moves.
+		foreach my $move (@legal) {
+			$self->{root_moves}->{$move} = {
+				move_effort => 0,
+				score => -INF,
+				previous_score => -INF,
+				average_score => -INF,
+				previous_average_score => -INF,
+				mean_squared_score => -INF * INF,
+			};
+		}
 	}
 
 	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
