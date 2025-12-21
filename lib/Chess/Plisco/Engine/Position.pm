@@ -470,9 +470,9 @@ sub move {
 	$zk_update ^= $zk_colour;
 
 	$self->[CP_POS_GAME_PHASE] += $move_phase_deltas[
-		($captured << 3) | $promote
+		(cp_move_captured($move) << 3) | cp_move_promote($move)
 	];
-	my $score_index = ($move & 0x3fffff & ~(1 << (CP_MOVE_COLOUR_OFFSET))) | (!($to_move) << (CP_MOVE_COLOUR_OFFSET));
+	my $score_index = ($move & 0x3fffff & ~(1 << (CP_MOVE_COLOUR_OFFSET))) | (!(cp_pos_to_move($self)) << (CP_MOVE_COLOUR_OFFSET));
 	$self->[CP_POS_OPENING_SCORE] += $opening_deltas[$score_index];
 	$self->[CP_POS_ENDGAME_SCORE] += $endgame_deltas[$score_index];
 
