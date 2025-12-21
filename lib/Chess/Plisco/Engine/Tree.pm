@@ -855,7 +855,10 @@ sub rootSearch {
 				} elsif (!$self->{ponder}) {
 					# Stockfish sets the threshold to half of the total time.
 					# We use less.
-					if ($elapsed > $total_time * 0.25) {
+					#
+					# Current best: 0.25
+					# Values 0.5, 0.375, 0.3125 all failed SPRTs.
+					if ($elapsed > $total_time >> 2) {
 						last;
 					}
 				}
