@@ -2467,11 +2467,11 @@ sub checkPseudoLegalMove {
 			$is_ep = 1;
 
 			# Removing the pawn may discover a check.
-			my $move_mask = (1 << $from) | $to_mask;
+			my $from_mask = 1 << $from;
 			my $captured_mask = $ep_pawn_masks[$ep_shift];
 
-			my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self))
-					& ((~$move_mask) ^ $captured_mask);
+			my $occupancy = (cp_pos_white_pieces($self) | cp_pos_black_pieces($self) | $to_mask)
+					& ~$from_mask & ~$captured_mask;
 			if (cp_mm_bmagic($king_shift, $occupancy) & $her_pieces
 				& (cp_pos_bishops($self) | cp_pos_queens($self))) {
 				return;
