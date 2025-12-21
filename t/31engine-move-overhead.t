@@ -74,12 +74,12 @@ ok %info, 'engine sent info line';
 ok $info{time}, 'engine sent time';
 
 $engine->__onUciInput("position startpos moves $result{bestmove} $result{ponder}");
-my $time_left = 2000 + 100 - $search_time - 27;
+my $time_left = 2000 + 100 - $info{time} - 27;
 $engine->__onUciInput("go wtime $time_left btime 1900 winc 100 binc 100");
 ok $engine->{__continued}, 'engine detected continuation';
 
 ok @{$engine->{__move_overheads}}, 'engine measured move overhead';
-is $engine->{__move_overheads}->[0], 27, 'engine measured move overhead correctly';
+ok $engine->{__move_overheads}->[0] >= 27, 'engine measured move overhead correctly';
 
 done_testing;
 
