@@ -81,9 +81,9 @@ sub cp_pos_material {}
 # - moving piece (3 bits)
 # - captured piece (3 bits)
 # - promotion (3 bits)
-# - colour (1 bit)
 # - from (6 bits)
 # - to (6 bits)
+# - colour (1 bit)
 # - en passant flag (1 bit)
 #
 # When ordering moves we often want to use the combination of attacker, victim,
