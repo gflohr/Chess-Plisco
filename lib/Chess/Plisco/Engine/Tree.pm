@@ -39,7 +39,6 @@ use Chess::Plisco::Engine::TranspositionTable;
 use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
-use constant ASPIRATION_WINDOW => 25;
 use constant SAFETY_MARGIN => 50;
 
 # For all combinations of promotion piece and captured piece, calculate a
@@ -481,9 +480,11 @@ sub alphabeta {
 			$root_move = $self->{root_moves}->{$move};
 			# The constants for the time management are taken from Stockfish
 			# and they use their own units which seem to be 3.5-4.0 centipawns.
-			my $sf_score = $root_move->{score} = 3.75 * $score;
 			$root_move->{average_score} =
-				$root_move->{average_score} != -INF ? ($score + $root_move->{average_score}) >> 1 : $sf_score;
+				$root_move->{average_score} != -INF ? ($score + $root_move->{average_score}) >> 1 : $score;
+			$root_move->{mean_squared_score} = $root_move->{mean_squared_score} != -INF * INF
+									? ($score * abs($score) + $root_move->{mean_squared_score}) / 2
+									: $score * abs($score);
 			$root_move->{move_effort} += $self->{nodes} - $nodes_before;
 			++$self->{total_best_move_changes} if $score > $best_value && $score > $alpha && $legal > 1;
 		}
@@ -667,7 +668,10 @@ sub quiesce {
 		$tt_type = Chess::Plisco::Engine::TranspositionTable::TT_SCORE_EXACT();
 	}
 
-	my @moves = $position->pseudoLegalAttacks;
+	# FIXME! Jump over all the expensive stuff following if there are no
+	# moves.
+	my @moves = $position->pseudoLegalAttacks; # or goto SKIP_MOVE_LOOP ...
+
 	my (@tt, @promotions, @checks, %captures);
 	foreach my $move (@moves) {
 		if (cp_move_equivalent $move, $tt_move) {
@@ -773,8 +777,6 @@ sub rootSearch {
 	my $score = $self->{score} = 0;
 
 	my @line = @$pline;
-	my $alpha = -INF;
-	my $beta = +INF;
 
 	my $last_best_move;
 	my $last_best_move_depth = 0;
@@ -784,35 +786,60 @@ sub rootSearch {
 		$self->debug("Searching $fen");
 	}
 	eval {
-		while (++$depth <= $max_depth) {
+		DEEPENING: while (++$depth <= $max_depth) {
 			no integer;
+
+warn "depth now $depth\n";
+			$self->{seldepth} = 0;
 
 			# Age out instability.
 			$self->{total_best_move_changes} /= 2;
 
-			my @lower_windows = (-50, -100, -INF);
-			my @upper_windows = (50, 100, +INF);
+			my $pv_move = $line[0];
+			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 2400;
+warn "mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
+warn "avg: $self->{root_moves}->{$pv_move}->{average_score}\n";
+			my $alpha = cp_max($avg - $delta, -INF);
+			my $beta = cp_min($avg + $delta, +INF);
+warn "delta: $delta, alpha: $alpha, beta: $beta\n";
 
 			$self->{depth} = $depth;
 			if (DEBUG) {
 				$self->debug("Deepening to depth $depth");
 				$self->{line} = [];
 			}
-			$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line);
-			if (DEBUG) {
-				$self->debug("Score at depth $depth: $score");
-			}
-			if (($score >= -MATE - $depth) || ($score <= MATE + $depth)) {
-				last;
-			}
 
-			if (($score <= $alpha) || ($score >= $beta)) {
+			while (1) {
+				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line);
+warn "score: $score\n";
 				if (DEBUG) {
-					$self->debug("Must re-search with infinite window.");
+					$self->debug("Score at depth $depth: $score");
 				}
-				$alpha = $score - ASPIRATION_WINDOW;
-				$beta = $score + ASPIRATION_WINDOW;
-				redo;
+				if (($score >= -MATE - $depth) || ($score <= MATE + $depth)) {
+					last DEEEPENING;
+				}
+
+				if ($score <= $alpha) {
+					$beta = $alpha;
+					$alpha = cp_max($score - $delta, -INF);
+					if (DEBUG) {
+						$self->debug("Failed low, must re-search with alpha=$alpha and beta=$beta");
+					}
+warn "Failed low, must re-search with alpha=$alpha and beta = $beta\n";
+				} elsif ($score >= $beta) {
+					$alpha = cp_max($beta - $delta, $alpha);
+					$beta = cp_min($score + $delta, +INF);
+					if (DEBUG) {
+						$self->debug("Failed high, must re-search with alpha=$alpha and beta=$beta");
+					}
+warn "Failed high, must re-search with alpha=$alpha and beta = $beta\n";
+				} else {
+warn "$alpha < $score < $beta\n";
+					last;
+				}
+				
+				$delta += $delta / 3;
 			}
 
 			if ($self->{use_time_management}) {
@@ -945,6 +972,7 @@ sub think {
 				average_score => -INF,
 				previous_average_score => -INF,
 				mean_squared_score => -INF * INF,
+san => $position->SAN($move),
 			};
 		}
 	}
@@ -957,7 +985,9 @@ sub think {
 		}
 	}
 
-	my @line;
+	# There must always be a valid move in the line.
+$DB::single = 1;
+	my @line = ($legal[0]);
 
 	$self->{thinking} = 1;
 	$self->{tt_hits} = 0;
