@@ -19,6 +19,7 @@ use Locale::TextDomain ('Chess-Plisco');
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
+use Chess::Plisco::Engine::Constants;
 
 use Time::HiRes qw(tv_interval);
 
@@ -31,6 +32,10 @@ use constant MATE => -15000;
 use constant INF => 16383;
 use constant MAX_PLY => 512;
 use constant DRAW => 0;
+
+use constant PV_NODE => 0;
+use constant CUT_NODE => 1;
+use constant ALL_NODE => 2;
 
 use Chess::Plisco::Engine::TranspositionTable;
 
