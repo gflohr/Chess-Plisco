@@ -1279,6 +1279,18 @@ sub moveSignificant {
 	return cp_move_significant $move;
 }
 
+sub moveCompress {
+	my ($self, $move) = @_;
+
+	return cp_move_compress $move;
+}
+
+sub moveUncompress {
+	my ($self, $m) = @_;
+
+	return cp_move_uncompress $m;
+}
+
 sub move {
 	my ($self, $move) = @_;
 

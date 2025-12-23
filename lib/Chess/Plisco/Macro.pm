@@ -144,6 +144,12 @@ _define cp_move_equivalent => '$m1', '$m2',
 		'(cp_move_significant($m1) == cp_move_significant($m2))';
 sub cp_move_equivalent {}
 
+_define cp_move_compress => '$m', '((($m) & 0x1fffc0) >> 6)';
+sub cp_move_compress {}
+
+_define cp_move_uncompress => '$m', '(($m) << 6)';
+sub cp_move_compress {}
+
 # Bitboard macros.
 _define cp_bitboard_popcount => '$b', '$c',
 		'{ my $_b = $b; for ($c = 0; $_b; ++$c) { $_b &= $_b - 1; } }';

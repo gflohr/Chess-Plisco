@@ -357,6 +357,18 @@ Same as L<Chess::Plisco/moveEquivalent>.
 
 Same as L<Chess::Plisco/moveSignificant>.
 
+=item B<cp_move_compress(MOVE)>
+
+Same as L<Chess::Plisco/moveCompress>.
+
+This macro has been added in version 1.0.2.
+
+=item B<cp_move_uncompress(MOVE)>
+
+Same as L<Chess::Plisco/moveUncompress>.
+
+This macro has been added in version 1.0.2.
+
 =item B<cp_move_coordinate_notation(MOVE)>
 
 Same as L<Chess::Plisco/moveCoordinateNotation>.
