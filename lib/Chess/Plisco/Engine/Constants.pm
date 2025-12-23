@@ -23,8 +23,20 @@ use constant BOUND_UPPER => 1;
 use constant BOUND_LOWER => 2;
 use constant BOUND_EXACT => 3;
 
+use constant MATE => -15000;
+use constant INF => 16383;
+use constant MAX_PLY => 512;
+use constant DRAW => 0;
+
+use constant PV_NODE => 0;
+use constant CUT_NODE => 1;
+use constant ALL_NODE => 2;
+
 our @EXPORT = qw(
 	DEPTH_UNSEARCHED
+	BOUND_NONE BOUND_UPPER BOUND_LOWER BOUND_EXACT
+	MATE INF MAX_PLY DRAW
+	PV_NODE CUT_NODE ALL_NODE
 );
 
 1;

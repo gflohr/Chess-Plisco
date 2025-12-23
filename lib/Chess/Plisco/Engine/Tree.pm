@@ -28,15 +28,6 @@ use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 use constant CP_POS_SIGNATURE => Chess::Plisco::Engine::Position::CP_POS_SIGNATURE();
 use constant CP_POS_REVERSIBLE_CLOCK => Chess::Plisco::Engine::Position::CP_POS_REVERSIBLE_CLOCK();
 
-use constant MATE => -15000;
-use constant INF => 16383;
-use constant MAX_PLY => 512;
-use constant DRAW => 0;
-
-use constant PV_NODE => 0;
-use constant CUT_NODE => 1;
-use constant ALL_NODE => 2;
-
 use Chess::Plisco::Engine::TranspositionTable;
 
 # These values get stored in the upper 32 bits of a moves so that they are
