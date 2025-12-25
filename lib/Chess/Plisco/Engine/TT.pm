@@ -71,10 +71,9 @@ sub new {
 sub clear {
 	my ($self) = @_;
 
-	my $size = @$self;
+	my $cluster_bytes = CLUSTER_CAPACITY * (KEY_BYTES + BUCKET_BYTES);
 
-	$#$self = 0;
-	$#$self = $size;
+	$self->[$_] = "x" x $cluster_bytes for 0 .. $#$self;
 
 	return $self;
 }
@@ -82,11 +81,13 @@ sub clear {
 sub resize {
 	my ($self, $size) = @_;
 
-	my $cluster_size = CLUSTER_CAPACITY * (KEY_BYTES + BUCKET_BYTES);
+	my $cluster_bytes = CLUSTER_CAPACITY * (KEY_BYTES + BUCKET_BYTES);
 
 	$#$self = 0;
 	# Perl possibly rounds the size up. Therefore the int.
-	$#$self = int($size * 1024 * 1024 / $cluster_size) - 1;
+	$#$self = int($size * 1024 * 1024 / $cluster_bytes) - 1;
+
+	$self->clear;
 
 	$generation = 0;
 
@@ -141,10 +142,9 @@ sub probe {
 		}
 	}
 
-	my $bucket_offset = 8 + $bucket_index * BUCKET_BYTES;
-	my $bucket = substr $cluster, $bucket_offset, BUCKET_BYTES;
+	my $bucket = substr $cluster, 8 + $bucket_index * BUCKET_BYTES, BUCKET_BYTES;
 
-	return 0, 0, 0, 0, 0, 0, 0, $bucket, $cluster_index, $bucket_offset;
+	return 0, 0, 0, 0, 0, 0, 0, $cluster_index, $bucket_index, $bucket;
 }
 
 sub store {

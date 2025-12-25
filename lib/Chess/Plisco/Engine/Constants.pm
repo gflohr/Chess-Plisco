@@ -51,8 +51,8 @@ use constant TT_ENTRY_BOUND_TYPE => 5;
 use constant TT_ENTRY_PV => 6;
 # The index into the TT array.
 use constant TT_CLUSTER_INDEX => 7;
-# The offset in bytes for the bucket.
-use constant TT_BUCKET_OFFSET => 8;
+# The index of the bucket inside the cluster.
+use constant TT_BUCKET_INDEX => 8;
 # The current bucket.
 use constant TT_BUCKET => 9;
 
