@@ -24,9 +24,16 @@ use constant TT_SCORE_EXACT => 0;
 use constant TT_SCORE_ALPHA => 1;
 use constant TT_SCORE_BETA => 2;
 
+use constant GENERATION_BITS => 3;
+use consatnt GENERATION_DELTA => (1 << (GENERATION_BITS));
+use constant GENERATION_CYCLE => 255 + GENERATION_DELTA;
+use constant GENERATION_MASK => (0xFF << (GENERATION_BITS)) & 0xFF;
+
 our @EXPORT = qw(TT_SCORE_EXACT TT_SCORE_ALPHA TT_SCORE_BETA);
 
 use base qw(Exporter);
+
+my $generation8 = 0;
 
 sub new {
 	my ($class, $size) = @_;
@@ -99,6 +106,20 @@ sub store {
 	my $payload = pack 's4', $depth, $flags, $value, cp_move_significant($move) >> CP_MOVE_PROMOTE_OFFSET;
 
 	$self->[$key % scalar @$self] = [$key, $payload];
+}
+
+sub newSearch {
+	$generation8 = 0;
+}
+
+sub generation {
+	return $generation8;
+}
+
+sub sfprobe {
+	my ($self, $key) = @_;
+
+	
 }
 
 1;
