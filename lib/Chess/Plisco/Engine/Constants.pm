@@ -26,6 +26,7 @@ use constant BOUND_EXACT => 3;
 
 use constant MATE => -15000;
 use constant INF => 16383;
+use constant NONE => INF + 1;
 use constant MAX_PLY => 512;
 use constant DRAW => 0;
 
@@ -48,12 +49,12 @@ use constant TT_ENTRY_EVAL => 4;
 use constant TT_ENTRY_BOUND_TYPE => 5;
 # Flag for PV nodes.
 use constant TT_ENTRY_PV => 6;
-# The current bucket.
-use constant TT_BUCKET => 7;
 # The index into the TT array.
-use constant TT_CLUSTER_INDEX => 8;
+use constant TT_CLUSTER_INDEX => 7;
 # The offset in bytes for the bucket.
-use constant TT_BUCKET_OFFSET => 9;
+use constant TT_BUCKET_OFFSET => 8;
+# The current bucket.
+use constant TT_BUCKET => 9;
 
 our @EXPORT = qw(
 	DEPTH_UNSEARCHED DEPTH_ENTRY_OFFSET
