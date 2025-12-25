@@ -60,7 +60,9 @@ sub resize {
 sub probe {
 	my ($self, $lookup_key, $ply, $depth, $alpha, $beta, $bestmove) = @_;
 
-	my $entry = $self->[$lookup_key % scalar @$self] or return;
+	# Throw away the highest bit in order to avoid producing negative indices.
+	# See https://github.com/gflohr/Chess-Plisco/issues/48
+	my $entry = $self->[($lookup_key & 0x7fff_ffff_ffff_ffff) % scalar @$self] or return;
 
 	my ($stored_key, $payload) = @$entry;
 	return if $stored_key != $lookup_key;
@@ -98,7 +100,9 @@ sub store {
 	# only the significant bits of the best move are stored.
 	my $payload = pack 's4', $depth, $flags, $value, cp_move_significant($move) >> CP_MOVE_PROMOTE_OFFSET;
 
-	$self->[$key % scalar @$self] = [$key, $payload];
+	# Throw away the highest bit in order to avoid producing negative indices.
+	# See https://github.com/gflohr/Chess-Plisco/issues/48
+	$self->[($key & 0x7fff_ffff_ffff_ffff) % scalar @$self] = [$key, $payload];
 }
 
 1;
