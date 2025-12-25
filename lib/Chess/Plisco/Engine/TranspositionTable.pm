@@ -25,7 +25,7 @@ use constant TT_SCORE_ALPHA => 1;
 use constant TT_SCORE_BETA => 2;
 
 use constant GENERATION_BITS => 3;
-use consatnt GENERATION_DELTA => (1 << (GENERATION_BITS));
+use constant GENERATION_DELTA => (1 << (GENERATION_BITS));
 use constant GENERATION_CYCLE => 255 + GENERATION_DELTA;
 use constant GENERATION_MASK => (0xFF << (GENERATION_BITS)) & 0xFF;
 
