@@ -111,8 +111,7 @@ sub probe {
 	my @keys = unpack 'S4', $cluster;
 	for (my $i = 0; $i < @keys; ++$i) {
 		if ($keys[$i] == $key16) {
-			my $offset = 8 + $i * BUCKET_BYTES;
-			my $bucket = substr $cluster, $offset, BUCKET_BYTES;
+			my $bucket = substr $cluster, 8 + $i * BUCKET_BYTES, BUCKET_BYTES;
 			# The list now contains the depth, move, value, evaluation, and
 			# encoded bitfield.
 			my @bucket = (0, unpack 'CCSss', $bucket);
@@ -121,7 +120,7 @@ sub probe {
 			$bucket[1] += DEPTH_ENTRY_OFFSET; # The actual depth.
 			my $bitfield = $bucket[2];
 			$bucket[2] &= 3; # Now contains the bound type.
-			push @bucket, $bitfield & 4, $cluster_index, $offset, $bucket;
+			push @bucket, $bitfield & 4, $cluster_index, $i, $bucket;
 
 			return @bucket;
 		}
