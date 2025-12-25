@@ -51,7 +51,7 @@ is $tt_move, 1234, 'move in first entry';
 is $tt_value, 314, 'value in first entry';
 is $tt_eval, 278, 'eval in first entry';
 
-# Test that exact entries overwrite upper and lower bounds.
+# Test that exact entries overwrite lower bound entries.
 $tt->clear;
 ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
 	$tt_pv, @write_info) = $tt->probe($signature);
@@ -60,6 +60,21 @@ $tt->store(@write_info, $signature, 314, 1, BOUND_LOWER, 7, 1233, 278);
 	$tt_pv, @write_info) = $tt->probe($signature);
 ok $tt_hit, 'hit on lower bound';
 is $tt_move, 1233, 'lower bound move';
+$tt->store(@write_info, $signature, 314, 1, BOUND_EXACT, 7, 1234, 278);
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+	$tt_pv, @write_info) = $tt->probe($signature);
+ok $tt_hit, 'hit on exact bound';
+is $tt_move, 1234, 'exact bound move';
+
+# Test that exact entries overwrite upper bound entries.
+$tt->clear;
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+	$tt_pv, @write_info) = $tt->probe($signature);
+$tt->store(@write_info, $signature, 314, 1, BOUND_UPPER, 7, 1235, 278);
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+	$tt_pv, @write_info) = $tt->probe($signature);
+ok $tt_hit, 'hit on upper bound';
+is $tt_move, 1235, 'upper bound move';
 $tt->store(@write_info, $signature, 314, 1, BOUND_EXACT, 7, 1234, 278);
 ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
 	$tt_pv, @write_info) = $tt->probe($signature);
