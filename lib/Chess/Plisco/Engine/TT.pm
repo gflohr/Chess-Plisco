@@ -168,11 +168,6 @@ if (defined $pv && $pv != 0 && $pv != 1) {
 	}
 
 	# Overwrite old entry?
-my $cond1 = $bound == BOUND_EXACT;
-my $cond2 = $key != $k;
-my $cond3 = $depth - DEPTH_ENTRY_OFFSET + ($pv << 1)
-		   > (unpack 'C', substr $bucket, 0, 1) - 4;
-my $cond4 = $relative_age->(unpack 'C', substr($bucket, 1, 1)) & GENERATION_MASK;
 	my $stored_depth;
 	if ($bound == BOUND_EXACT || $key != $k
 		|| ($stored_depth = unpack('C', substr $bucket, 0, 1) || 0) # Always false, forces stored_depth to be defined.
@@ -189,6 +184,40 @@ my $cond4 = $relative_age->(unpack 'C', substr($bucket, 1, 1)) & GENERATION_MASK
 				$eval,
 			);
 	}
+}
+
+sub hashfull {
+	my ($self, $max_age) = @_;
+
+	my $max_age_internal = $max_age << (GENERATION_BITS);
+	my $cnt = 0;
+
+	for (my $i = 0; $i < 1000; ++$i) {
+		my $cluster = $self->[$i];
+		# FIXME! Unpack the whole cluster with one unpack into 40 bytes.
+		# And then just that array instead substr() and unpack.
+		for (my $j = 0; $j < CLUSTER_CAPACITY; ++$j) {
+
+			# key16 test == is_occupied().
+			my $key16 = unpack 'S', substr($cluster, $j << 1, 2);
+			next if $key16 == 0;
+
+			# Read generation from bucket.
+			my $bucket_offset = 8 + ($j << 3);
+			my $genBound8 = unpack 'C', substr($cluster, $bucket_offset + 1, 1);
+
+			my $entry_generation = $genBound8 & GENERATION_MASK;
+
+			my $age =
+				(GENERATION_CYCLE + $generation - $entry_generation)
+				& GENERATION_MASK;
+
+			$cnt++ if $age <= $max_age_internal;
+		}
+	}
+
+	# Return permille as per UCI.
+	return int($cnt / CLUSTER_CAPACITY);
 }
 
 1;
