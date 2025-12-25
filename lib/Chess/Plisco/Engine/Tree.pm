@@ -941,6 +941,7 @@ sub think {
 
 	$self->{thinking} = 1;
 	$self->{tt_hits} = 0;
+	$self->{tt}->newSearch;
 
 	if ($self->{debug}) {
 		$self->{info}->("allocated time: $self->{optimum} .. $self->{maximum}");
