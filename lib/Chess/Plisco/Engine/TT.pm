@@ -192,31 +192,27 @@ sub hashfull {
 	my $max_age_internal = $max_age << (GENERATION_BITS);
 	my $cnt = 0;
 
-	for (my $i = 0; $i < 1000; ++$i) {
-		my $cluster = $self->[$i];
-		# FIXME! Unpack the whole cluster with one unpack into 40 bytes.
-		# And then just that array instead substr() and unpack.
-		for (my $j = 0; $j < CLUSTER_CAPACITY; ++$j) {
+	my $limit = @$self < 1000 ? @$self : 1000;
 
-			# key16 test == is_occupied().
-			my $key16 = unpack 'S', substr($cluster, $j << 1, 2);
-			next if $key16 == 0;
+	for my $ci (0 .. $limit - 1) {
+		my @c = unpack 'C40', $self->[$ci];
 
-			# Read generation from bucket.
-			my $bucket_offset = 8 + ($j << 3);
-			my $genBound8 = unpack 'C', substr($cluster, $bucket_offset + 1, 1);
+		for my $bi (0 .. CLUSTER_CAPACITY - 1) {
+			my $k_lo = $c[$bi*2];
+			my $k_hi = $c[$bi*2 + 1];
+			next if ($k_lo | $k_hi) == 0;   # empty
 
-			my $entry_generation = $genBound8 & GENERATION_MASK;
+			my $base = 8 + ($bi << 3);
+			my $gen  = $c[$base + 1] >> 3;
 
 			my $age =
-				(GENERATION_CYCLE + $generation - $entry_generation)
+				(GENERATION_CYCLE + $generation - $gen)
 				& GENERATION_MASK;
 
 			$cnt++ if $age <= $max_age_internal;
 		}
 	}
 
-	# Return permille as per UCI.
 	return int($cnt / CLUSTER_CAPACITY);
 }
 
