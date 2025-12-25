@@ -81,4 +81,81 @@ $tt->store(@write_info, $signature, 314, 1, BOUND_EXACT, 7, 1234, 278);
 ok $tt_hit, 'hit on exact bound';
 is $tt_move, 1234, 'exact bound move';
 
+# Test that entries with another key do not overwrite old ones.
+$tt->clear;
+
+# Store first entry with original signature
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+ $tt_pv, @write_info) = $tt->probe($signature);
+$tt->store(@write_info, $signature, 314, 1, BOUND_EXACT, 7, 1234, 278);
+
+# Probe it back to make sure it's there
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+ $tt_pv, @write_info) = $tt->probe($signature);
+ok $tt_hit, 'hit on original key';
+is $tt_move, 1234, 'original move stored correctly';
+
+# Now use a new signature with a different key
+my $signature2 = $signature + $num_clusters;  # simple way to get different key
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+ $tt_pv, @write_info) = $tt->probe($signature2);
+$tt->store(@write_info, $signature2, 555, 0, BOUND_UPPER, 5, 4321, 999);
+
+# Probe both signatures
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+ $tt_pv, @write_info) = $tt->probe($signature);
+ok $tt_hit, 'original key should not be overwritten';
+
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+ $tt_pv, @write_info) = $tt->probe($signature2);
+ok $tt_hit, 'new key stored';
+is $tt_move, 4321, 'new move stored correctly';
+
+# Fill the cluster with 4 distinct keys
+my @signatures = (
+	$signature,
+	$signature + 1 * $num_clusters,
+	$signature + 2 * $num_clusters,
+	$signature + 3 * $num_clusters,
+);
+my @moves = (1001 .. 1004);
+
+$tt->clear;
+for my $i (0 .. 3) {
+	my $sig = $signatures[$i];
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($sig);
+	$tt->store(@write_info, $sig, 314, 1, BOUND_EXACT, 7, $moves[$i], 278);
+}
+
+# All 4 should be present
+for my $i (0..3) {
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($signatures[$i]);
+	ok $tt_hit, "cluster contains signature $i";
+	is $tt_move, $moves[$i], "correct move for signature $i";
+}
+
+# Now store a 5th distinct entry, forcing a replacement
+my $sig5 = $signature + 4 * $num_clusters;
+my $move5 = 9999;
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+    $tt_pv, @write_info) = $tt->probe($sig5);
+$tt->store(@write_info, $sig5, 314, 1, BOUND_EXACT, 7, $move5, 278);
+
+# Probe all 5 signatures: one of the old ones must have been replaced
+my $found_count = 0;
+for my $i (0 .. 4) {
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($i < 4 ? $signatures[$i] : $sig5);
+	$found_count++ if $tt_hit;
+}
+is $found_count, 4, 'cluster still contains 4 entries after replacement';
+
+# Ensure the new move is stored
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+ $tt_pv, @write_info) = $tt->probe($sig5);
+ok $tt_hit, 'new signature stored';
+is $tt_move, $move5, 'new move stored correctly';
+
 done_testing;
