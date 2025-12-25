@@ -44,6 +44,7 @@ If you want to do more with the software, you have to install at least a
 Perl interpreter for Windows ([Strawberry Perl](https://strawberryperl.com/)
 will usually be the first choice). If you want to hack on the sources, you have
 to set up a development environment that is close enough to a Un*x system.
+Just read on in this case.
 
 ### POSIX Systems (Un*x, Linux, macos, ...)
 
