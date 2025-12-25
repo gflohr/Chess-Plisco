@@ -1,0 +1,191 @@
+#! /bin/false
+
+# Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>,
+# all rights reserved.
+
+# This program is free software. It comes without any warranty, to
+# the extent permitted by applicable law. You can redistribute it
+# and/or modify it under the terms of the Do What the Fuck You Want
+# to Public License, Version 2, as published by Sam Hocevar. See
+# http://www.wtfpl.net/ for more details.
+
+# Rename that back to TranspositionTable, once done.
+package Chess::Plisco::Engine::TT;
+
+use strict;
+use integer;
+
+use Chess::Plisco::Engine::Constants;
+
+# The transposition table is organised into clusters, which in turn contain
+# 4 buckets.
+use constant CLUSTER_CAPACITY => 4;
+
+# We store the keys separately from the actual entries, because that is easier
+# to scan. The layout of a cluster is then like this:
+
+# key0       16 bit
+# key1       16 bit
+# key2       16 bit
+# key3       16 bit
+# depth       8 bit start of bucket 0
+# generation  5 bit
+# pv node     1 bit
+# bound type  2 bit
+# move       16 bit
+# value      16 bit
+# evaluation 16 bit end of bucket 0
+# bucket1    64 bit 
+# bucket2    64 bit 
+# bucket3    64 bit 
+
+use constant KEY_BYTES => 2;
+use constant BUCKET_BYTES => 8;
+
+use constant TT_ENTRY_SIZE => 16;
+
+use constant GENERATION_BITS => 3;
+use constant GENERATION_DELTA => (1 << (GENERATION_BITS));
+use constant GENERATION_CYCLE => 255 + GENERATION_DELTA;
+use constant GENERATION_MASK => (0xFF << (GENERATION_BITS)) & 0xFF;
+
+my $generation = 0;
+
+# FIXME! Inline this!
+my $relative_age = sub {
+	return (GENERATION_CYCLE + $generation - $_[0]) & GENERATION_MASK;
+};
+
+
+sub new {
+	my ($class, $size) = @_;
+
+	# Reading array entries is almost 50 % faster than access strings with
+	# substr.
+	my $self = [];
+	bless $self, $class;
+
+	return $self->resize($size);
+}
+
+sub clear {
+	my ($self) = @_;
+
+	my $size = @$self;
+
+	$#$self = 0;
+	$#$self = $size;
+
+	return $self;
+}
+
+sub resize {
+	my ($self, $size) = @_;
+
+	my $cluster_size = CLUSTER_CAPACITY * (KEY_BYTES + BUCKET_BYTES);
+
+	$#$self = 0;
+	# Perl possibly rounds the size up. Therefore the int.
+	$#$self = int($size * 1024 * 1024 / $cluster_size) - 1;
+
+	$generation = 0;
+
+	return $self;
+}
+
+sub newSearch {
+	$generation += GENERATION_DELTA;
+}
+
+sub probe {
+	my ($self, $signature) = @_;
+
+	# Throw away the sign bit, because we cannot use negative indices.
+	my $cluster_index = ($signature & 0x7fff_ffff_ffff_ffff) % scalar @$self;
+	my $cluster = $self->[$cluster_index];
+	
+	# Use the lower 16 bits.
+	my $key16 = $signature & 0xffff;
+
+	my @keys = unpack 'S4', $cluster;
+	for (my $i = 0; $i < @keys; ++$i) {
+		if ($keys[$i] == $key16) {
+			my $offset = 8 + $i * BUCKET_BYTES;
+			my $bucket = substr $cluster, $offset, BUCKET_BYTES;
+			# The list now contains the depth, move, value, evaluation, and
+			# encoded bitfield.
+			my @bucket = (0, unpack 'CCSss', $bucket);
+			my $occupied = $bucket[1] or next;
+			$bucket[0] = $occupied && 1; # The occupied flag.
+			$bucket[1] += DEPTH_ENTRY_OFFSET; # The actual depth.
+			my $bitfield = $bucket[2];
+			$bucket[2] >>= 3; # Now contains the generation.
+			push @bucket, $bitfield & 3, $bitfield & 4, $cluster_index, $offset, $bucket;
+
+			return @bucket;
+		}
+	}
+
+	# Nothing found. Find a bucket to replace.
+	my ($depth, $generation) = unpack 'CC', substr $cluster, 8;
+	my $bucket_index = 0;
+	my $best = $depth - 8 * $relative_age->($generation);
+	for (my $i = 1; $i < @keys; ++$i) {
+		my $offset = 8 + $i * BUCKET_BYTES;
+		my $repl_bucket = substr $cluster, $offset, BUCKET_BYTES;
+		my ($repl_depth, $repl_generation) = unpack 'CC', $repl_bucket;
+		if ($repl_depth - 8 * $relative_age->($repl_generation) < $best) {
+			$depth = $repl_depth;
+			$generation = $repl_generation;
+			$bucket_index = $i;
+		}
+	}
+
+	my $bucket_offset = 8 + $bucket_index * BUCKET_BYTES;
+	my $bucket = substr $cluster, $bucket_offset, BUCKET_BYTES;
+
+	return 0, 0, 0, 0, 0, 0, 0, $bucket, $cluster_index, $bucket_offset;
+}
+
+sub store {
+	my ($self, $cluster_index, $bucket_index, $bucket, $signature, $value,
+		$pv, $bound, $depth, $move, $eval) = @_;
+
+if (defined $pv && $pv != 0 && $pv != 1) {
+	require Carp;
+	Carp::croak("pv must always be 1 or 0 or undef");
+} elsif ($generation & GENERATION_MASK != $generation) {
+	Carp::croak("generation must be masked")
+}
+	my $k = $signature & 0xffff;
+
+	my $cluster = $self->[$cluster_index];
+
+	# Unpacking just one value is almost two times faster than unpacking all
+	# four keys and picking the right one.
+	my $key = unpack 'S', substr $cluster, $bucket_index << 1, 2;
+
+	# Preserve the 
+	if (!$move && $key == $k) {
+		$move = unpack 'S', substr $bucket, 2, 2;
+	}
+
+	# Overwrite old entry?
+	if ($bound == BOUND_EXACT || $key != $k
+		|| $depth - DEPTH_ENTRY_OFFSET + ($pv << 1)
+		   > (unpack 'C', substr $bucket, 1) - 4
+		|| $relative_age->(unpack 'C', substr($bucket, 1, 1)) & GENERATION_MASK) {
+		# Overwrite!
+		substr($self->[$cluster_index], $bucket_index << 1) = pack 'S', $k; # Key.
+		substr($self->[$cluster_index], 8 + ($bucket_index << 3), BUCKET_BYTES) =
+			pack('CCSss',
+				$depth - DEPTH_ENTRY_OFFSET, # Depth.
+				$generation | ($pv << 2) | $bound, # GenBound8.
+				$move,
+				$value,
+				$eval,
+			);
+	}
+}
+
+1;
