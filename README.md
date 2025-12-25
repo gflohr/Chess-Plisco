@@ -204,7 +204,7 @@ well with `Chess-Plisco`.
 
 The solution was another Perl gimmick, so-called source code filters. These
 filters are regular Perl modules that receive some source code as input and
-are expected to produced output that can be processed by the Perl interpreter.
+are expected to produce output that can be processed by the Perl interpreter.
 They are run before the Perl interpreter itself parses the code, and
 this is what `Chess-Plisco` is using for inlining.
 
@@ -224,15 +224,15 @@ with the code that is actually executed. Inlining.
 In order to speed up the installed module, there is a script `expand-macros`
 in the top-level directory that runs a whole directory of Perl source files
 through that source filter and expands them in place. This is one step in the
-release workflow. Therefore, the published releases of `Chess-Plisco` do not
-have that start-up penalty and compile relatively fast. There is still a
+build workflow. Therefore, the published releases of `Chess-Plisco` do not
+have this start-up penalty and compile relatively fast. There is still a
 noticeable delay that comes from pre-computing relatively large lookup tables.
 
 Releases of `Chess-Plisco` are created with the help of
 [`Dist::Zilla`](https://dzil.org/), which makes the integration of the source
 code filter really easy. It is probably feasible to integrate the filter on a
 lower level after `perl Makefile.PL && make`, so that you will find expanded
-sources inside `blib/lib` but, so far, there was no need for it. For the time
+sources inside `blib/lib`, but so far, there was no demand for it. For the time
 being, you have to know that the library created after the conventional Perl
 build plethor `perl Makefile.PL && make` will produce a module with a massive
 start-up overhead.
