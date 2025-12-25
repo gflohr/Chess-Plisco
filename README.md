@@ -59,7 +59,7 @@ runs the test suites that ship with the packages. That can be time consuming,
 and sometimes tests fail, that are not really relevant. Therefore, you can
 always add the option `--notest` to bypass this step if you need that.
 
-Once you `cpanm`, installing the latest release of the library and the engine
+Once you have `cpanm` working, installing the latest release of the library and the engine
 is as easy as this:
 
 ```shell
