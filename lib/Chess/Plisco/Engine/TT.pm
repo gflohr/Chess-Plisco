@@ -73,7 +73,7 @@ sub clear {
 
 	my $cluster_bytes = CLUSTER_CAPACITY * (KEY_BYTES + BUCKET_BYTES);
 
-	$self->[$_] = "x" x $cluster_bytes for 0 .. $#$self;
+	$self->[$_] = "\0" x $cluster_bytes for 0 .. $#$self;
 
 	return $self;
 }
@@ -168,10 +168,16 @@ if (defined $pv && $pv != 0 && $pv != 1) {
 	}
 
 	# Overwrite old entry?
+my $cond1 = $bound == BOUND_EXACT;
+my $cond2 = $key != $k;
+my $cond3 = $depth - DEPTH_ENTRY_OFFSET + ($pv << 1)
+		   > (unpack 'C', substr $bucket, 0, 1) - 4;
+my $cond4 = $relative_age->(unpack 'C', substr($bucket, 1, 1)) & GENERATION_MASK;
+	my $stored_depth;
 	if ($bound == BOUND_EXACT || $key != $k
-		|| $depth - DEPTH_ENTRY_OFFSET + ($pv << 1)
-		   > (unpack 'C', substr $bucket, 1) - 4
-		|| $relative_age->(unpack 'C', substr($bucket, 1, 1)) & GENERATION_MASK) {
+		|| ($stored_depth = unpack('C', substr $bucket, 0, 1) || 0) # Always false, forces stored_depth to be defined.
+		|| $depth - DEPTH_ENTRY_OFFSET + ($pv << 1) > $stored_depth - 4
+		|| $relative_age->($stored_depth) & GENERATION_MASK) {
 		# Overwrite!
 		substr($self->[$cluster_index], $bucket_index << 1, 2) = pack 'S', $k; # Key.
 		substr($self->[$cluster_index], 8 + ($bucket_index << 3), BUCKET_BYTES) =

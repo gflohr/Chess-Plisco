@@ -158,4 +158,33 @@ is $found_count, 4, 'cluster still contains 4 entries after replacement';
 ok $tt_hit, 'new signature stored';
 is $tt_move, $move5, 'new move stored correctly';
 
+# Check that a new generation overwrites older ones.
+$tt->clear;
+for my $i (0 .. 3) {
+	my $sig = $signatures[$i];
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($sig);
+	$tt->store(@write_info, $sig, 314, 1, BOUND_EXACT, 100, $moves[$i], 278);
+}
+
+# Force next generation.
+$tt->newSearch;
+
+my @new_moves = (10000 .. 10003);
+for my $i (0 .. 3) {
+	my $sig = $signatures[$i];
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($sig);
+	# Store them with with a non-exact bound type at a much lower depth.
+	$tt->store(@write_info, $sig, 314, 1, BOUND_UPPER, 3, $new_moves[$i], 278);
+}
+
+# Now check that we have new moves only.
+for my $i (0 .. 3) {
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($signatures[$i]);
+	ok $tt_hit, "next generation tt hit $i";
+	is $tt_move, $new_moves[$i], "overwritten move $i";
+}
+
 done_testing;
