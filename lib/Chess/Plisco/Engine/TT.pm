@@ -159,11 +159,9 @@ if (defined $pv && $pv != 0 && $pv != 1) {
 }
 	my $k = $signature & 0xffff;
 
-	my $cluster = $self->[$cluster_index];
-
 	# Unpacking just one value is almost two times faster than unpacking all
 	# four keys and picking the right one.
-	my $key = unpack 'S', substr $cluster, $bucket_index << 1, 2;
+	my $key = unpack 'S', substr $self->[$cluster_index], $bucket_index << 1, 2;
 
 	# Preserve the 
 	if (!$move && $key == $k) {
@@ -176,7 +174,7 @@ if (defined $pv && $pv != 0 && $pv != 1) {
 		   > (unpack 'C', substr $bucket, 1) - 4
 		|| $relative_age->(unpack 'C', substr($bucket, 1, 1)) & GENERATION_MASK) {
 		# Overwrite!
-		substr($self->[$cluster_index], $bucket_index << 1) = pack 'S', $k; # Key.
+		substr($self->[$cluster_index], $bucket_index << 1, 2) = pack 'S', $k; # Key.
 		substr($self->[$cluster_index], 8 + ($bucket_index << 3), BUCKET_BYTES) =
 			pack('CCSss',
 				$depth - DEPTH_ENTRY_OFFSET, # Depth.
