@@ -120,8 +120,8 @@ sub probe {
 			$bucket[0] = $occupied && 1; # The occupied flag.
 			$bucket[1] += DEPTH_ENTRY_OFFSET; # The actual depth.
 			my $bitfield = $bucket[2];
-			$bucket[2] >>= 3; # Now contains the generation.
-			push @bucket, $bitfield & 3, $bitfield & 4, $cluster_index, $offset, $bucket;
+			$bucket[2] &= 3; # Now contains the bound type.
+			push @bucket, $bitfield & 4, $cluster_index, $offset, $bucket;
 
 			return @bucket;
 		}

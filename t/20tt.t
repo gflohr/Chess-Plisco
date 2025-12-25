@@ -28,7 +28,7 @@ is scalar @$tt, $num_clusters, "$num_clusters clusters";
 
 # Retrieve an entry.
 my $signature = 0xbea7ab1e_ba5eba11;
-my ($tt_hit, $tt_depth, $tt_move, $tt_value, $tt_eval, $tt_bound_type,
+my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
 	$tt_pv, @write_info) = $tt->probe($signature);
 
 ok !$tt_hit, 'hit in empty table';
@@ -36,10 +36,19 @@ ok !$tt_depth, 'depth in empty table';
 ok !$tt_move, 'move in empty table';
 ok !$tt_value, 'value in empty table';
 ok !$tt_eval, 'eval in empty table';
-ok !$tt_bound_type, 'bound type in empty table';
+ok !$tt_bound, 'bound in empty table';
 ok !$tt_pv, 'PV flag in empty table';
 
-# Store an entry.
+# Store an entry and get the values.
+# @write_info, $signature, $value, $pv, $bound, $depth, $move, $eval) = @_;
 $tt->store(@write_info, $signature, 314, 1, BOUND_EXACT, 7, 1234, 278);
+($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+	$tt_pv, @write_info) = $tt->probe($signature);
+ok $tt_hit, 'hit on first entry';
+is $tt_depth, 7, 'depth in first entry';
+is $tt_bound, BOUND_EXACT, 'bound in first entry';
+is $tt_move, 1234, 'move in first entry';
+is $tt_value, 314, 'value in first entry';
+is $tt_eval, 278, 'eval in first entry';
 
 done_testing;
