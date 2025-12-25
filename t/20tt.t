@@ -39,4 +39,7 @@ ok !$tt_eval, 'eval in empty table';
 ok !$tt_bound_type, 'bound type in empty table';
 ok !$tt_pv, 'PV flag in empty table';
 
+# Store an entry.
+$tt->store(@write_info, $signature, 314, 1, BOUND_EXACT, 7, 1234, 278);
+
 done_testing;
