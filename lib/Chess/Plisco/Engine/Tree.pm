@@ -224,8 +224,6 @@ sub printPV {
 
 # Make them invokable without a method call.
 sub quiesce;
-sub valueFromTT;
-sub valueToTT;
 
 # __BEGIN_MACROS__
 
@@ -297,7 +295,7 @@ sub alphabeta {
 		$tt_pv, @tt_address) = $tt->probe($signature);
 
 	$tt_move = 0 if ($root_node || !$tt_hit);
-	$tt_value = valueFromTT($self, $tt_value, $ply, $position->[CP_POS_HALFMOVE_CLOCK])
+	$tt_value = _cp_value_from_tt($tt_value, $ply, $position->[CP_POS_HALFMOVE_CLOCK])
 		if $tt_hit && defined $tt_value;
 	$tt_pvs->[$ply] = $pv_node || ($tt_hit && $tt_pv);
 	my $pv_hit = $tt_hit && $tt_pv;
@@ -532,7 +530,7 @@ sub alphabeta {
 			$tt->store(
 				@tt_address, # Information about destination.
 				$signature, # Position key.
-				valueToTT($self, $score, $ply), # Mate corrections.
+				_cp_value_to_tt($score, $ply), # Mate corrections.
 				0, # PV flag.
 				BOUND_LOWER,
 				$depth,
@@ -601,7 +599,7 @@ sub alphabeta {
 			} else {
 				$type = 'BOUND_EXACT';
 			}
-			my $value = valueToTT($self, $best_value, $ply);
+			my $value = _cp_value_to_tt($best_value, $ply);
 			$self->indent($ply, "returning best value $best_value, store $value ($type) \@depth $depth for $hex_sig");
 		}
 	}
@@ -616,7 +614,7 @@ sub alphabeta {
 	$tt->store(
 		@tt_address, # Address.
 		$signature, # Zobrist key.
-		valueToTT($self, $best_value, $ply), # score, mate distance adjusted.
+		_cp_value_to_tt($best_value, $ply), # score, mate distance adjusted.
 		$tt_pvs->[-1], # PV flag.
 		$tt_type, # BOUND_EXACT/TT_SCORE_ALPHA/TT_SCORE_LOWER.
 		$depth, # Depth searched.
@@ -665,7 +663,7 @@ sub quiesce {
 		$tt_pv, @tt_address) = $tt->probe($signature);
 
 	$tt_move = 0 if !$tt_hit;
-	$tt_value = valueFromTT($self, $tt_value, $ply, $position->[CP_POS_HALFMOVE_CLOCK])
+	$tt_value = _cp_value_from_tt($tt_value, $ply, $position->[CP_POS_HALFMOVE_CLOCK])
 		if $tt_hit && defined $tt_value;
 	my $pv_hit = $tt_hit && $tt_pv;
 
@@ -711,7 +709,7 @@ sub quiesce {
 		$tt->store(
 			@tt_address,
 			$signature,
-			valueToTT($self, $best_value, $ply),
+			_cp_value_to_tt($best_value, $ply),
 			0,
 			BOUND_LOWER,
 			DEPTH_UNSEARCHED,
@@ -799,7 +797,7 @@ sub quiesce {
 	$tt->store(
 		@tt_address, # Address.
 		$signature, # Zobrist key.
-		valueToTT($self, $best_value, $ply), # score, mate distance adjusted.
+		_cp_value_to_tt($best_value, $ply), # score, mate distance adjusted.
 		$pv_hit, # PV flag.
 		$tt_type, # BOUND_EXACT/BOUND_UPPER/BOUND_LOWER.
 		DEPTH_QUIESCENCE, # Depth searched.
@@ -949,38 +947,6 @@ sub rootSearch {
 	}
 
 	@$pline = @line;
-}
-
-sub valueToTT {
-	my ($self, $v, $p) = @_;
-
-	return ($v >= VALUE_TB_WIN_IN_MAX_PLY) ? $v + $p : ($v <= VALUE_TB_LOSS_IN_MAX_PLY) ? $v - $p : $v;
-}
-
-sub valueFromTT {
-	my ($self, $value, $ply, $rule50_count) = @_;
-
-	if ($value >= VALUE_TB_WIN_IN_MAX_PLY) {
-		return VALUE_TB_WIN_IN_MAX_PLY - 1
-			if $value >= MATE_IN_MAX_PLY && MATE - $value > 100 - $rule50_count;
-
-		return VALUE_TB_WIN_IN_MAX_PLY - 1
-			if VALUE_TB_WIN_IN_MAX_PLY - $value > 100 - $rule50_count;
-
-		return $value - $ply;
-	}
-
-	if ($value <= VALUE_TB_LOSS_IN_MAX_PLY) {
-		return VALUE_TB_LOSS_IN_MAX_PLY + 1
-			if $value <= MATED_IN_MAX_PLY && MATE + $value > 100 - $rule50_count;
-
-		return VALUE_TB_LOSS_IN_MAX_PLY + 1
-			if VALUE_TB_LOSS_IN_MAX_PLY + $value > 100 - $rule50_count;
-
-		return $value + $ply;
-	}
-
-	return $value;
 }
 
 # __END_MACROS__
