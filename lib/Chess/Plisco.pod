@@ -19,6 +19,11 @@ somewhat opinionated but this is not an end in itself but owed to its intention
 of being fast and efficient.  In doubt, flexibility is sacrificed for
 performance and efficiency.
 
+The software also ships a UCI compatible chess engine F<plisco>. If it is
+online, you can challenge it on Lichess: L<https://lichess.org/@/plisco-bot>.
+On Lichess, it currently has a rating of around 2000, leaving many engines written
+in high-level languages like C/C++, Rust, Scala, and C# behind.
+
 The library features:
 
 =over 4
