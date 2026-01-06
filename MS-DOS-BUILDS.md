@@ -33,7 +33,7 @@ Inside the release (make sure that `expand-macros` was run!), type this into
 the crap shell:
 
 ```shell
-pp --lib=lib --output=plisco.exe .\\bin\\plisco
+pp --lib=lib --output=plisco.exe .\bin\plisco
 ```
 
 Make sure to use backward slashes and add the filename extention `.exe`!
