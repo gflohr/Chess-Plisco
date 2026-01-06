@@ -217,9 +217,9 @@ _define cp_clamp => '$v', '$lo', '$hi', '($v) < ($lo) ? ($lo) : ($v) > ($hi) ? (
 _define _cp_zk_lookup => '$p', '$c', '$s', '$zk_pieces[((($p) << 7) | (($c) << 6) | ($s)) - 128]';
 
 ## TT probes and stores.
-_define_from_file _cp_value_from_tt => '$v', '$p', '$r50c', 'value_from_tt.pm';
+_define_from_file _cp_value_from_tt => '$v', '$p', '$r50c', 'valueFromTT.pm';
 sub _cp_value_from_tt {}
-_define_from_file _cp_value_to_tt => '$v', '$p', 'value_to_tt.pm';
+_define_from_file _cp_value_to_tt => '$v', '$p', 'valueToTT.pm';
 sub _cp_value_to_tt {}
 
 sub import {
