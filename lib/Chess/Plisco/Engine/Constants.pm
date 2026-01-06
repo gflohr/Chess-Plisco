@@ -16,6 +16,7 @@ use integer;
 
 use base qw(Exporter);
 
+use constant DEPTH_QUIESCENCE => 0;
 use constant DEPTH_UNSEARCHED => -2;
 use constant DEPTH_ENTRY_OFFSET => -3;
 
@@ -24,15 +25,29 @@ use constant BOUND_UPPER => 1;
 use constant BOUND_LOWER => 2;
 use constant BOUND_EXACT => 3;
 
-use constant MATE => -15000;
-use constant INF => 16383;
+# For debugging output.
+use constant BOUND_TYPES => ['None', 'Upper', 'Lower', 'Exact'];
+
+use constant MATE => 32000;
+use constant INF => MATE + 1;
 use constant NONE => INF + 1;
-use constant MAX_PLY => 512;
+use constant MAX_PLY => 246;
 use constant DRAW => 0;
 
-use constant PV_NODE => 0;
-use constant CUT_NODE => 1;
-use constant ALL_NODE => 2;
+use constant MATE_IN_MAX_PLY => MATE - MAX_PLY;
+use constant MATED_IN_MAX_PLY => -MATE_IN_MAX_PLY;
+
+use constant VALUE_TB => MATE_IN_MAX_PLY - 1;
+use constant VALUE_TB_WIN_IN_MAX_PLY => VALUE_TB - MAX_PLY;
+use constant VALUE_TB_LOSS_IN_MAX_PLY => -VALUE_TB_WIN_IN_MAX_PLY;
+
+# Node types for search.
+use constant ROOT_NODE => 0;
+use constant PV_NODE => 1;
+use constant NON_PV_NODE => 2;
+
+# For debugging output.
+use constant NODE_TYPES => ['Root', 'PV', 'NonPV'];
 
 # Indices into TT probe results.
 #
@@ -57,10 +72,12 @@ use constant TT_BUCKET_INDEX => 8;
 use constant TT_BUCKET => 9;
 
 our @EXPORT = qw(
-	DEPTH_UNSEARCHED DEPTH_ENTRY_OFFSET
+	DEPTH_QUIESCENCE DEPTH_UNSEARCHED DEPTH_ENTRY_OFFSET
 	BOUND_NONE BOUND_UPPER BOUND_LOWER BOUND_EXACT
 	MATE INF MAX_PLY DRAW
-	PV_NODE CUT_NODE ALL_NODE
+	ROOT_NODE PV_NODE NON_PV_NODE NODE_TYPES
+	MATE_IN_MAX_PLY MATED_IN_MAX_PLY
+	VALUE_TB VALUE_TB_WIN_IN_MAX_PLY VALUE_TB_LOSS_IN_MAX_PLY
 );
 
 1;

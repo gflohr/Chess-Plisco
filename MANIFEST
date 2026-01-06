@@ -19,6 +19,7 @@ lib/Chess/Plisco/EPD/Record.pod
 lib/Chess/Plisco/Engine.pm
 lib/Chess/Plisco/Engine.pod
 lib/Chess/Plisco/Engine/Book.pm
+lib/Chess/Plisco/Engine/Constants.pm
 lib/Chess/Plisco/Engine/InputWatcher.pm
 lib/Chess/Plisco/Engine/LimitsType.pm
 lib/Chess/Plisco/Engine/Position.pm
