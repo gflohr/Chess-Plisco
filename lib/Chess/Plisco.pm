@@ -1,6 +1,6 @@
 #! /bin/false
 
-# Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>,
+# Copyright (C) 2021-2026 Guido Flohr <guido.flohr@cantanea.com>,
 # all rights reserved.
 
 # This program is free software. It comes without any warranty, to
@@ -1277,6 +1277,18 @@ sub moveSignificant {
 	my ($self, $move) = @_;
 
 	return cp_move_significant $move;
+}
+
+sub moveCompress {
+	my ($self, $move) = @_;
+
+	return cp_move_compress $move;
+}
+
+sub moveUncompress {
+	my ($self, $m) = @_;
+
+	return cp_move_uncompress $m;
 }
 
 sub move {

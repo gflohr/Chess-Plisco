@@ -14,14 +14,23 @@
 ## no critic (TestingAndDebugging::RequireUseStrict)
 
 (do {
-	my $her_colour = !$c;
-	my $her_pieces = $p->[CP_POS_WHITE_PIECES + $her_colour];
-	my $occupancy = $p->[CP_POS_WHITE_PIECES + $c] | $her_pieces;
-	my $queens = cp_pos_queens($p);
-	$her_pieces
-		& (($pawn_masks[$c]->[2]->[$shift] & cp_pos_pawns($p))
-			| ($knight_attack_masks[$shift] & cp_pos_knights($p))
-			| ($king_attack_masks[$shift] & cp_pos_kings($p))
-			| (cp_mm_bmagic($shift, $occupancy) & ($queens | cp_pos_bishops($p)))
-			| (cp_mm_rmagic($shift, $occupancy) & ($queens | cp_pos_rooks($p))));
+	if ($v >= VALUE_TB_WIN_IN_MAX_PLY) {
+		if ($v >= MATE_IN_MAX_PLY && MATE - $v > 100 - $r50c) {
+			VALUE_TB_WIN_IN_MAX_PLY - 1
+		} elsif (VALUE_TB_WIN_IN_MAX_PLY - $v > 100 - $r50c) {
+			VALUE_TB_WIN_IN_MAX_PLY - 1
+		} else {
+			$v - $p;
+		}
+	} elsif ($v <= VALUE_TB_LOSS_IN_MAX_PLY) {
+		if ($v <= MATED_IN_MAX_PLY && MATE + $v > 100 - $r50c) {
+			VALUE_TB_LOSS_IN_MAX_PLY + 1;
+		} elsif (VALUE_TB_LOSS_IN_MAX_PLY + $v > 100 - $r50c) {
+			VALUE_TB_LOSS_IN_MAX_PLY + 1;
+		} else {
+			$v + $p;
+		}
+	} else {
+		$v;
+	}
 })
