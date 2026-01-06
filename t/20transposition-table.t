@@ -207,4 +207,13 @@ is $tt_value, 14996, 'value for bug position';
 is $tt_eval, 0, 'evaluation for bug position';
 is $tt_pv, 0, 'pv flag for bug position';
 
+$tt->clear;
+
+foreach my $signature (1 .. 42 * 4) {
+	($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @write_info) = $tt->probe($signature);
+	$tt->store(@write_info, $signature, 14996, 0, 2, 3, 64);
+}
+is $tt->hashfull, 42, 'hashfull';
+
 done_testing;

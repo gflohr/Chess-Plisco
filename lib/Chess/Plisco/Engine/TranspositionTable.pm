@@ -197,12 +197,12 @@ sub hashfull {
 		my @c = unpack 'C40', $self->[$ci];
 
 		for my $bi (0 .. CLUSTER_CAPACITY - 1) {
-			my $k_lo = $c[$bi*2];
-			my $k_hi = $c[$bi*2 + 1];
+			my $k_lo = $c[$bi * 2];
+			my $k_hi = $c[$bi * 2 + 1];
 			next if ($k_lo | $k_hi) == 0;   # empty
 
 			my $base = 8 + ($bi << 3);
-			my $gen  = $c[$base + 1] >> 3;
+			my $gen  = $c[$base + 1];
 
 			my $age =
 				(GENERATION_CYCLE + $generation - $gen)

@@ -215,7 +215,7 @@ sub printPV {
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
 	my $pv = join ' ', $position->movesCoordinateNotation(@$pline);
 	my $time = int(0.5 + (1000 * $elapsed));
-	my $hashfull = $tt->hashfull;
+	my $hashfull = $self->{tt}->hashfull;
 	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
 			. " score $scorestr nodes $nodes nps $nps hashfull $hashfull"
 			. " time $time pv $pv");
