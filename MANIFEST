@@ -40,6 +40,8 @@ lib/Chess/Plisco/Macro/moveAttacked.pm
 lib/Chess/Plisco/Macro/movePinned.pm
 lib/Chess/Plisco/Macro/movesFromMask.pm
 lib/Chess/Plisco/Macro/promotionMovesFromMask.pm
+lib/Chess/Plisco/Macro/value_from_tt.pm
+lib/Chess/Plisco/Macro/value_to_tt.pm
 lib/Chess/Plisco/Tablebase/SearchTree.pm
 lib/Chess/Plisco/Tablebase/Syzygy.pm
 lib/Chess/Plisco/Tablebase/Syzygy.pod
