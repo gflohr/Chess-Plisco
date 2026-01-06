@@ -309,11 +309,12 @@ sub alphabeta {
 				$self->indent($ply, "best move: $cn");
 			}
 		}
-		if ($tt_bound == BOUND_EXACT
-		    || ($tt_bound == BOUND_LOWER && $tt_value >= $beta)
-			|| ($tt_bound == BOUND_UPPER && $tt_value <= $alpha)) {
+		if ($tt_move
+		    && ($tt_bound == BOUND_EXACT
+		        || ($tt_bound == BOUND_LOWER && $tt_value >= $beta)
+		        || ($tt_bound == BOUND_UPPER && $tt_value <= $alpha))) {
 			++$self->{tt_hits};
-			if ($tt_move && $ply == 1) {
+			if ($ply == 1) {
 				@$pline = ($tt_move);
 				$self->{score} = $tt_value;
 			}
@@ -487,7 +488,7 @@ sub alphabeta {
 			}
 			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line, $pv_node ? PV_NODE : NON_PV_NODE, $tt_pvs);
 		}
-#warn "$cn: $score (alpha: $alpha, beta: $beta, best_value: $best_value)\n" if $depth == 1 && $ply == 1;
+
 		++$legal;
 		++$moveno;
 		if (DEBUG) {
@@ -842,7 +843,6 @@ sub rootSearch {
 		$self->debug("Searching $fen");
 	}
 	eval {
-$DB::single = 1;
 		while (++$depth <= $max_depth) {
 			no integer;
 
