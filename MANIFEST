@@ -5,6 +5,7 @@ LICENSE
 MANIFEST
 META.json
 META.yml
+MS-DOS-BUILDS.md
 Makefile.PL
 README.md
 README.pod

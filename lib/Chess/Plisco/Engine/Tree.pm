@@ -223,6 +223,31 @@ sub printPV {
 	}
 }
 
+sub getPV {
+	my ($self, $pline) = @_;
+
+	# Complete PV.
+	my @pv = @$pline;
+	my $pos = $self->{position}->copy;
+	my $tt = $self->{tt};
+	foreach my $ply (1 .. $self->{depth}) {
+		my $move;
+		if ($ply < @$pline) {
+			$move = $pline->[$ply - 1];
+		} else {
+			my $signature = $pos->[CP_POS_SIGNATURE];
+			my $tt_move;
+			# We're not interested in the value.
+			$tt->probe($signature, 1, MAX_PLY + 1, 0, 0, \$tt_move);
+			last if !$tt_move;
+		}
+		push @pv, $move;
+		$pos->move($move);
+	}
+
+	return @pv;
+}
+
 # Make them invokable without a method call.
 sub quiesce;
 
@@ -462,7 +487,7 @@ sub alphabeta {
 		$position->move($move, 1);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		my $nodes_before = $self->{nodes}++;
-		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
+		$self->printCurrentMove($move, $legal) if $print_current_move;
 		my $score;
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
@@ -500,7 +525,7 @@ sub alphabeta {
 		}
 		my $root_move;
 		if ($node_type == ROOT_NODE) {
-			$root_move = $self->{root_moves}->{$move};
+			$root_move = $self->{root_moves}->{$move & 0xffff_ffff};
 			# The constants for the time management are taken from Stockfish
 			# and they use their own units which seem to be 3.5-4.0 centipawns.
 			$root_move->{average_score} =
@@ -844,6 +869,7 @@ sub rootSearch {
 
 	my $last_best_move;
 	my $last_best_move_depth = 0;
+	my $search_again_counter = 0;
 
 	if (DEBUG) {
 		my $fen = $position->toFEN;
@@ -853,64 +879,55 @@ sub rootSearch {
 		DEEPENING: while (++$depth <= $max_depth) {
 			no integer;
 
-warn "depth now $depth\n";
-			$self->{seldepth} = 0;
-
 			# Age out instability.
 			$self->{total_best_move_changes} /= 2;
-
-			my $pv_move = $line[0];
-			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 2400;
-warn "mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
-			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
-warn "avg: $self->{root_moves}->{$pv_move}->{average_score}\n";
-			my $alpha = cp_max($avg - $delta, -INF);
-			my $beta = cp_min($avg + $delta, +INF);
-warn "delta: $delta, alpha: $alpha, beta: $beta\n";
 
 			$self->{depth} = $depth;
 			if (DEBUG) {
 				$self->debug("Deepening to depth $depth");
 				$self->{line} = [];
 			}
-<<<<<<< HEAD
-=======
-			my @tt_pvs;
-			$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
-			if (DEBUG) {
-				$self->debug("Score at depth $depth: $score");
-			}
-			if (($score >= MATE - $depth) || ($score <= -MATE + $depth)) {
-				last;
-			}
->>>>>>> main
 
+			# The upper 32 bits of the move can be abused by the move ordering.
+			my $pv_move = $line[0] & 0xffff_ffff;
+			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 9000;
+			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
+#warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+#warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
+			my $alpha = int(cp_max($avg - $delta, -INF));
+			my $beta = int(cp_min($avg + $delta, +INF));
+
+			my $failed_high_count = 0;
 			while (1) {
-				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line);
-warn "score: $score\n";
+				my @tt_pvs;
+				my $adjusted_depth = cp_max(1, $depth - $failed_high_count);
+#warn "DEPTH $depth (adjusted: $adjusted_depth): delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
+				$score = $self->alphabeta(1, $adjusted_depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
+#warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
 				}
-				if (($score >= -MATE - $depth) || ($score <= MATE + $depth)) {
-					last DEEEPENING;
+
+				# Mate found?
+				if (($score >= MATE - $depth) || ($score <= -(MATE - $depth))) {
+					last DEEPENING;
 				}
 
 				if ($score <= $alpha) {
 					$beta = $alpha;
-					$alpha = cp_max($score - $delta, -INF);
+					$alpha = int(cp_max($score - $delta, -INF));
 					if (DEBUG) {
 						$self->debug("Failed low, must re-search with alpha=$alpha and beta=$beta");
 					}
-warn "Failed low, must re-search with alpha=$alpha and beta = $beta\n";
+					$failed_high_count = 0;
 				} elsif ($score >= $beta) {
-					$alpha = cp_max($beta - $delta, $alpha);
-					$beta = cp_min($score + $delta, +INF);
+					$alpha = int(cp_max($beta - $delta, $alpha));
+					$beta = int(cp_min($score + $delta, +INF));
 					if (DEBUG) {
 						$self->debug("Failed high, must re-search with alpha=$alpha and beta=$beta");
 					}
-warn "Failed high, must re-search with alpha=$alpha and beta = $beta\n";
+					++$failed_high_count;
 				} else {
-warn "$alpha < $score < $beta\n";
 					last;
 				}
 				
@@ -922,7 +939,7 @@ warn "$alpha < $score < $beta\n";
 
 				no integer;
 
-				my $root_move = $self->{root_moves}->{$line[0]};
+				my $root_move = $self->{root_moves}->{$line[0] & 0xffff_ffff};
 				my $best_value = $root_move->{score};
 
 				my $falling_eval = (11.85 + 2.24 * ($root_move->{previous_average_score} - $best_value)
@@ -1011,7 +1028,7 @@ sub outputMoveEfforts {
 }
 
 sub printCurrentMove {
-	my ($self, $depth, $move, $moveno) = @_;
+	my ($self, $move, $moveno) = @_;
 
 	no integer;
 
@@ -1020,7 +1037,7 @@ sub printCurrentMove {
 	my $elapsed = int(1000 * tv_interval($self->{start_time}));
 
 	$moveno += 1;
-	$self->{info}->("depth $depth currmove $cn currmovenumber $moveno"
+	$self->{info}->("depth $self->{depth} currmove $cn currmovenumber $moveno"
 		. " time $elapsed");
 }
 
@@ -1038,7 +1055,8 @@ sub think {
 		# ponder on. Try to at least get a ponder move from the transposition
 		# table.
 		my $move = $legal[0];
-		$self->printCurrentMove(1, $move, 1);
+		$self->{depth} = 1;
+		$self->printCurrentMove($move, 1);
 		$self->printPV([$move]);
 		return $move;
 	} else {
@@ -1051,7 +1069,6 @@ sub think {
 				average_score => -INF,
 				previous_average_score => -INF,
 				mean_squared_score => -INF * INF,
-san => $position->SAN($move),
 			};
 		}
 	}
@@ -1065,7 +1082,6 @@ san => $position->SAN($move),
 	}
 
 	# There must always be a valid move in the line.
-$DB::single = 1;
 	my @line = ($legal[0]);
 
 	$self->{thinking} = 1;
