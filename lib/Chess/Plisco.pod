@@ -19,6 +19,11 @@ somewhat opinionated but this is not an end in itself but owed to its intention
 of being fast and efficient.  In doubt, flexibility is sacrificed for
 performance and efficiency.
 
+The software also ships a UCI compatible chess engine F<plisco>. If it is
+online, you can challenge it on Lichess: L<https://lichess.org/@/plisco-bot>.
+On Lichess, it currently has a rating of around 2000, leaving many engines written
+in high-level languages like C/C++, Rust, Scala, and C# behind.
+
 The library features:
 
 =over 4
@@ -571,6 +576,21 @@ L</moveEquivalent> for what is considered significant.
 
 Although, this is technically a class method you should keep in mind that 
 the redundant parts of the moves depend on the current position.
+
+=item B<moveCompress(MOVE)>
+
+Reduces a move to its significant part. The resulting integer is guaranteed
+to fit into 16 bits.  The compressed move can be used as an index into lookup
+tables.
+
+This method has been added in version 1.0.2.
+
+=item B<moveUncompress(MOVE)>
+
+Undoes what B<moveCompress()> has done. The resulting integer is not a complete
+move, but you can compare it to a complete move with B<moveEquivalent()>.
+
+This method has been added in version 1.0.2.
 
 =item B<moveFrom(MOVE)>
 
@@ -1606,7 +1626,7 @@ P stands for Perl.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2021-2025 Guido Flohr <guido.flohr@cantanea.com>.
+Copyright (C) 2021-2026 Guido Flohr <guido.flohr@cantanea.com>.
 
 =head1 SEE ALSO
 
