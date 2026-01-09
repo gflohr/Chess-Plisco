@@ -100,6 +100,7 @@ sub newSearch {
 }
 
 sub probe {
+	#return 0, 0, 0, 0, undef, undef, 0, 0, 0, ''; # Disable TT.
 	my ($self, $signature) = @_;
 
 	# Throw away the sign bit, because we cannot use negative indices.
@@ -149,6 +150,7 @@ sub probe {
 }
 
 sub store {
+	#return; # Disable TT
 	my ($self, $cluster_index, $bucket_index, $bucket, $signature, $value,
 		$pv, $bound, $depth, $move, $eval) = @_;
 

@@ -223,31 +223,6 @@ sub printPV {
 	}
 }
 
-sub getPV {
-	my ($self, $pline) = @_;
-
-	# Complete PV.
-	my @pv = @$pline;
-	my $pos = $self->{position}->copy;
-	my $tt = $self->{tt};
-	foreach my $ply (1 .. $self->{depth}) {
-		my $move;
-		if ($ply < @$pline) {
-			$move = $pline->[$ply - 1];
-		} else {
-			my $signature = $pos->[CP_POS_SIGNATURE];
-			my $tt_move;
-			# We're not interested in the value.
-			$tt->probe($signature, 1, MAX_PLY + 1, 0, 0, \$tt_move);
-			last if !$tt_move;
-		}
-		push @pv, $move;
-		$pos->move($move);
-	}
-
-	return @pv;
-}
-
 # Make them invokable without a method call.
 sub quiesce;
 
@@ -260,7 +235,7 @@ sub alphabeta {
 		$self->checkTime;
 	}
 
-	my $pv_node = $node_type != PV_NODE;
+	my $pv_node = $node_type != NON_PV_NODE;
 
 	if ($depth <= 0) {
 		return quiesce($self, $ply, $alpha, $beta, $pv_node ? PV_NODE : NON_PV_NODE);
@@ -327,12 +302,7 @@ sub alphabeta {
 	my $pv_hit = $tt_hit && $tt_pv;
 
 	if ($tt_hit && defined $tt_value && $tt_depth >= $depth) {
-		if (DEBUG) {
-			if ($tt_move) {
-				my $cn = $position->moveCoordinateNotation($tt_move);
-				$self->indent($ply, "best move: $cn");
-			}
-		}
+		# FIXME! Actually, there is no need for a TT move.
 		if ($tt_move
 		    && ($tt_bound == BOUND_EXACT
 		        || ($tt_bound == BOUND_LOWER && $tt_value >= $beta)
@@ -346,12 +316,15 @@ sub alphabeta {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
 				my $cn = $position->moveCoordinateNotation($tt_move);
-				$self->indent($ply, "TT hit for $hex_sig, value $tt_value, best move $cn");
+				my $type = BOUND_TYPES->[$tt_bound];
+				my $is_pv_hit = $pv_hit ? 'true' : 'false';
+				$self->indent($ply, "TT hit for $hex_sig, value $tt_value ($type), TT depth $tt_depth, PV hit: $is_pv_hit, best move $cn");
 			}
 
 			return $tt_value;
 		}
 	}
+$tt_move = 0;
 
 	my @moves = $position->pseudoLegalMoves;
 
@@ -398,8 +371,8 @@ sub alphabeta {
 				push @quiet, $move;
 			}
 		}
-		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
-		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] } @bad_captures;
+		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
+		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
 	} elsif ($depth >= 4) {
 		# Light sorting.
 		my %good_captures;
@@ -431,8 +404,8 @@ sub alphabeta {
 				push @quiet, $move;
 			}
 		}
-		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
-		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] } @bad_captures;
+		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
+		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
 	} else {
 		# Minimal sorting.
 		foreach my $move (@moves) {
@@ -538,65 +511,59 @@ sub alphabeta {
 		}
 		if ($score > $best_value) {
 			$best_value = $score;
-			$best_move = $move;
 
 			if ($score > $alpha) {
-				$alpha = $score;
+				$best_move = $move;
+
 				$pv_found = 1;
 				@$pline = ($move, @line);
-
-				if (DEBUG) {
-					$self->indent($ply, "raise alpha to $alpha");
-				}
-				if ($ply == 1) {
+				if ($node_type == ROOT_NODE) {
 					$self->{score} = $score;
 					$self->printPV($pline);
 				}
-			}
-		}
-		if ($score >= $beta) {
-			if (DEBUG) {
-				my $hex_sig = sprintf '%016x', $signature;
-				my $cn = $position->moveCoordinateNotation($move);
-				$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BETA) \@depth $depth for $hex_sig");
-			}
-			$tt->store(
-				@tt_address, # Information about destination.
-				$signature, # Position key.
-				_cp_value_to_tt($score, $ply), # Mate corrections.
-				0, # PV flag.
-				BOUND_LOWER,
-				$depth,
-				$move);
 
-			# Quiet move or bad capture failing high?
-			my $first_quiet = 1 + (scalar @moves) - (scalar @quiet) - (scalar @bad_captures);
-			if ($moveno >= $first_quiet && !cp_move_captured $move) {
-				if (DEBUG) {
-					my $cn = $position->moveCoordinateNotation($move);
-					$self->indent($ply, "$cn is quiet and becomes new killer move");
+				if ($score < $beta) {
+					$alpha = $score;
+					if (DEBUG) {
+						$self->indent($ply, "raise alpha to $alpha");
+					}
+				} else {
+					if (DEBUG) {
+						my $hex_sig = sprintf '%016x', $signature;
+						my $cn = $position->moveCoordinateNotation($move);
+						$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BOUND_LOWER) \@depth $depth for $hex_sig");
+					}
+
+					# Quiet move or bad capture failing high?
+					my $first_quiet = 1 + (scalar @moves) - (scalar @quiet) - (scalar @bad_captures);
+					if ($moveno >= $first_quiet && !cp_move_captured $move) {
+						if (DEBUG) {
+							my $cn = $position->moveCoordinateNotation($move);
+							$self->indent($ply, "$cn is quiet and becomes new killer move");
+						}
+
+						my $killers = $self->{killers}->[$ply];
+						($killers->[0], $killers->[1]) = ($move, $killers->[0]);
+
+						# The history bonus should only be given to real quiet
+						# moves, not bad captures. Later, when we also give
+						# maluses, we still want to give the malus to all
+						# previously searched quiet moves.
+
+						# This is the from and to square as one single integer.
+						my $from_to = ($move & 0x1ffe00) >> 9;
+
+						$cutoff_moves->[$from_to] += $depth * $depth;
+						if (DEBUG) {
+							my $bonus = $depth * $depth;
+							my $cn = $position->moveCoordinateNotation($move);
+							$self->indent($ply, "$cn is quiet and gets history bonus $bonus");
+						}
+					}
+
+					last;
 				}
-
-				my $killers = $self->{killers}->[$ply];
-				($killers->[0], $killers->[1]) = ($move, $killers->[0]);
-
-				# The history bonus should only be given to real quiet
-				# moves, not bad captures. Later, when we also give
-				# maluses, we still want to give the malus to all
-				# previously searched quiet moves.
-
-				# This is the from and to square as one single integer.
-				my $from_to = ($move & 0x1ffe00) >> 9;
-
-				$cutoff_moves->[$from_to] += $depth * $depth;
-				if (DEBUG) {
-					my $bonus = $depth * $depth;
-					my $cn = $position->moveCoordinateNotation($move);
-					$self->indent($ply, "$cn is quiet and gets history bonus $bonus");
-				}
 			}
-
-			return $score;
 		}
 	}
 
@@ -629,6 +596,8 @@ sub alphabeta {
 			my $type;
 			if ($tt_type == BOUND_UPPER) {
 				$type = 'BOUND_UPPER';
+			} elsif ($tt_type == BOUND_LOWER) {
+				$type = 'BOUND_LOWER';
 			} else {
 				$type = 'BOUND_EXACT';
 			}
@@ -700,54 +669,48 @@ sub quiesce {
 		if $tt_hit && defined $tt_value;
 	my $pv_hit = $tt_hit && $tt_pv;
 
-	if (DEBUG) {
-		if ($tt_move) {
-			my $cn = $position->moveCoordinateNotation($tt_move);
-			$self->indent($ply, "best move: $cn");
-		}
-	}
-
 	if (!$pv_node && $tt_depth >= DEPTH_QUIESCENCE
 	    && defined $tt_value
 		&& $tt_bound & ($tt_value >= $beta ? BOUND_LOWER : BOUND_UPPER)) {
 		if (DEBUG) {
 			my $hex_sig = sprintf '%016x', $signature;
-			$self->indent($ply, "quiescence TT hit for $hex_sig, value $tt_value");
+			my $type = BOUND_TYPES->[$tt_bound];
+			my $is_pv_hit = $pv_hit ? 'true' : 'false';
+			$self->indent($ply, "quiescence TT hit for $hex_sig, value $tt_value ($type), TT depth $tt_depth, PV hit: $is_pv_hit");
 		}
 		++$self->{tt_hits};
 
 		return $tt_value;
 	}
 
-	my $is_null_window = $beta - $alpha == 1;
-
 	my $best_value = $position->evaluate;
 	if (DEBUG) {
 		$self->indent($ply, "static evaluation: $best_value");
 	}
 	if ($best_value >= $beta) {
+		# FIXME! Reduce branching here!
 		if (DEBUG) {
 			my $hex_sig = sprintf '%016x', $signature;
-			if ($is_null_window || $tt_hit) {
+			if ($tt_hit) {
 				$self->indent($ply, "quiescence standing pat ($best_value >= $beta) without tt store for $hex_sig");
 			} else {
-				$self->indent($ply, "quiescence standing pat ($best_value >= $beta), store no move value $best_value(EXACT) \@depth 0 for $hex_sig");
+				$self->indent($ply, "quiescence standing pat ($best_value >= $beta), store no move value $best_value (BOUND_LOWER) \@depth 0 for $hex_sig");
 			}
 		}
 
-		if (!($best_value >= VALUE_TB_WIN_IN_MAX_PLY
-				|| $best_value <= VALUE_TB_LOSS_IN_MAX_PLY)) {
-			$best_value = ($best_value + $beta) >> 1;
+		if (!$tt_hit) {
+			$tt->store(
+				@tt_address,
+				$signature,
+				_cp_value_to_tt($best_value, $ply),
+				0,
+				BOUND_LOWER,
+				DEPTH_UNSEARCHED,
+				0,
+			);
+		} else {
+			$best_value = $tt_value;
 		}
-		$tt->store(
-			@tt_address,
-			$signature,
-			_cp_value_to_tt($best_value, $ply),
-			0,
-			BOUND_LOWER,
-			DEPTH_UNSEARCHED,
-			0,
-		);
 
 		return $best_value;
 	}
@@ -760,6 +723,7 @@ sub quiesce {
 	# moves.
 	my @moves = $position->pseudoLegalAttacks; # or goto SKIP_MOVE_LOOP ...
 
+$tt_move = 0;
 	my (@tt, @promotions, @checks, %captures);
 	foreach my $move (@moves) {
 		if (cp_move_equivalent $move, $tt_move) {
@@ -774,7 +738,7 @@ sub quiesce {
 		}
 	}
 
-	my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
+	my @captures = sort { $captures{$b} <=> $captures{$a} || $b <=> $a } keys %captures;
 	@moves = (@tt, @promotions, @checks, @captures);
 
 	my $signatures = $self->{signatures};
@@ -805,27 +769,27 @@ sub quiesce {
 			pop @{$self->{line}};
 		}
 		@$position = @backup;
-		if ($score >= $beta) {
-			if (DEBUG) {
-				my $hex_sig = sprintf '%016x', $signature;
-				my $cn = $position->moveCoordinateNotation($move);
-				$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score(BOUND_LOWER) \@depth 0 for $hex_sig");
-			}
-
-			$best_value = $score;
-			$best_move = $move;
-
-			last;
-		}
 		if ($score > $best_value) {
 			$best_value = $score;
-			$best_move = $move;
-		}
-		if ($score > $alpha) {
-			if (DEBUG) {
-				$self->indent($ply, "raise quiescence alpha to $alpha");
+
+			if ($score > $alpha) {
+				$best_move = $move;
+
+				if ($score < $beta) {
+					if (DEBUG) {
+						$self->indent($ply, "raise quiescence alpha to $alpha");
+					}
+					$alpha = $score;
+				} else {
+					if (DEBUG) {
+						my $hex_sig = sprintf '%016x', $signature;
+						my $cn = $position->moveCoordinateNotation($move);
+						$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score (BOUND_LOWER) \@depth 0 for $hex_sig");
+					}
+
+					last;
+				}
 			}
-			$alpha = $score;
 		}
 	}
 
@@ -841,12 +805,7 @@ sub quiesce {
 	);
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		my $type;
-		if ($tt_type == BOUND_UPPER) {
-			$type = 'BOUND_UPPER';
-		} else {
-			$type = 'BOUND_LOWER';
-		}
+		my $type = BOUND_TYPES->[$tt_type];
 		$self->indent($ply, "returning best value (quiescence) $best_value, store ($type) for $hex_sig");
 	}
 
@@ -896,6 +855,8 @@ sub rootSearch {
 #warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
 			my $alpha = int(cp_max($avg - $delta, -INF));
 			my $beta = int(cp_min($avg + $delta, +INF));
+$alpha = -INF;
+$beta = +INF;
 
 			my $failed_high_count = 0;
 			while (1) {
@@ -932,6 +893,7 @@ sub rootSearch {
 				}
 				
 				$delta += $delta / 3;
+last;
 			}
 
 			if ($self->{use_time_management}) {
@@ -1145,7 +1107,7 @@ sub getPonderMove {
 	if (DEBUG) {
 		if ($tt_move) {
 			my $cn = $pos->moveCoordinateNotation($tt_move);
-			$self->debug("best move: $cn");
+			#$self->debug("best move: $cn");
 		}
 	}
 
