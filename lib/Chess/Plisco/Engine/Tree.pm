@@ -324,7 +324,6 @@ sub alphabeta {
 			return $tt_value;
 		}
 	}
-$tt_move = 0;
 
 	my @moves = $position->pseudoLegalMoves;
 
@@ -651,42 +650,40 @@ sub quiesce {
 	if ($position->inCheck) {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
-		}
+		}	
+		
 		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type, [$pv_node]);
 	}
 
 	my $tt = $self->{tt};
 	my $signature = $position->[CP_POS_SIGNATURE];
-	if (DEBUG) {
-		my $hex_sig = sprintf '%016x', $signature;
-		$self->indent($ply, "TT probe $hex_sig, alpha = $alpha, beta = $beta");
-	}
 	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
 		$tt_pv, @tt_address) = $tt->probe($signature);
 
-	$tt_move = 0 if !$tt_hit;
 	$tt_value = _cp_value_from_tt($tt_value, $ply, $position->[CP_POS_HALFMOVE_CLOCK])
 		if $tt_hit && defined $tt_value;
-	my $pv_hit = $tt_hit && $tt_pv;
 
+	# Early TT cutoff.
 	if (!$pv_node && $tt_depth >= DEPTH_QUIESCENCE
 	    && defined $tt_value
-		&& $tt_bound & ($tt_value >= $beta ? BOUND_LOWER : BOUND_UPPER)) {
-		if (DEBUG) {
-			my $hex_sig = sprintf '%016x', $signature;
-			my $type = BOUND_TYPES->[$tt_bound];
-			my $is_pv_hit = $pv_hit ? 'true' : 'false';
-			$self->indent($ply, "quiescence TT hit for $hex_sig, value $tt_value ($type), TT depth $tt_depth, PV hit: $is_pv_hit");
-		}
-		++$self->{tt_hits};
-
+	    && ($tt_bound & ($tt_value >= $beta ? BOUND_LOWER : BOUND_UPPER))) {
 		return $tt_value;
 	}
 
-	my $best_value = $position->evaluate;
-	if (DEBUG) {
-		$self->indent($ply, "static evaluation: $best_value");
+	# Compute best available stand-pat value
+	my $best_value;
+	if ($tt_hit && defined $tt_value && !_cp_is_decisive($tt_value)) {
+		$best_value = $tt_value;
+		if (DEBUG) {
+			$self->indent($ply, "set best value to TT value: $best_value");
+		}
+	} else {
+		$best_value = $position->evaluate;
+		if (DEBUG) {
+			$self->indent($ply, "static evaluation: $best_value");
+		}
 	}
+
 	if ($best_value >= $beta) {
 		# FIXME! Reduce branching here!
 		if (DEBUG) {
@@ -723,7 +720,6 @@ sub quiesce {
 	# moves.
 	my @moves = $position->pseudoLegalAttacks; # or goto SKIP_MOVE_LOOP ...
 
-$tt_move = 0;
 	my (@tt, @promotions, @checks, %captures);
 	foreach my $move (@moves) {
 		if (cp_move_equivalent $move, $tt_move) {
@@ -798,7 +794,7 @@ $tt_move = 0;
 		@tt_address, # Address.
 		$signature, # Zobrist key.
 		_cp_value_to_tt($best_value, $ply), # score, mate distance adjusted.
-		$pv_hit, # PV flag.
+		$tt_hit && $tt_pv, # PV flag.
 		$tt_type, # BOUND_EXACT/BOUND_UPPER/BOUND_LOWER.
 		DEPTH_QUIESCENCE, # Depth searched.
 		$best_move # Best move at this node.
@@ -851,20 +847,18 @@ sub rootSearch {
 			my $pv_move = $line[0] & 0xffff_ffff;
 			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 9000;
 			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
-#warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
-#warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
+warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
 			my $alpha = int(cp_max($avg - $delta, -INF));
 			my $beta = int(cp_min($avg + $delta, +INF));
-$alpha = -INF;
-$beta = +INF;
 
 			my $failed_high_count = 0;
 			while (1) {
 				my @tt_pvs;
 				my $adjusted_depth = cp_max(1, $depth - $failed_high_count);
-#warn "DEPTH $depth (adjusted: $adjusted_depth): delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
+warn "DEPTH $depth (adjusted: $adjusted_depth): delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
 				$score = $self->alphabeta(1, $adjusted_depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
-#warn "  best value: $score\n";
+warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
 				}
@@ -893,7 +887,6 @@ $beta = +INF;
 				}
 				
 				$delta += $delta / 3;
-last;
 			}
 
 			if ($self->{use_time_management}) {

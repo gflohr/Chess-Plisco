@@ -204,7 +204,7 @@ sub hashfull {
 			next if ($k_lo | $k_hi) == 0;   # empty
 
 			my $base = 8 + ($bi << 3);
-			my $gen  = $c[$base + 1];
+			my $gen = $c[$base + 1] >> 3;
 
 			my $age =
 				(GENERATION_CYCLE + $generation - $gen)
