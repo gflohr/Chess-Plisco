@@ -845,10 +845,10 @@ sub rootSearch {
 
 			# The upper 32 bits of the move can be abused by the move ordering.
 			my $pv_move = $line[0] & 0xffff_ffff;
-			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 9000;
+			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 8000;
 			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
-warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
-warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
+#warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+#warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
 			my $alpha = int(cp_max($avg - $delta, -INF));
 			my $beta = int(cp_min($avg + $delta, +INF));
 
@@ -856,15 +856,16 @@ warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
 			while (1) {
 				my @tt_pvs;
 				my $adjusted_depth = cp_max(1, $depth - $failed_high_count);
-warn "DEPTH $depth (adjusted: $adjusted_depth): delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
+#warn "DEPTH $depth (adjusted: $adjusted_depth): delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
 				$score = $self->alphabeta(1, $adjusted_depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
-warn "  best value: $score\n";
+#warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
 				}
 
 				# Mate found?
 				if (($score >= MATE - $depth) || ($score <= -(MATE - $depth))) {
+					$self->printPV(\@line);
 					last DEEPENING;
 				}
 
@@ -886,8 +887,10 @@ warn "  best value: $score\n";
 					last;
 				}
 				
-				$delta += $delta / 3;
+				$delta *= 2.5;
 			}
+
+			$self->printPV(\@line);
 
 			if ($self->{use_time_management}) {
 				my $iter_idx = ($depth - 1) & 3;
@@ -1058,9 +1061,7 @@ sub think {
 	# good for both cases.
 	return if $self->{cancelled};
 
-	if (@line) {
-		$self->printPV(\@line);
-	} else {
+	if (!@line) {
 		# Search has returned no move.
 		$self->{info}->("Error: pick a random move because of search failure.");
 		$line[0] = $legal[int rand @legal];
