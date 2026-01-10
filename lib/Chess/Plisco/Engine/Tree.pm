@@ -650,8 +650,8 @@ sub quiesce {
 	if ($position->inCheck) {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
-		}	
-		
+		}
+
 		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type, [$pv_node]);
 	}
 
