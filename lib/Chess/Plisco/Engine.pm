@@ -117,8 +117,7 @@ sub new {
 
 	bless $self, $class;
 
-	#$self->__calibrateNPS;
-$self->{__nps} = 50000;
+	$self->__calibrateNPS;
 
 	return $self;
 }
