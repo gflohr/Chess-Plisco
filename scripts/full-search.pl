@@ -25,8 +25,8 @@ if (!$depth || $depth < 1 || $depth >> MAX_PLY) {
 
 say 'Value,Best,Line';
 
-my $fen = join '', @fen;
-my $pos = Chess::Plisco::Engine::Position->new;
+my $fen = join ' ', @fen;
+my $pos = Chess::Plisco::Engine::Position->new($fen);
 
 search $pos, $depth, 0, !$pos->turn;
 

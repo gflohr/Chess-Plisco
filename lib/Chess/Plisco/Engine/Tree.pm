@@ -644,17 +644,9 @@ sub quiesce {
 	}
 
 	# Compute best available stand-pat value
-	my $best_value;
-	if ($tt_hit && defined $tt_value && !_cp_is_decisive($tt_value)) {
-		$best_value = $tt_value;
-		if (DEBUG) {
-			$self->indent($ply, "set best value to TT value: $best_value");
-		}
-	} else {
-		$best_value = $position->evaluate;
-		if (DEBUG) {
-			$self->indent($ply, "static evaluation: $best_value");
-		}
+	my $best_value = $position->evaluate;
+	if (DEBUG) {
+		$self->indent($ply, "static evaluation: $best_value");
 	}
 
 	if ($best_value >= $beta) {
@@ -799,7 +791,6 @@ sub rootSearch {
 	my $last_best_move_depth = 0;
 	my $search_again_counter = 0;
 
-$DB::single = 1;
 	if (DEBUG) {
 		my $fen = $position->toFEN;
 		$self->debug("Searching $fen");
@@ -824,7 +815,7 @@ $DB::single = 1;
 
 			# The upper 32 bits of the move can be abused by the move ordering.
 			my $pv_move = $line[0] & 0xffff_ffff;
-			my $delta = 5 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 8000;
+			my $delta = 15 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 8000;
 			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
 #warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
 #warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
@@ -834,9 +825,8 @@ $DB::single = 1;
 			my $failed_high_count = 0;
 			while (1) {
 				my @tt_pvs;
-				my $adjusted_depth = cp_max(1, $depth - $failed_high_count);
-#warn "DEPTH $depth (adjusted: $adjusted_depth): delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
-				$score = $self->alphabeta(1, $adjusted_depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
+#warn "DEPTH $depth: delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
+				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
 #warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
@@ -866,7 +856,7 @@ $DB::single = 1;
 					last;
 				}
 				
-				$delta *= 2.5;
+				$delta *= 5;
 
 				# Bring the PV move to the front and keep the rest of the
 				# move ordering unchanged.
