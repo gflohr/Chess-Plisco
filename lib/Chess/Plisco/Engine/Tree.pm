@@ -325,123 +325,95 @@ sub alphabeta {
 		}
 	}
 
-	my @moves = $position->pseudoLegalMoves;
-
-	# Sort moves. FIXME!!!! Bad captures must be searched *after* the
-	# quiet moves.
+	my @moves;
 	my $pv_move;
-
-	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
-	my $killers = $self->{killers}->[$ply];
-	my $k1 = $killers->[0];
-	my $k2 = $killers->[1];
-	my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
-	if ($depth >= 5) {
-		# Full sorting.
-		my %good_captures;
-		foreach my $move (@moves) {
-			if (cp_move_equivalent $move, $pv_move) {
-				push @pv, $move;
-			} elsif (cp_move_equivalent $move, $tt_move) {
-				push @tt, $move;
-			} elsif (my $promote = cp_move_promote $move) {
-				if ((GOOD_PROMO_MASK >> $promote) & 1) {
-					push @promotions, $move;
-				} else {
-					push @quiet, $move;
-				}
-			} elsif ($position->moveGivesCheck($move)) {
-				push @checks, $move;
-			} elsif (cp_move_captured $move) {
-				my $see = $position->SEE($move);
-				if ($see >= 0) {
-					$good_captures{$move} = $position->SEE($move);
-				} else {
-					push @bad_captures, $move;
-				}
-			} elsif ($move == $k1) {
-				$k1[0] = $move;
-			} elsif ($move == $k2) {
-				$k2[0] = $move;
-			} elsif ($move == $k3) {
-				$k3[0] = $move;
-			} else {
-				push @quiet, $move;
-			}
-		}
-		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
-		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
-	} elsif ($depth >= 4) {
-		# Light sorting.
-		my %good_captures;
-		foreach my $move (@moves) {
-			if (cp_move_equivalent $move, $pv_move) {
-				push @pv, $move;
-			} elsif (cp_move_equivalent $move, $tt_move) {
-				push @tt, $move;
-			} elsif (my $promote = cp_move_promote $move) {
-				if ((GOOD_PROMO_MASK >> $promote) & 1) {
-					push @promotions, $move;
-				} else {
-					push @quiet, $move;
-				}
-			} elsif (cp_move_captured $move) {
-				my $see = $position->SEE($move);
-				if ($see >= 0) {
-					$good_captures{$move} = $position->SEE($move);
-				} else {
-					push @bad_captures, $move;
-				}
-			} elsif ($move == $k1) {
-				$k1[0] = $move;
-			} elsif ($move == $k2) {
-				$k2[0] = $move;
-			} elsif ($move == $k3) {
-				$k3[0] = $move;
-			} else {
-				push @quiet, $move;
-			}
-		}
-		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
-		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
-	} else {
-		# Minimal sorting.
-		foreach my $move (@moves) {
-			if (cp_move_equivalent $move, $pv_move) {
-				push @pv, $move;
-			} elsif (cp_move_equivalent $move, $tt_move) {
-				push @tt, $move;
-			} elsif (my $promote = cp_move_promote $move) {
-				if ((GOOD_PROMO_MASK >> $promote) & 1) {
-					push @promotions, $move;
-				} else {
-					push @quiet, $move;
-				}
-			} elsif (cp_move_captured $move) {
-				push @good_captures, $move;
-			} elsif ($move == $k1) {
-				$k1[0] = $move;
-			} elsif ($move == $k2) {
-				$k2[0] = $move;
-			} elsif ($move == $k3) {
-				$k3[0] = $move;
-			} else {
-				push @quiet, $move;
-			}
-		}
-		@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
-	}
-
-	# Apply history bonus and malus to all quiet moves. We store the bonuses
-	# in the upper 32 bits so that we can do a simple integer sort.
 	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
-	foreach my $move (@quiet) {
-		$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
-	}
-	@quiet = sort { $b <=> $a } @quiet;
+	if ($root_node) {
+		@moves = @{$self->{ordered_root_moves}};
+		$pv_move = $moves[0];
+	} elsif ($depth >= 5) {
+		# Use the same move ordering as for root moves.
+		$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
+		@moves = $self->orderRootMoves($position, $depth, $ply, $pv_move, $position->pseudoLegalMoves);
+	} else {
+		@moves = $position->pseudoLegalMoves;
 
-	@moves = (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+		$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
+		my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+		my $killers = $self->{killers}->[$ply];
+		my $k1 = $killers->[0];
+		my $k2 = $killers->[1];
+		my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
+		if ($depth >= 4) {
+			# Light sorting.
+			my %good_captures;
+			foreach my $move (@moves) {
+				if (cp_move_equivalent $move, $pv_move) {
+					push @pv, $move;
+				} elsif (cp_move_equivalent $move, $tt_move) {
+					push @tt, $move;
+				} elsif (my $promote = cp_move_promote $move) {
+					if ((GOOD_PROMO_MASK >> $promote) & 1) {
+						push @promotions, $move;
+					} else {
+						push @quiet, $move;
+					}
+				} elsif (cp_move_captured $move) {
+					my $see = $position->SEE($move);
+					if ($see >= 0) {
+						$good_captures{$move} = $position->SEE($move);
+					} else {
+						push @bad_captures, $move;
+					}
+				} elsif ($move == $k1) {
+					$k1[0] = $move;
+				} elsif ($move == $k2) {
+					$k2[0] = $move;
+				} elsif ($move == $k3) {
+					$k3[0] = $move;
+				} else {
+					push @quiet, $move;
+				}
+			}
+			@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
+			@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
+		} else {
+			# Minimal sorting.
+			foreach my $move (@moves) {
+				if (cp_move_equivalent $move, $pv_move) {
+					push @pv, $move;
+				} elsif (cp_move_equivalent $move, $tt_move) {
+					push @tt, $move;
+				} elsif (my $promote = cp_move_promote $move) {
+					if ((GOOD_PROMO_MASK >> $promote) & 1) {
+						push @promotions, $move;
+					} else {
+						push @quiet, $move;
+					}
+				} elsif (cp_move_captured $move) {
+					push @good_captures, $move;
+				} elsif ($move == $k1) {
+					$k1[0] = $move;
+				} elsif ($move == $k2) {
+					$k2[0] = $move;
+				} elsif ($move == $k3) {
+					$k3[0] = $move;
+				} else {
+					push @quiet, $move;
+				}
+			}
+			@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
+		}
+
+		# Apply history bonus and malus to all quiet moves. We store the bonuses
+		# in the upper 32 bits so that we can do a simple integer sort.
+		foreach my $move (@quiet) {
+			$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
+		}
+		@quiet = sort { $b <=> $a } @quiet;
+
+		@moves = (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+	}
 
 	my $legal = 0;
 	my $moveno = 0;
@@ -533,9 +505,10 @@ sub alphabeta {
 						$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BOUND_LOWER) \@depth $depth for $hex_sig");
 					}
 
-					# Quiet move or bad capture failing high?
-					my $first_quiet = 1 + (scalar @moves) - (scalar @quiet) - (scalar @bad_captures);
-					if ($moveno >= $first_quiet && !cp_move_captured $move) {
+					# Quiet move failing high?
+					if (!cp_move_captured($move)
+					    && !cp_move_equivalent($move, $pv_move)
+						&& !cp_move_equivalent($move, $tt_move)) {
 						if (DEBUG) {
 							my $cn = $position->moveCoordinateNotation($move);
 							$self->indent($ply, "$cn is quiet and becomes new killer move");
@@ -826,6 +799,7 @@ sub rootSearch {
 	my $last_best_move_depth = 0;
 	my $search_again_counter = 0;
 
+$DB::single = 1;
 	if (DEBUG) {
 		my $fen = $position->toFEN;
 		$self->debug("Searching $fen");
@@ -833,6 +807,11 @@ sub rootSearch {
 	eval {
 		DEEPENING: while (++$depth <= $max_depth) {
 			no integer;
+
+			# When the aspiration window changes, the PV move should be
+			# brought to the front and the order of all other moves must
+			# remain unchanged. Therefore, we order the moves just once.
+			$self->{ordered_root_moves} = [$self->orderRootMoves($position, 1, $depth, 0, keys %{$self->{root_moves}})];
 
 			# Age out instability.
 			$self->{total_best_move_changes} /= 2;
@@ -888,6 +867,14 @@ sub rootSearch {
 				}
 				
 				$delta *= 2.5;
+
+				# Bring the PV move to the front and keep the rest of the
+				# move ordering unchanged.
+				my $pv_move = $line[0];
+				$self->{ordered_root_moves} = [
+					$pv_move,
+					grep { $_ ne $pv_move } @{$self->{ordered_root_moves}},
+				];
 			}
 
 			$self->printPV(\@line);
@@ -965,6 +952,67 @@ sub rootSearch {
 	}
 
 	@$pline = @line;
+}
+
+sub orderRootMoves {
+	my ($self, $position, $depth, $ply, $pv_move, @moves) = @_;
+
+	my $signature = $self->{position}->[CP_POS_SIGNATURE];
+
+	my $tt = $self->{tt};
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @tt_address) = $tt->probe($signature);
+	$tt_move = 0 if !$tt_hit;
+
+	my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+	my $killers = $self->{killers}->[$ply];
+	my $k1 = $killers->[0];
+	my $k2 = $killers->[1];
+	my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
+
+	my %good_captures;
+	foreach my $move (@moves) {
+		if (cp_move_equivalent $move, $pv_move) {
+			push @tt, $move;
+		} elsif (cp_move_equivalent $move, $tt_move) {
+			push @tt, $move;
+		} elsif (my $promote = cp_move_promote $move) {
+			if ((GOOD_PROMO_MASK >> $promote) & 1) {
+				push @promotions, $move;
+			} else {
+				push @quiet, $move;
+			}
+		} elsif ($position->moveGivesCheck($move)) {
+			push @checks, $move;
+		} elsif (cp_move_captured $move) {
+			my $see = $position->SEE($move);
+			if ($see >= 0) {
+				$good_captures{$move} = $position->SEE($move);
+			} else {
+				push @bad_captures, $move;
+			}
+		} elsif ($move == $k1) {
+			$k1[0] = $move;
+		} elsif ($move == $k2) {
+			$k2[0] = $move;
+		} elsif ($move == $k3) {
+			$k3[0] = $move;
+		} else {
+			push @quiet, $move;
+		}
+	}
+	@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
+	@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
+
+	# Apply history bonus and malus to all quiet moves. We store the bonuses
+	# in the upper 32 bits so that we can do a simple integer sort.
+	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
+	foreach my $move (@quiet) {
+		$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
+	}
+	@quiet = sort { $b <=> $a } @quiet;
+
+	return @pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures;
 }
 
 # __END_MACROS__
