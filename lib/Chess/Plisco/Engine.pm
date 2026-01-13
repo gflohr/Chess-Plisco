@@ -27,6 +27,7 @@ use Chess::Plisco::Engine::InputWatcher;
 use Chess::Plisco::Engine::TranspositionTable;
 use Chess::Plisco::Engine::Book;
 use Chess::Plisco::Engine::LimitsType;
+use Chess::Plisco::Tablebase::Syzygy;
 
 # These figures are taken from 
 use constant MIN_HASH_SIZE => 1;
@@ -82,6 +83,30 @@ use constant UCI_OPTIONS => [
 		max => 5000,
 		default => 10,
 	},
+	{
+		name => 'SyzygyPath',
+		type => 'string',
+		callback => '__setSyzygyPath',
+	},
+	{
+		name => 'SyzygyProbeDepth',
+		type => 'spin',
+		min => 1,
+		max => 100,
+		default => 1,
+	},
+	{
+		name => 'Syzygy50MoveRule',
+		type => 'check',
+		default => 'true',
+	},
+	{
+		name => 'SyzygyProbeLimit',
+		type => 'spin',
+		min => 0,
+		max => 7,
+		default => 7,
+	},
 ];
 
 my $uci_options = UCI_OPTIONS;
@@ -105,6 +130,7 @@ sub new {
 		__move_overheads => [],
 		__last_params => {},
 		__original_time_adjust => -1,
+		__tb => Chess::Plisco::Tablebase::Syzygy->new,
 	};
 
 	my $options = UCI_OPTIONS;
@@ -749,6 +775,27 @@ sub __setBookFile {
 
 	my $callback = sub { $self->__info(@_) };
 	$self->{__book}->setFile($value, $callback);
+
+	return $self;
+}
+
+sub __setSyzygyPath {
+	my ($self, $value) = @_;
+
+	my $path_sep = $^O eq 'MSWin32' ? ';' : ':';
+
+	my @directories = map { $self->__trim($_) } split $path_sep, $value;
+
+$DB::single = 1;
+	$self->{__tb} = Chess::Plisco::Tablebase::Syzygy->new(undef);
+	foreach my $directory (@directories) {
+		$self->{__tb}->addDirectory($directory, recursive => 1);
+	}
+
+	my $largest = $self->{__tb}->largestWdl;
+	my $num_wdl = $self->{__tb}->numWdlFiles;
+	my $num_dtz = $self->{__tb}->numDtzFiles;
+	$self->__info("Found $num_wdl WDL and $num_dtz DTZ tablebase files (up to $largest-man)");
 
 	return $self;
 }

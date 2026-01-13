@@ -1684,6 +1684,8 @@ sub new {
 		tables => \%tables,
 		wdl => {},
 		dtz => {},
+		wdl_files => 0,
+		dtz_files => 0,
 	}, $class;
 
 	$self->addDirectory($directory, %options) if defined $directory;
@@ -1734,6 +1736,7 @@ sub __addFile {
 			if ($options{load_wdl}) {
 				$self->{wdl}->{$tablename} = $path;
 				$self->{wdl}->{$mirrored_tablename} = $path;
+				++$self->{wdl_files};
 
 				return 1;
 			}
@@ -1741,6 +1744,7 @@ sub __addFile {
 			if ($options{load_dtz}) {
 				$self->{dtz}->{$tablename} = $path;
 				$self->{dtz}->{$mirrored_tablename} = $path;
+				++$self->{dtz_files};
 
 				return 1;
 			}
@@ -1784,13 +1788,13 @@ sub largest {
 sub numWdlFiles {
 	my ($self) = @_;
 
-	return scalar keys %{$self->{wdl}};
+	return $self->{wdl_files};
 }
 
 sub numDtzFiles {
 	my ($self) = @_;
 
-	return scalar keys %{$self->{dtz}};
+	return $self->{dtz_files};
 }
 
 sub __checkPosition {
