@@ -35,7 +35,6 @@ use Chess::Plisco::Engine::TranspositionTable;
 use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
-use constant ASPIRATION_WINDOW => 25;
 use constant SAFETY_MARGIN => 50;
 
 # For all combinations of promotion piece and captured piece, calculate a
@@ -82,7 +81,7 @@ sub new {
 		previous_average_score => INF,
 		iter_scores => [],
 		previous_time_reduction => 0.85,
-		move_efforts => {},
+		root_moves => {},
 		total_best_move_changes => 0,
 	};
 
@@ -236,7 +235,7 @@ sub alphabeta {
 		$self->checkTime;
 	}
 
-	my $pv_node = $node_type != PV_NODE;
+	my $pv_node = $node_type != NON_PV_NODE;
 
 	if ($depth <= 0) {
 		return quiesce($self, $ply, $alpha, $beta, $pv_node ? PV_NODE : NON_PV_NODE);
@@ -303,12 +302,7 @@ sub alphabeta {
 	my $pv_hit = $tt_hit && $tt_pv;
 
 	if ($tt_hit && defined $tt_value && $tt_depth >= $depth) {
-		if (DEBUG) {
-			if ($tt_move) {
-				my $cn = $position->moveCoordinateNotation($tt_move);
-				$self->indent($ply, "best move: $cn");
-			}
-		}
+		# FIXME! Actually, there is no need for a TT move.
 		if ($tt_move
 		    && ($tt_bound == BOUND_EXACT
 		        || ($tt_bound == BOUND_LOWER && $tt_value >= $beta)
@@ -322,130 +316,104 @@ sub alphabeta {
 			if (DEBUG) {
 				my $hex_sig = sprintf '%016x', $signature;
 				my $cn = $position->moveCoordinateNotation($tt_move);
-				$self->indent($ply, "TT hit for $hex_sig, value $tt_value, best move $cn");
+				my $type = BOUND_TYPES->[$tt_bound];
+				my $is_pv_hit = $pv_hit ? 'true' : 'false';
+				$self->indent($ply, "TT hit for $hex_sig, value $tt_value ($type), TT depth $tt_depth, PV hit: $is_pv_hit, best move $cn");
 			}
 
 			return $tt_value;
 		}
 	}
 
-	my @moves = $position->pseudoLegalMoves;
-
-	# Sort moves. FIXME!!!! Bad captures must be searched *after* the
-	# quiet moves.
+	my @moves;
 	my $pv_move;
-
-	$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
-	my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
-	my $killers = $self->{killers}->[$ply];
-	my $k1 = $killers->[0];
-	my $k2 = $killers->[1];
-	my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
-	if ($depth >= 5) {
-		# Full sorting.
-		my %good_captures;
-		foreach my $move (@moves) {
-			if (cp_move_equivalent $move, $pv_move) {
-				push @pv, $move;
-			} elsif (cp_move_equivalent $move, $tt_move) {
-				push @tt, $move;
-			} elsif (my $promote = cp_move_promote $move) {
-				if ((GOOD_PROMO_MASK >> $promote) & 1) {
-					push @promotions, $move;
-				} else {
-					push @quiet, $move;
-				}
-			} elsif ($position->moveGivesCheck($move)) {
-				push @checks, $move;
-			} elsif (cp_move_captured $move) {
-				my $see = $position->SEE($move);
-				if ($see >= 0) {
-					$good_captures{$move} = $position->SEE($move);
-				} else {
-					push @bad_captures, $move;
-				}
-			} elsif ($move == $k1) {
-				$k1[0] = $move;
-			} elsif ($move == $k2) {
-				$k2[0] = $move;
-			} elsif ($move == $k3) {
-				$k3[0] = $move;
-			} else {
-				push @quiet, $move;
-			}
-		}
-		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
-		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] } @bad_captures;
-	} elsif ($depth >= 4) {
-		# Light sorting.
-		my %good_captures;
-		foreach my $move (@moves) {
-			if (cp_move_equivalent $move, $pv_move) {
-				push @pv, $move;
-			} elsif (cp_move_equivalent $move, $tt_move) {
-				push @tt, $move;
-			} elsif (my $promote = cp_move_promote $move) {
-				if ((GOOD_PROMO_MASK >> $promote) & 1) {
-					push @promotions, $move;
-				} else {
-					push @quiet, $move;
-				}
-			} elsif (cp_move_captured $move) {
-				my $see = $position->SEE($move);
-				if ($see >= 0) {
-					$good_captures{$move} = $position->SEE($move);
-				} else {
-					push @bad_captures, $move;
-				}
-			} elsif ($move == $k1) {
-				$k1[0] = $move;
-			} elsif ($move == $k2) {
-				$k2[0] = $move;
-			} elsif ($move == $k3) {
-				$k3[0] = $move;
-			} else {
-				push @quiet, $move;
-			}
-		}
-		@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} } keys %good_captures;
-		@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] } @bad_captures;
-	} else {
-		# Minimal sorting.
-		foreach my $move (@moves) {
-			if (cp_move_equivalent $move, $pv_move) {
-				push @pv, $move;
-			} elsif (cp_move_equivalent $move, $tt_move) {
-				push @tt, $move;
-			} elsif (my $promote = cp_move_promote $move) {
-				if ((GOOD_PROMO_MASK >> $promote) & 1) {
-					push @promotions, $move;
-				} else {
-					push @quiet, $move;
-				}
-			} elsif (cp_move_captured $move) {
-				push @good_captures, $move;
-			} elsif ($move == $k1) {
-				$k1[0] = $move;
-			} elsif ($move == $k2) {
-				$k2[0] = $move;
-			} elsif ($move == $k3) {
-				$k3[0] = $move;
-			} else {
-				push @quiet, $move;
-			}
-		}
-		@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
-	}
-
-	# Apply history bonus and malus to all quiet moves. We store the bonuses
-	# in the upper 32 bits so that we can do a simple integer sort.
 	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
-	foreach my $move (@quiet) {
-		$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
-	}
-	@quiet = sort { $b <=> $a } @quiet;
+	if ($root_node) {
+		@moves = @{$self->{ordered_root_moves}};
+		$pv_move = $moves[0];
+	} elsif ($depth >= 5) {
+		# Use the same move ordering as for root moves.
+		$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
+		@moves = $self->orderRootMoves($position, $depth, $ply, $pv_move, $position->pseudoLegalMoves);
+	} else {
+		@moves = $position->pseudoLegalMoves;
 
-	@moves = (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+		$pv_move = $pline->[$ply - 1] if @$pline >= $ply;
+		my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+		my $killers = $self->{killers}->[$ply];
+		my $k1 = $killers->[0];
+		my $k2 = $killers->[1];
+		my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
+		if ($depth >= 4) {
+			# Light sorting.
+			my %good_captures;
+			foreach my $move (@moves) {
+				if (cp_move_equivalent $move, $pv_move) {
+					push @pv, $move;
+				} elsif (cp_move_equivalent $move, $tt_move) {
+					push @tt, $move;
+				} elsif (my $promote = cp_move_promote $move) {
+					if ((GOOD_PROMO_MASK >> $promote) & 1) {
+						push @promotions, $move;
+					} else {
+						push @quiet, $move;
+					}
+				} elsif (cp_move_captured $move) {
+					my $see = $position->SEE($move);
+					if ($see >= 0) {
+						$good_captures{$move} = $position->SEE($move);
+					} else {
+						push @bad_captures, $move;
+					}
+				} elsif ($move == $k1) {
+					$k1[0] = $move;
+				} elsif ($move == $k2) {
+					$k2[0] = $move;
+				} elsif ($move == $k3) {
+					$k3[0] = $move;
+				} else {
+					push @quiet, $move;
+				}
+			}
+			@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
+			@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
+		} else {
+			# Minimal sorting.
+			foreach my $move (@moves) {
+				if (cp_move_equivalent $move, $pv_move) {
+					push @pv, $move;
+				} elsif (cp_move_equivalent $move, $tt_move) {
+					push @tt, $move;
+				} elsif (my $promote = cp_move_promote $move) {
+					if ((GOOD_PROMO_MASK >> $promote) & 1) {
+						push @promotions, $move;
+					} else {
+						push @quiet, $move;
+					}
+				} elsif (cp_move_captured $move) {
+					push @good_captures, $move;
+				} elsif ($move == $k1) {
+					$k1[0] = $move;
+				} elsif ($move == $k2) {
+					$k2[0] = $move;
+				} elsif ($move == $k3) {
+					$k3[0] = $move;
+				} else {
+					push @quiet, $move;
+				}
+			}
+			@good_captures = sort { $mvv_lva[$b & 0x3f] <=> $mvv_lva[$a & 0x3f] } @good_captures;
+		}
+
+		# Apply history bonus and malus to all quiet moves. We store the bonuses
+		# in the upper 32 bits so that we can do a simple integer sort.
+		foreach my $move (@quiet) {
+			$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
+		}
+		@quiet = sort { $b <=> $a } @quiet;
+
+		@moves = (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+	}
 
 	my $legal = 0;
 	my $moveno = 0;
@@ -463,7 +431,7 @@ sub alphabeta {
 		$position->move($move, 1);
 		$signatures->[$signature_slot] = $position->[CP_POS_SIGNATURE];
 		my $nodes_before = $self->{nodes}++;
-		$self->printCurrentMove($depth, $move, $legal) if $print_current_move;
+		$self->printCurrentMove($move, $legal) if $print_current_move;
 		my $score;
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
@@ -499,73 +467,75 @@ sub alphabeta {
 		if (DEBUG) {
 			pop @{$self->{line}};
 		}
+		my $root_move;
 		if ($node_type == ROOT_NODE) {
-			$self->{average_score} =
-				$self->{average_score} != -INF ? ($score + $self->{average_score}) >> 1 : 3.75 * $score;
-			$self->{move_efforts}->{$move} += $self->{nodes} - $nodes_before;
+			$root_move = $self->{root_moves}->{$move & 0xffff_ffff};
+			# The constants for the time management are taken from Stockfish
+			# and they use their own units which seem to be 3.5-4.0 centipawns.
+			$root_move->{average_score} =
+				$root_move->{average_score} != -INF ? ($score + $root_move->{average_score}) >> 1 : $score;
+			$root_move->{mean_squared_score} = $root_move->{mean_squared_score} != -INF * INF
+									? ($score * abs($score) + $root_move->{mean_squared_score}) / 2
+									: $score * abs($score);
+			$root_move->{move_effort} += $self->{nodes} - $nodes_before;
 			++$self->{total_best_move_changes} if $score > $best_value && $score > $alpha && $legal > 1;
 		}
 		if ($score > $best_value) {
 			$best_value = $score;
-			$best_move = $move;
 
 			if ($score > $alpha) {
-				$alpha = $score;
+				$best_move = $move;
+
 				$pv_found = 1;
 				@$pline = ($move, @line);
-
-				if (DEBUG) {
-					$self->indent($ply, "raise alpha to $alpha");
-				}
-				if ($ply == 1) {
+				if ($node_type == ROOT_NODE) {
 					$self->{score} = $score;
 					$self->printPV($pline);
 				}
-			}
-		}
-		if ($score >= $beta) {
-			if (DEBUG) {
-				my $hex_sig = sprintf '%016x', $signature;
-				my $cn = $position->moveCoordinateNotation($move);
-				$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BETA) \@depth $depth for $hex_sig");
-			}
-			$tt->store(
-				@tt_address, # Information about destination.
-				$signature, # Position key.
-				_cp_value_to_tt($score, $ply), # Mate corrections.
-				0, # PV flag.
-				BOUND_LOWER,
-				$depth,
-				$move);
 
-			# Quiet move or bad capture failing high?
-			my $first_quiet = 1 + (scalar @moves) - (scalar @quiet) - (scalar @bad_captures);
-			if ($moveno >= $first_quiet && !cp_move_captured $move) {
-				if (DEBUG) {
-					my $cn = $position->moveCoordinateNotation($move);
-					$self->indent($ply, "$cn is quiet and becomes new killer move");
+				if ($score < $beta) {
+					$alpha = $score;
+					if (DEBUG) {
+						$self->indent($ply, "raise alpha to $alpha");
+					}
+				} else {
+					if (DEBUG) {
+						my $hex_sig = sprintf '%016x', $signature;
+						my $cn = $position->moveCoordinateNotation($move);
+						$self->indent($ply, "$cn fail high ($score >= $beta), store $score(BOUND_LOWER) \@depth $depth for $hex_sig");
+					}
+
+					# Quiet move failing high?
+					if (!cp_move_captured($move)
+					    && !cp_move_equivalent($move, $pv_move)
+						&& !cp_move_equivalent($move, $tt_move)) {
+						if (DEBUG) {
+							my $cn = $position->moveCoordinateNotation($move);
+							$self->indent($ply, "$cn is quiet and becomes new killer move");
+						}
+
+						my $killers = $self->{killers}->[$ply];
+						($killers->[0], $killers->[1]) = ($move, $killers->[0]);
+
+						# The history bonus should only be given to real quiet
+						# moves, not bad captures. Later, when we also give
+						# maluses, we still want to give the malus to all
+						# previously searched quiet moves.
+
+						# This is the from and to square as one single integer.
+						my $from_to = ($move & 0x1ffe00) >> 9;
+
+						$cutoff_moves->[$from_to] += $depth * $depth;
+						if (DEBUG) {
+							my $bonus = $depth * $depth;
+							my $cn = $position->moveCoordinateNotation($move);
+							$self->indent($ply, "$cn is quiet and gets history bonus $bonus");
+						}
+					}
+
+					last;
 				}
-
-				my $killers = $self->{killers}->[$ply];
-				($killers->[0], $killers->[1]) = ($move, $killers->[0]);
-
-				# The history bonus should only be given to real quiet
-				# moves, not bad captures. Later, when we also give
-				# maluses, we still want to give the malus to all
-				# previously searched quiet moves.
-
-				# This is the from and to square as one single integer.
-				my $from_to = ($move & 0x1ffe00) >> 9;
-
-				$cutoff_moves->[$from_to] += $depth * $depth;
-				if (DEBUG) {
-					my $bonus = $depth * $depth;
-					my $cn = $position->moveCoordinateNotation($move);
-					$self->indent($ply, "$cn is quiet and gets history bonus $bonus");
-				}
 			}
-
-			return $score;
 		}
 	}
 
@@ -598,6 +568,8 @@ sub alphabeta {
 			my $type;
 			if ($tt_type == BOUND_UPPER) {
 				$type = 'BOUND_UPPER';
+			} elsif ($tt_type == BOUND_LOWER) {
+				$type = 'BOUND_LOWER';
 			} else {
 				$type = 'BOUND_EXACT';
 			}
@@ -652,71 +624,55 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "quiescence check extension");
 		}
+
 		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type, [$pv_node]);
 	}
 
 	my $tt = $self->{tt};
 	my $signature = $position->[CP_POS_SIGNATURE];
-	if (DEBUG) {
-		my $hex_sig = sprintf '%016x', $signature;
-		$self->indent($ply, "TT probe $hex_sig, alpha = $alpha, beta = $beta");
-	}
 	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
 		$tt_pv, @tt_address) = $tt->probe($signature);
 
-	$tt_move = 0 if !$tt_hit;
 	$tt_value = _cp_value_from_tt($tt_value, $ply, $position->[CP_POS_HALFMOVE_CLOCK])
 		if $tt_hit && defined $tt_value;
-	my $pv_hit = $tt_hit && $tt_pv;
 
-	if (DEBUG) {
-		if ($tt_move) {
-			my $cn = $position->moveCoordinateNotation($tt_move);
-			$self->indent($ply, "best move: $cn");
-		}
-	}
-
+	# Early TT cutoff.
 	if (!$pv_node && $tt_depth >= DEPTH_QUIESCENCE
 	    && defined $tt_value
-		&& $tt_bound & ($tt_value >= $beta ? BOUND_LOWER : BOUND_UPPER)) {
-		if (DEBUG) {
-			my $hex_sig = sprintf '%016x', $signature;
-			$self->indent($ply, "quiescence TT hit for $hex_sig, value $tt_value");
-		}
-		++$self->{tt_hits};
-
+	    && ($tt_bound & ($tt_value >= $beta ? BOUND_LOWER : BOUND_UPPER))) {
 		return $tt_value;
 	}
 
-	my $is_null_window = $beta - $alpha == 1;
-
+	# Compute best available stand-pat value
 	my $best_value = $position->evaluate;
 	if (DEBUG) {
 		$self->indent($ply, "static evaluation: $best_value");
 	}
+
 	if ($best_value >= $beta) {
+		# FIXME! Reduce branching here!
 		if (DEBUG) {
 			my $hex_sig = sprintf '%016x', $signature;
-			if ($is_null_window || $tt_hit) {
+			if ($tt_hit) {
 				$self->indent($ply, "quiescence standing pat ($best_value >= $beta) without tt store for $hex_sig");
 			} else {
-				$self->indent($ply, "quiescence standing pat ($best_value >= $beta), store no move value $best_value(EXACT) \@depth 0 for $hex_sig");
+				$self->indent($ply, "quiescence standing pat ($best_value >= $beta), store no move value $best_value (BOUND_LOWER) \@depth 0 for $hex_sig");
 			}
 		}
 
-		if (!($best_value >= VALUE_TB_WIN_IN_MAX_PLY
-				|| $best_value <= VALUE_TB_LOSS_IN_MAX_PLY)) {
-			$best_value = ($best_value + $beta) >> 1;
+		if (!$tt_hit) {
+			$tt->store(
+				@tt_address,
+				$signature,
+				_cp_value_to_tt($best_value, $ply),
+				0,
+				BOUND_LOWER,
+				DEPTH_UNSEARCHED,
+				0,
+			);
+		} else {
+			$best_value = $tt_value;
 		}
-		$tt->store(
-			@tt_address,
-			$signature,
-			_cp_value_to_tt($best_value, $ply),
-			0,
-			BOUND_LOWER,
-			DEPTH_UNSEARCHED,
-			0,
-		);
 
 		return $best_value;
 	}
@@ -725,7 +681,10 @@ sub quiesce {
 		$alpha = $best_value;
 	}
 
-	my @moves = $position->pseudoLegalAttacks;
+	# FIXME! Jump over all the expensive stuff following if there are no
+	# moves.
+	my @moves = $position->pseudoLegalAttacks; # or goto SKIP_MOVE_LOOP ...
+
 	my (@tt, @promotions, @checks, %captures);
 	foreach my $move (@moves) {
 		if (cp_move_equivalent $move, $tt_move) {
@@ -740,7 +699,7 @@ sub quiesce {
 		}
 	}
 
-	my @captures = sort { $captures{$b} <=> $captures{$a} } keys %captures;
+	my @captures = sort { $captures{$b} <=> $captures{$a} || $b <=> $a } keys %captures;
 	@moves = (@tt, @promotions, @checks, @captures);
 
 	my $signatures = $self->{signatures};
@@ -771,27 +730,27 @@ sub quiesce {
 			pop @{$self->{line}};
 		}
 		@$position = @backup;
-		if ($score >= $beta) {
-			if (DEBUG) {
-				my $hex_sig = sprintf '%016x', $signature;
-				my $cn = $position->moveCoordinateNotation($move);
-				$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score(BOUND_LOWER) \@depth 0 for $hex_sig");
-			}
-
-			$best_value = $score;
-			$best_move = $move;
-
-			last;
-		}
 		if ($score > $best_value) {
 			$best_value = $score;
-			$best_move = $move;
-		}
-		if ($score > $alpha) {
-			if (DEBUG) {
-				$self->indent($ply, "raise quiescence alpha to $alpha");
+
+			if ($score > $alpha) {
+				$best_move = $move;
+
+				if ($score < $beta) {
+					if (DEBUG) {
+						$self->indent($ply, "raise quiescence alpha to $alpha");
+					}
+					$alpha = $score;
+				} else {
+					if (DEBUG) {
+						my $hex_sig = sprintf '%016x', $signature;
+						my $cn = $position->moveCoordinateNotation($move);
+						$self->indent($ply, "$cn quiescence fail high ($score >= $beta), store $score (BOUND_LOWER) \@depth 0 for $hex_sig");
+					}
+
+					last;
+				}
 			}
-			$alpha = $score;
 		}
 	}
 
@@ -800,19 +759,14 @@ sub quiesce {
 		@tt_address, # Address.
 		$signature, # Zobrist key.
 		_cp_value_to_tt($best_value, $ply), # score, mate distance adjusted.
-		$pv_hit, # PV flag.
+		$tt_hit && $tt_pv, # PV flag.
 		$tt_type, # BOUND_EXACT/BOUND_UPPER/BOUND_LOWER.
 		DEPTH_QUIESCENCE, # Depth searched.
 		$best_move # Best move at this node.
 	);
 	if (DEBUG) {
 		my $hex_sig = sprintf '%016x', $signature;
-		my $type;
-		if ($tt_type == BOUND_UPPER) {
-			$type = 'BOUND_UPPER';
-		} else {
-			$type = 'BOUND_LOWER';
-		}
+		my $type = BOUND_TYPES->[$tt_type];
 		$self->indent($ply, "returning best value (quiescence) $best_value, store ($type) for $hex_sig");
 	}
 
@@ -832,59 +786,98 @@ sub rootSearch {
 	my $score = $self->{score} = 0;
 
 	my @line = @$pline;
-	my $alpha = -INF;
-	my $beta = +INF;
 
 	my $last_best_move;
 	my $last_best_move_depth = 0;
+	my $search_again_counter = 0;
 
 	if (DEBUG) {
 		my $fen = $position->toFEN;
 		$self->debug("Searching $fen");
 	}
 	eval {
-		while (++$depth <= $max_depth) {
+		DEEPENING: while (++$depth <= $max_depth) {
 			no integer;
+
+			# When the aspiration window changes, the PV move should be
+			# brought to the front and the order of all other moves must
+			# remain unchanged. Therefore, we order the moves just once.
+			$self->{ordered_root_moves} = [$self->orderRootMoves($position, 1, $depth, 0, keys %{$self->{root_moves}})];
 
 			# Age out instability.
 			$self->{total_best_move_changes} /= 2;
-
-			my @lower_windows = (-50, -100, -INF);
-			my @upper_windows = (50, 100, +INF);
 
 			$self->{depth} = $depth;
 			if (DEBUG) {
 				$self->debug("Deepening to depth $depth");
 				$self->{line} = [];
 			}
-			my @tt_pvs;
-			$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
-			if (DEBUG) {
-				$self->debug("Score at depth $depth: $score");
-			}
-			if (($score >= MATE - $depth) || ($score <= -MATE + $depth)) {
-				last;
+
+			# The upper 32 bits of the move can be abused by the move ordering.
+			my $pv_move = $line[0] & 0xffff_ffff;
+			my $delta = 15 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 8000;
+			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
+#warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+#warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
+			my $alpha = int(cp_max($avg - $delta, -INF));
+			my $beta = int(cp_min($avg + $delta, +INF));
+
+			my $failed_high_count = 0;
+			while (1) {
+				my @tt_pvs;
+#warn "DEPTH $depth: delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
+				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
+#warn "  best value: $score\n";
+				if (DEBUG) {
+					$self->debug("Score at depth $depth: $score");
+				}
+
+				# Mate found?
+				if (($score >= MATE - $depth) || ($score <= -(MATE - $depth))) {
+					$self->printPV(\@line);
+					last DEEPENING;
+				}
+
+				if ($score <= $alpha) {
+					$beta = $alpha;
+					$alpha = int(cp_max($score - $delta, -INF));
+					if (DEBUG) {
+						$self->debug("Failed low, must re-search with alpha=$alpha and beta=$beta");
+					}
+					$failed_high_count = 0;
+				} elsif ($score >= $beta) {
+					$alpha = int(cp_max($beta - $delta, $alpha));
+					$beta = int(cp_min($score + $delta, +INF));
+					if (DEBUG) {
+						$self->debug("Failed high, must re-search with alpha=$alpha and beta=$beta");
+					}
+					++$failed_high_count;
+				} else {
+					last;
+				}
+				
+				$delta *= 5;
+
+				# Bring the PV move to the front and keep the rest of the
+				# move ordering unchanged.
+				my $pv_move = $line[0];
+				$self->{ordered_root_moves} = [
+					$pv_move,
+					grep { $_ ne $pv_move } @{$self->{ordered_root_moves}},
+				];
 			}
 
-			if (($score <= $alpha) || ($score >= $beta)) {
-				if (DEBUG) {
-					$self->debug("Must re-search with infinite window.");
-				}
-				$alpha = $score - ASPIRATION_WINDOW;
-				$beta = $score + ASPIRATION_WINDOW;
-				redo;
-			}
+			$self->printPV(\@line);
 
 			if ($self->{use_time_management}) {
 				my $iter_idx = ($depth - 1) & 3;
 
 				no integer;
 
-				# The constants are taken from Stockfish and they use their own units
-				# which seem to be 3.5-4.0 centipawns.
-				my $best_value = 3.75 * $score;
+				my $root_move = $self->{root_moves}->{$line[0] & 0xffff_ffff};
+				my $best_value = $root_move->{score};
 
-				my $falling_eval = (11.85 + 2.24 * ($self->{previous_average_score} - $best_value)
+				my $falling_eval = (11.85 + 2.24 * ($root_move->{previous_average_score} - $best_value)
 					+ 0.93 * ($self->{iter_scores}->[$iter_idx] - $best_value)) / 100.0;
 				$falling_eval = cp_clamp($falling_eval, 0.57, 1.70);
 				if ($line[0] != $last_best_move) {
@@ -902,7 +895,7 @@ sub rootSearch {
 				my $time_reduction = 0.66 + 0.85 / (0.98 + exp(-$k * ($depth - $center)));
 				my $reduction = (1.43 + $self->{previous_time_reduction}) / (2.28 * $time_reduction);
 				my $best_move_instability = 1.02 + 2.14 * $self->{total_best_move_changes};
-				my $nodes_effort = $self->{move_efforts}->{$line[0]} * 100000 / cp_max(1, $self->{nodes});
+				my $nodes_effort = $root_move->{move_effort} * 100000 / cp_max(1, $self->{nodes});
 
 				# The original value is 93340. But we will not reach that
 				# with only safe prunings.
@@ -928,7 +921,7 @@ sub rootSearch {
 					}
 				}
 
-				$self->{previous_average_score} = $self->{average_score};
+				$root_move->{previous_average_score} = $root_move->{average_score};
 				$self->{previous_time_reduction} = $time_reduction;
 				$last_best_move = $line[0];
 				$self->{iter_scores}->[$iter_idx] = $best_value;
@@ -951,6 +944,67 @@ sub rootSearch {
 	@$pline = @line;
 }
 
+sub orderRootMoves {
+	my ($self, $position, $depth, $ply, $pv_move, @moves) = @_;
+
+	my $signature = $self->{position}->[CP_POS_SIGNATURE];
+
+	my $tt = $self->{tt};
+	my ($tt_hit, $tt_depth, $tt_bound, $tt_move, $tt_value, $tt_eval,
+		$tt_pv, @tt_address) = $tt->probe($signature);
+	$tt_move = 0 if !$tt_hit;
+
+	my (@pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures);
+	my $killers = $self->{killers}->[$ply];
+	my $k1 = $killers->[0];
+	my $k2 = $killers->[1];
+	my $k3 = $ply > 1 ? $self->{killers}->[$ply - 2]->[0] : 0;
+
+	my %good_captures;
+	foreach my $move (@moves) {
+		if (cp_move_equivalent $move, $pv_move) {
+			push @tt, $move;
+		} elsif (cp_move_equivalent $move, $tt_move) {
+			push @tt, $move;
+		} elsif (my $promote = cp_move_promote $move) {
+			if ((GOOD_PROMO_MASK >> $promote) & 1) {
+				push @promotions, $move;
+			} else {
+				push @quiet, $move;
+			}
+		} elsif ($position->moveGivesCheck($move)) {
+			push @checks, $move;
+		} elsif (cp_move_captured $move) {
+			my $see = $position->SEE($move);
+			if ($see >= 0) {
+				$good_captures{$move} = $position->SEE($move);
+			} else {
+				push @bad_captures, $move;
+			}
+		} elsif ($move == $k1) {
+			$k1[0] = $move;
+		} elsif ($move == $k2) {
+			$k2[0] = $move;
+		} elsif ($move == $k3) {
+			$k3[0] = $move;
+		} else {
+			push @quiet, $move;
+		}
+	}
+	@good_captures = sort { $good_captures{$b} <=> $good_captures{$a} || $b <=> $a } keys %good_captures;
+	@bad_captures = sort { $mvv_lva[$b] <=> $mvv_lva[$a] || $b <=> $a } @bad_captures;
+
+	# Apply history bonus and malus to all quiet moves. We store the bonuses
+	# in the upper 32 bits so that we can do a simple integer sort.
+	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
+	foreach my $move (@quiet) {
+		$move |= (($cutoff_moves->[($move & 0x1ffe00) >> 9]) << 32);
+	}
+	@quiet = sort { $b <=> $a } @quiet;
+
+	return @pv, @tt, @promotions, @checks, @good_captures, @k1, @k2, @k3, @quiet, @bad_captures;
+}
+
 # __END_MACROS__
 
 sub outputMoveEfforts {
@@ -958,9 +1012,9 @@ sub outputMoveEfforts {
 
 	my $sum = 0;
 	my $all_nodes = $self->{nodes} || 1;
-	foreach my $move (sort { $self->{move_efforts}->{$b} <=> $self->{move_efforts}->{$a} } keys %{$self->{move_efforts}}) {
+	foreach my $move (sort { $self->{root_moves}->{$b}->{move_effort} <=> $self->{root_moves}->{$a}->{move_effort} } keys %{$self->{root_moves}}) {
 		my $san = $self->{position}->SAN($move);
-		my $nodes = $self->{move_efforts}->{$move};
+		my $nodes = $self->{root_moves}->{$move}->{move_effort};
 		$sum += $nodes;
 		my $effort = int(0.5 + (100000 * $nodes / $all_nodes));
 		$self->{info}->("Move effort $san: $effort ($nodes nodes)");
@@ -970,7 +1024,7 @@ sub outputMoveEfforts {
 }
 
 sub printCurrentMove {
-	my ($self, $depth, $move, $moveno) = @_;
+	my ($self, $move, $moveno) = @_;
 
 	no integer;
 
@@ -979,7 +1033,7 @@ sub printCurrentMove {
 	my $elapsed = int(1000 * tv_interval($self->{start_time}));
 
 	$moveno += 1;
-	$self->{info}->("depth $depth currmove $cn currmovenumber $moveno"
+	$self->{info}->("depth $self->{depth} currmove $cn currmovenumber $moveno"
 		. " time $elapsed");
 }
 
@@ -997,9 +1051,22 @@ sub think {
 		# ponder on. Try to at least get a ponder move from the transposition
 		# table.
 		my $move = $legal[0];
-		$self->printCurrentMove(1, $move, 1);
+		$self->{depth} = 1;
+		$self->printCurrentMove($move, 1);
 		$self->printPV([$move]);
 		return $move;
+	} else {
+		# Initialize root moves.
+		foreach my $move (@legal) {
+			$self->{root_moves}->{$move} = {
+				move_effort => 0,
+				score => -INF,
+				previous_score => -INF,
+				average_score => -INF,
+				previous_average_score => -INF,
+				mean_squared_score => -INF * INF,
+			};
+		}
 	}
 
 	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
@@ -1010,7 +1077,8 @@ sub think {
 		}
 	}
 
-	my @line;
+	# There must always be a valid move in the line.
+	my @line = ($legal[0]);
 
 	$self->{thinking} = 1;
 	$self->{tt_hits} = 0;
@@ -1031,9 +1099,7 @@ sub think {
 	# good for both cases.
 	return if $self->{cancelled};
 
-	if (@line) {
-		$self->printPV(\@line);
-	} else {
+	if (!@line) {
 		# Search has returned no move.
 		$self->{info}->("Error: pick a random move because of search failure.");
 		$line[0] = $legal[int rand @legal];
@@ -1073,7 +1139,7 @@ sub getPonderMove {
 	if (DEBUG) {
 		if ($tt_move) {
 			my $cn = $pos->moveCoordinateNotation($tt_move);
-			$self->debug("best move: $cn");
+			#$self->debug("best move: $cn");
 		}
 	}
 

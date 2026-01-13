@@ -100,6 +100,7 @@ sub newSearch {
 }
 
 sub probe {
+	#return 0, 0, 0, 0, undef, undef, 0, 0, 0, ''; # Disable TT.
 	my ($self, $signature) = @_;
 
 	# Throw away the sign bit, because we cannot use negative indices.
@@ -149,6 +150,7 @@ sub probe {
 }
 
 sub store {
+	#return; # Disable TT
 	my ($self, $cluster_index, $bucket_index, $bucket, $signature, $value,
 		$pv, $bound, $depth, $move, $eval) = @_;
 
@@ -202,7 +204,7 @@ sub hashfull {
 			next if ($k_lo | $k_hi) == 0;   # empty
 
 			my $base = 8 + ($bi << 3);
-			my $gen  = $c[$base + 1];
+			my $gen = $c[$base + 1] >> 3;
 
 			my $age =
 				(GENERATION_CYCLE + $generation - $gen)
