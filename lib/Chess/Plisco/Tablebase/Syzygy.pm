@@ -1781,6 +1781,18 @@ sub largest {
 	return $largestWdl < $largestDtz ? $largestWdl : $largestDtz;
 }
 
+sub numWdlFiles {
+	my ($self) = @_;
+
+	return scalar keys %{$self->{wdl}};
+}
+
+sub numDtzFiles {
+	my ($self) = @_;
+
+	return scalar keys %{$self->{dtz}};
+}
+
 sub __checkPosition {
 	my ($self, $pos) = @_;
 
