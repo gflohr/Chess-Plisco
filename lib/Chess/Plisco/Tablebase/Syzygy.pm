@@ -1661,6 +1661,8 @@ use Tie::Cache::LRU;
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
 
+use base qw(Chess::Plisco::Tablebase);
+
 use constant TBW_SUFFIX => 'rtbw';
 use constant TBZ_SUFFIX => 'rtbz';
 use constant WDL_TO_DTZ => [-1, -101, 0, 101, 1];
