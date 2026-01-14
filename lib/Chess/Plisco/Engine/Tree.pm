@@ -83,6 +83,12 @@ sub new {
 		previous_time_reduction => 0.85,
 		root_moves => {},
 		total_best_move_changes => 0,
+		tb => $options{tb},
+		tb_cardinality => $options{tb_cardinality},
+		tb_probe_depth => $options{tb_probe_depth},
+		tb_probe_limit => $options{tb_probe_limit},
+		tb_50_move_rule => $options{tb_50_move_rule},
+		tb_hits => 0,
 	};
 
 	bless $self, $class;
@@ -217,7 +223,7 @@ sub printPV {
 	my $hashfull = $self->{tt}->hashfull;
 	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
 			. " score $scorestr nodes $nodes nps $nps hashfull $hashfull"
-			. " time $time pv $pv");
+			. " tbhits $self->{tb_hits} time $time pv $pv");
 	if ($self->{__debug}) {
 		$self->{info}->("tt_hits $self->{tt_hits}") if $self->{__debug};
 	}
@@ -325,6 +331,75 @@ sub alphabeta {
 		}
 	}
 
+	# Probe endgame tablebase.
+	my $best_value = -INF;
+	if ($node_type != ROOT_NODE) {
+		my $pieces_count;
+		cp_bitboard_popcount $position->[CP_POS_WHITE_PIECES] | $position->[CP_POS_BLACK_PIECES],
+			$pieces_count;
+
+		if ($pieces_count < $self->{tb_cardinality}
+		    && ($pieces_count < $self->{tb_cardinality}
+		        || $depth >= $self->{tb_probe_depth})
+		    # && cp_pos_halfmove_clock($position) == 0
+		    && !cp_pos_castling_rights($position)) {
+
+			my $tb = $self->{tb};
+			my $wdl = $tb->safeProbeWdl($position);
+
+			if (defined $wdl) {
+				if (DEBUG) {
+					$self->indent($ply, "tablebase hit, WDL: $wdl\n");
+				}
+
+				++$self->{tb_hits};
+
+				my $draw_score = $self->{tb_50_move_rule} ? 1 : 0;
+				my $tb_value = VALUE_TB - $ply;
+
+				my ($value, $tt_type);
+				if ($wdl < -$draw_score) {
+					$value = -$tb_value;
+					$tt_type = BOUND_UPPER;
+				} elsif ($wdl > $draw_score) {
+					$value = $tb_value;
+					$tt_type = BOUND_LOWER;
+				} else {
+					$value = DRAW + 2 * $wdl * $draw_score;
+					$tt_type = BOUND_EXACT;
+				}
+
+				if ($tt_type == BOUND_EXACT
+				    || ($tt_type == BOUND_LOWER ? $value >= $beta : $value <= $alpha)) {
+					if (DEBUG) {
+						my $tt_type_name = BOUND_TYPES->[$tt_type];
+						my $tt_value = _cp_value_to_tt($value, $ply);
+						$self->indent($ply, "store value $ply \@depth $depth with bound type $tt_type_name");
+					}
+					$tt->store(
+						@tt_address, # Address.
+						$signature, # Zobrist key.
+						_cp_value_to_tt($value, $ply), # score, mate distance adjusted.
+						$tt_pvs->[-1], # PV flag.
+						$tt_type, # BOUND_EXACT/TT_SCORE_ALPHA/TT_SCORE_LOWER.
+						$depth, # Depth searched.
+						0, # Best move at this node.
+					);
+
+					return $value;
+				}
+
+				if ($pv_node && $tt_type == BOUND_LOWER) {
+					$best_value = $value;
+					if (DEBUG && $best_value > $alpha) {
+						$self->indent($ply, "raise alpha to tablebase value $best_value");
+					}
+					$alpha = cp_max $alpha, $best_value;
+				}
+			}
+		}
+	}
+
 	my @moves;
 	my $pv_move;
 	my $cutoff_moves = $self->{cutoff_moves}->[$position->[CP_POS_TO_MOVE]];
@@ -424,7 +499,6 @@ sub alphabeta {
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
 	my @backup = @$position;
-	my $best_value = -INF;
 	foreach my $move (@moves) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;

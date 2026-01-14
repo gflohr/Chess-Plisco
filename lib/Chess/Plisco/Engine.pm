@@ -547,6 +547,11 @@ sub __onUciCmdGo {
 		watcher => $self->{__watcher},
 		info => $info,
 		signatures => $self->{__signatures},
+		tb => $self->{__tb},
+		tb_cardinality => $self->{__tb}->largestWdl,
+		tb_probe_depth => $self->{__options}->{SyzygyProbeDepth},
+		tb_probe_limit => $self->{__options}->{SyzygyProbeLimit},
+		tb_50_move_rule => $self->{__options}->{Syzygy50MoveRule},
 	);
 	if ($self->{__options}->{OwnBook} eq 'true') {
 		$options{book} = $self->{__book};
@@ -786,7 +791,6 @@ sub __setSyzygyPath {
 
 	my @directories = map { $self->__trim($_) } split $path_sep, $value;
 
-$DB::single = 1;
 	$self->{__tb} = Chess::Plisco::Tablebase::Syzygy->new(undef);
 	foreach my $directory (@directories) {
 		$self->{__tb}->addDirectory($directory, recursive => 1);
