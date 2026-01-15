@@ -37,6 +37,12 @@ use constant MOVE_ORDERING_TT => 1 << 61;
 
 use constant SAFETY_MARGIN => 50;
 
+use constant WDL_LOSS => -2;
+use constant WDL_BLESSED_LOSS => -1;
+use constant WDL_DRAW => 0;
+use constant WDL_CURSED_WIN => 1;
+use constant WDL_WIN => 2;
+
 # For all combinations of promotion piece and captured piece, calculate a
 # value suitable for sorting.  We choose the raw material balance minus the
 # piece that moves.  That way, captures that the queen makes are less
@@ -89,6 +95,7 @@ sub new {
 		tb_probe_limit => $options{tb_probe_limit},
 		tb_50_move_rule => $options{tb_50_move_rule},
 		tb_hits => 0,
+		tb_root_hit => 0,
 	};
 
 	bless $self, $class;
@@ -1129,19 +1136,23 @@ sub think {
 		$self->printCurrentMove($move, 1);
 		$self->printPV([$move]);
 		return $move;
-	} else {
-		# Initialize root moves.
-		foreach my $move (@legal) {
-			$self->{root_moves}->{$move} = {
-				move_effort => 0,
-				score => -INF,
-				previous_score => -INF,
-				average_score => -INF,
-				previous_average_score => -INF,
-				mean_squared_score => -INF * INF,
-			};
-		}
 	}
+
+	# Initialize root moves.
+	foreach my $move (@legal) {
+		$self->{root_moves}->{$move} = {
+			move_effort => 0,
+			score => -INF,
+			previous_score => -INF,
+			average_score => -INF,
+			previous_average_score => -INF,
+			mean_squared_score => -INF * INF,
+		};
+	}
+
+	# Check for tablebase hit.
+	$DB::single = 1;
+	$self->tbRankRootMoves;
 
 	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
 		my $notation = $self->{book}->pickMove($position);
@@ -1219,6 +1230,143 @@ sub getPonderMove {
 
 	return $tt_move if $tt_move;
 }
+
+sub tbRankRootMoves {
+	my ($self) = @_;
+
+	my $tb = $self->{tb};
+
+	$self->{tb_root_hit} = 0;
+
+	# Limit probe depth to 0 if table piece count too small.
+	if ($self->{tb_probe_limit} > $self->{tb_cardinality}) {
+		$self->{tb_probe_limit} = $self->{tb_cardinality};
+		$self->{tb_probe_depth} = 0;
+	}
+
+	my $pos = $self->{position};
+	
+	if (!$pos->[CP_POS_CASTLING_RIGHTS]
+	    && $pos->bitboardPopcount($pos->[CP_POS_WHITE_PIECES]
+	                             | $pos->[CP_POS_BLACK_PIECES])
+	    <= $self->{tb_probe_limit}) {
+		$self->{tb_root_hit} = $self->tbRootProbe;
+	}
+}
+
+sub tbRootProbe {
+	my ($self) = @_;
+
+	my $rank_dtz = 1; # FIXME! This should be a method argument.
+
+	my $pos = $self->{position};
+	my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
+
+	# Has the position repeated? The signatures array contains the signature
+	# of the starting position plus the "history" - one signature for each
+	# move. The history length is therefore the number of signatures - 1.
+	#
+	# The detection differs from the detection inside alphabeta(), where we
+	# explicitely ignore if the position at ply 0 is a repetition.
+	my $has_repeated;
+	my $rc = $pos->[CP_POS_REVERSIBLE_CLOCK];
+	my $signature_slot = $self->{history_length};
+	my $max_back = $signature_slot - $rc;
+	my @signatures = @{$self->{signatures}};
+	my $signature = $pos->[CP_POS_SIGNATURE];
+	for (my $n = $signature_slot - 4; $n >= $max_back; $n -= 2) {
+		if ($signatures[$n] == $signature) {
+			$has_repeated = 1;
+			last;
+		}
+	}
+
+	# Arbitrarily chosen but large enough.
+	my $max_dtz = 1 << 18;
+
+	my $bound = $self->{tb_50_move_rule} ? ($max_dtz / 2 - 100) : 1;
+	
+	my @backup = @$pos;
+	my $tb = $self->{tb};
+	my $retval = 1;
+	my $use_rule_50 = $self->{tb_50_move_rule};
+	push @signatures, undef; # Extend for next move.
+	++$signature_slot;
+	foreach my $move (keys %{$self->{root_moves}}) {
+		my $dtz;
+		$pos->move($move);
+		$hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
+		my $state = $pos->gameOver;
+		if ($hmc == 0) {
+			my $wdl = -$tb->safeProbeWdl($pos);
+			return if !defined $wdl;
+			$dtz = $self->dtzBeforeZeroing($wdl);
+		} else {
+			if ($state
+			    && (!($state & CP_GAME_WHITE_WINS)) && !($state & CP_GAME_BLACK_WINS)) {
+				$dtz = 0;
+			} else {
+				# Repetition?
+				$signature = $signatures[-1] = $pos->[CP_POS_SIGNATURE];
+				my $is_repetition;
+				for (my $n = $signature_slot - 4; $n >= $max_back; $n -= 2) {
+					if ($signatures[$n] == $signature) {
+						$is_repetition = 1;
+						last;
+					}
+				}
+				if ($is_repetition) {
+					$dtz = 0;
+				} else {
+					$dtz = -$tb->safeProbeDtz($pos);
+					return if !defined $dtz;
+				}
+			}
+		}
+
+		if ($state & CP_GAME_OVER
+		    && (($state & CP_GAME_WHITE_WINS) || ($state & CP_GAME_BLACK_WINS))
+			&& $dtz == 2) {
+			$dtz = 1;
+		}
+
+		@$pos = @backup;
+
+		my $rm = $self->{root_moves}->{$move};
+		my $r = $dtz > 0 ? ($dtz + $hmc <= 99 && !$has_repeated ? $max_dtz - ($rank_dtz ? $dtz : 0)
+						: $max_dtz / 2 - ($dtz + $hmc))
+				: $dtz < 0 ? (-$dtz * 2 + $hmc < 100 ? -$max_dtz - ($rank_dtz ? $dtz : 0)
+						: -$max_dtz / 2 + (-$dtz + $hmc))
+				: 0;
+		
+		$rm->{tb_rank} = $r;
+
+		# This will later be used for displaying the score.
+		my $max = sub { my ($x1, $x2) = @_; $x1 > $x2 ? $x1 : $x2 };
+		my $min = sub { my ($x1, $x2) = @_; $x1 < $x2 ? $x1 : $x2 };
+
+		my $pawn_value = 208;
+		$rm->{tb_score} = $r >= $bound ? MATE - MAX_PLY - 1
+				: $r > 0  ? (($max->(3, $r - ($max_dtz / 2 - 200)) * $pawn_value) / 200)
+				: $r == 0 ? DRAW
+				: $r > -$bound
+				? (($min->(-3, $r + ($max_dtz / 2 - 200)) * $pawn_value) / 200)
+				: -MATE + MAX_PLY + 1;
+	}
+
+	return $self;
+}
+
+sub dtzBeforeZeroing {
+	my ($self, $wdl) = @_;
+
+	return $wdl == WDL_WIN ? 1
+			: $wdl == WDL_CURSED_WIN ? 101
+			: $wdl == WDL_BLESSED_LOSS ? -101
+			: $wdl == WDL_LOSS ? -1
+			: 0;
+}
+
 
 # Fill the lookup table for the move values.
 foreach my $mover (CP_PAWN .. CP_KING) {
