@@ -179,7 +179,7 @@ sub __calibrateNPS {
 }
 
 sub uci {
-	my ($self, $in, $out) = @_;
+	my ($self, $in, $out, $init) = @_;
 
 	if ($^O =~ /win32/i) {
 		$in = $self->__msDosSocket($in);
@@ -187,7 +187,7 @@ sub uci {
 
 	$self->{__out} = $out;
 	$self->{__out}->autoflush(1);
-	$self->{__watcher} = Chess::Plisco::Engine::InputWatcher->new($in);
+	$self->{__watcher} = Chess::Plisco::Engine::InputWatcher->new($in, @$init);
 	$self->{__watcher}->onInput(sub {
 		$self->__onUciInput(@_);
 	});
@@ -199,12 +199,14 @@ sub uci {
 	$self->__output(<<"EOF");
 Welcome to Plisco $version!
 
-Plisco is a chess engine written in Perl that implements the UCI protocol (see
-http://wbec-ridderkerk.nl/html/UCIProtocol.html).
-
 Try 'help' for a list of commands!
 
 EOF
+
+	foreach my $command (@$init) {
+		$out->print("$command\n");
+		$self->__onUciInput($command);
+	}
 
 	while (1) {
 		$self->{__watcher}->check;
@@ -917,27 +919,28 @@ sub __onUciCmdHelp {
 	my ($self) = @_;
 
 	$self->__output(<<"EOF");
-    The Plisco Chess Engine
+The Plisco Chess Engine
 
-    The engine understands the following commands:
+The engine understands the following commands:
 
-        uci - switch to UCI mode (no-op)
-        debug (on|off) - switch debugging on or off
-        go [depth, wtime, btime, ... see protocol!]
-        go perft DEPTH - do performance test (blocks engine, hit CTRL-C ...)
-        setoption name NAME[ value VALUE] - set option NAME to VALUE
-        isready - ping the engine
-        stop - move immediately
-        fen - print the current position as FEN
-        board - print a compact representation of the board
-        evaluate - print the static score of the current position
-        see MOVE - do a static exchange evaluation for MOVE
-        help - show available commands
-        quit - quit the engine immediately
+	uci - switch to UCI mode (no-op)
+	debug (on|off) - switch debugging on or off
+	go [depth, wtime, btime, ... see protocol!]
+	go perft DEPTH - do performance test (blocks engine, hit CTRL-C ...)
+	setoption name NAME[ value VALUE] - set option NAME to VALUE
+	isready - ping the engine
+	stop - move immediately
+	fen - print the current position as FEN
+	board - print a compact representation of the board
+	evaluate - print the static score of the current position
+	see MOVE - do a static exchange evaluation for MOVE
+	help - show available commands
+	quit - quit the engine immediately
 
-    See http://wbec-ridderkerk.nl/html/UCIProtocol.html for more information!
+See https://gist.github.com/DOBRO/2592c6dad754ba67e6dcaec8c90165bf for
+more information!
 
-    In batch mode, the engine is unresponsive during searches.
+In batch mode, the engine is unresponsive during searches.
 EOF
 
 	return;

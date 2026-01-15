@@ -11,13 +11,243 @@
 
 use strict;
 
+use Locale::TextDomain qw(Chess-Plisco);
+use Getopt::Long;
+
 use Chess::Plisco::Engine;
+
+sub display_usage;
+sub usage_error;
+sub version_information;
+sub read_init_commands;
+
+my %options = (
+	init => [],
+	init_from_file => [],
+);
+Getopt::Long::Configure('bundling');
+GetOptions(
+	'i|init=s' => $options{init},
+	'init-from-file=s' => $options{init_from_file},
+	'h|help' => \$options{help},
+	'v|version' => \$options{version},
+) or usage_error;
+
+display_usage if $options{help};
+version_information if $options{version};
+
+read_init_commands $options{init_from_file}, $options{init};
 
 # Wrap that into an eval to make sure that the DESTROY function is executed.
 eval {
-	Chess::Plisco::Engine->new->uci(\*STDIN, \*STDOUT)
+	Chess::Plisco::Engine->new->uci(\*STDIN, \*STDOUT, $options{init})
 		or die "cannot create engine";
 };
 if ($@) {
 	die $@;
 }
+
+sub read_init_commands {
+	my ($filenames, $commands) = @_;
+
+	my @commands;
+	foreach my $filename (@$filenames) {
+		open my $fh, '<', $filename
+			or die __x("cannot open '{filename}' for reading: {err}\n",
+				filename => $filename, err => $!);
+		my @lines = <$fh>;
+		foreach my $line (@lines) {
+			chomp $line;
+			push @commands, split /\n/, $line;
+		}
+	}
+
+	@$commands = (@commands, @$commands);
+}
+
+sub display_usage {
+	print __x(<<EOF, program => $0);
+Usage: {program} [OPTIONS]
+EOF
+
+	print "\n";
+
+	print __"Start a UCI compatible chess engine.\n";
+
+	print __(<<EOF);
+Mandatory arguments to long options, are mandatory to short options, too.
+EOF
+
+	print "\n";
+
+	print __"Initialisation:\n";
+	print __(<<EOF);
+  -i, --init=UCI_COMMAND       send UCI_COMMAND to the engine
+      --init-from-file=FILENAME send UCI_COMMANDS from FILENAME to engine
+EOF
+
+	print "\n";
+
+	print __"Informative output:\n";
+
+	print __(<<EOF);
+  -h, --help                   display this help and exit
+EOF
+	print __(<<EOF);
+  -V, --version                display version information and exit
+EOF
+
+	print "\n";
+
+	print __"The options `--init` and `--init-from-file` can be given multiple times.\n";
+	print __"Commands read from files are always executed before string commands.\n";
+
+	print "\n";
+
+	print __x("Type 'man {program}' or 'perldoc {program}' for more information.\n");
+
+	exit 0;
+}
+
+sub usage_error {
+	my ($msg) = @_;
+
+	$msg = '' if !defined $msg;
+	$msg =~ s/^[ \t]+//;
+	$msg =~ s/[ \t\r\n]+$//;
+
+	if (length $msg) {
+		$msg = __x("{program}: {error}\n",
+		           program => $0, error => $msg);
+	}
+
+	die $msg . __x("Try '{program} --help' for more information!\n",
+	               program => $0);
+}
+
+sub version_information {
+	my $package = 'Chess::Plisco';
+	my $version = $Chess::Plisco::VERION || __"development version";
+
+	print __x(<<EOF, program => $0, package => $package, version => $version);
+{program} ({package}) {version}
+Copyright (C) 2021-2026 Guido Flohr <guido.flohr\@cantanea.com>.
+License: WTFPL2 <http://www.wtfpl.net/>
+This program is free software. It comes without any warranty, to
+the extent permitted by applicable law.
+EOF
+
+	exit 0;
+}
+
+
+=head1 NAME
+
+plisco - Play chess against Perl
+
+=head1 SYNOPSIS
+
+    plisco [OPTIONS]
+
+Valid options are:
+
+=over 4
+
+=item B<-i, --init=UCI_COMMAND>
+
+Specify the B<PATH> to the endgame table base.  This is the directory that
+contains the F<.rtbw> and F<.rtbz> files.
+
+If this option is not used, the environment variable C<TB_PATH> is checked.
+
+=item B<-h, --help>
+
+Display a short help page and exit.
+
+=item B<-V, --version>
+
+Display version information and exit.
+
+=back
+
+=head1 DESCRIPTION
+
+The program uses the <UCI protocol|https://gist.github.com/DOBRO/2592c6dad754ba67e6dcaec8c90165bf>
+to communicate with a human player or another chess engine via a GUI or
+similar programs.  Wherever possible, the engine tries to UCI commands and
+options in a similar or identical manner to the popular Stockfish engine.
+You can use their documentation at
+L<https://official-stockfish.github.io/docs/stockfish-wiki/UCI-&-Commands.html>
+to the extend possible as documentation for Plisco.
+
+On the Computer Chess Rating List CCRL, it has a rating of around 1500 ELO
+for Blitz (L<https://www.computerchess.org.uk/ccrl/404/>). But Blitz is its
+weakest time control.
+
+The engine uses the following features:
+
+=over 4
+
+=item negamax searching
+
+=item transposition tables
+
+=item iterative deepening
+
+=item aspiration windows
+
+=item killer heuristic
+
+=item history heuristic
+
+=item (Syzygy) endgame tablebases
+
+=back
+
+=head1 Hints
+
+=head2 Performance and Playing Strength
+
+The engine is written completely in pure Perl. The underlying chess library
+L<Chess::Plisco> is highly optimised and very fast for an interpreted language.
+However, you should not expect wonders.
+
+Plisco outperforms quite a few engines that are written in compiled languages
+and that are necessarily faster for chess programming than Perl. This suggests
+that the search implementation of Plisco is mostly bugfree. Analysis of
+Plisco's game play usually shows that it mostly plays bad moves, when the
+negative effect of them is only visible beyond the engines move horizon which
+is limited by Perl.
+
+No effort has been made to make the engine play like a human or to artificially
+reduce its playing strength.
+
+=head2 Endgame Tablebases
+
+WDL (Win/Draw/Loss) tablebase files (F<.rtbw>) should be stored on a fast SSD
+disk. Using them from a USB stick or a conventional, spinning harddisk will
+almost certainly hurt performance and playing strength. DTZ (Distance To Zero)
+files (F<.rtbz>) can be stored on any storage without bigger problems.
+
+The path to the Endgame tablebases is a colon-separated list of directories:
+
+    setoption name SyzygyPath value /usr/share/chess/syzygy:/mnt/dsk1/chess
+
+The directories are searched recursively for tablebase files. On
+MS-DOS/MS-Windows use a semi-colon ";" as a separator instead of a colon.
+
+=head2 Hash Size
+
+A transposition table is used to store the result of previous searches. Chess
+engine potentially test every possible line of play from a particular position.
+That makes it quite likely that a particular position is encountered multiple
+times. It therefore makes sense to cache the evaluation for that position in
+case it occurs again later.
+
+The default size of the transposition table is 16 MB. Experience shows that
+increasing the size does actually hurt performance. Feel free to experiment
+with the setting.
+
+=head1 SEE ALSO
+
+L<Chess::Plisco>(3pm), perl(1)
