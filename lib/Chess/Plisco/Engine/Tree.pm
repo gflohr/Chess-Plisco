@@ -224,6 +224,9 @@ sub printPV {
 	my $nodes = $self->{nodes};
 	my $elapsed = tv_interval($self->{start_time});
 	my $nps = $elapsed ? (int(0.5 + $nodes / $elapsed)) : 0;
+	if ($self->{tb_hit} && !$mate_in) {
+		$score = $self->{tb_outcome};
+	}
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
 	my $pv = join ' ', $position->movesCoordinateNotation(@$pline);
 	my $time = int(0.5 + (1000 * $elapsed));
@@ -1399,6 +1402,12 @@ sub tbRootProbe {
 				delete @{$root_moves}{@other};
 			}
 		}
+	}
+
+	if ($self->{tb_50_move_rule}) {
+		$self->{tb_outcome} = $wdl == WDL_WIN ? 20000 : $wdl == WDL_LOSS ? -20000 : 0;
+	} else {
+		$self->{tb_outcome} = 20000 * $wdl_sign;
 	}
 
 	return $self;
