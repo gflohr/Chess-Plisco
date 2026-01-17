@@ -1257,116 +1257,148 @@ sub tbRankRootMoves {
 sub tbRootProbe {
 	my ($self) = @_;
 
-	my $rank_dtz = 1; # FIXME! This should be a method argument.
+	my $pos = $self->{position}->copy;
 
-	my $pos = $self->{position};
-	my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
+	my $tb = $self->{tb};
 
-	# Has the position repeated? The signatures array contains the signature
-	# of the starting position plus the "history" - one signature for each
-	# move. The history length is therefore the number of signatures - 1.
-	#
-	# The detection differs from the detection inside alphabeta(), where we
-	# explicitely ignore if the position at ply 0 is a repetition.
-	my $has_repeated;
-	my $rc = $pos->[CP_POS_REVERSIBLE_CLOCK];
-	my $signature_slot = $self->{history_length};
-	my $max_back = $signature_slot - $rc;
-	my @signatures = @{$self->{signatures}};
-	my $signature = $pos->[CP_POS_SIGNATURE];
-	for (my $n = $signature_slot - 4; $n >= $max_back; $n -= 2) {
-		if ($signatures[$n] == $signature) {
-			$has_repeated = 1;
-			last;
-		}
+	# Probe for the outcome of the game.
+	my $wdl = $tb->safeProbeWdl($pos);
+	return if !defined $wdl;
+
+	my $wdl_sign = $wdl <=> 0;
+
+	# First determine whether we are winning or losing.
+	my $winning = $wdl > 0;
+	if ($wdl == 0) {
+		# In case of a draw, we want to escape there, if we are behind.
+		my $static_eval = $pos->evaluate;
+		$winning = $static_eval > 0;
 	}
 
-	# Arbitrarily chosen but large enough.
-	my $max_dtz = 1 << 18;
-
-	my $bound = $self->{tb_50_move_rule} ? ($max_dtz / 2 - 100) : 1;
-	
+	# Pass 1. Probe all root moves.
+	my $root_moves = $self->{root_moves};
 	my @backup = @$pos;
-	my $tb = $self->{tb};
-	my $retval = 1;
-	my $use_rule_50 = $self->{tb_50_move_rule};
-	push @signatures, undef; # Extend for next move.
-	++$signature_slot;
-	foreach my $move (keys %{$self->{root_moves}}) {
-		my $dtz;
+
+	# Pass 2.
+	# Discard all moves that change the outcome of the game.  They cannot be
+	# part of the PV.
+	#
+	# We want to order the moves by the DTZ of the position after the move
+	# has been made.
+	foreach my $move (keys %{$root_moves}) {
 		$pos->move($move);
-		$hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
-		my $state = $pos->gameOver;
-		if ($hmc == 0) {
-			my $wdl = -$tb->safeProbeWdl($pos);
-			return if !defined $wdl;
-			$dtz = $self->dtzBeforeZeroing($wdl);
-		} else {
-			if ($state
-			    && (!($state & CP_GAME_WHITE_WINS)) && !($state & CP_GAME_BLACK_WINS)) {
-				$dtz = 0;
+
+		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
+		# We consider a missing WDL table a configuration error.
+		return if !defined $root_moves->{$move}->{tb_wdl};
+
+		if (($root_moves->{$move}->{tb_wdl} <=> 0) != -$wdl_sign) {
+			delete $root_moves->{$move};
+			goto UNDO_MOVE;
+		}
+
+		# First, get mate, stalemate out of the way.
+		my @legal = $pos->legalMoves;
+		if (!@legal) {
+			if ($pos->inCheck || !$winning) {
+				# We have found a mate or stalemate. Our single-threaded
+				# engine cannot be used for multiPV analysys. We can just as
+				# well bypass the search altogether and return the winning
+				# move.
+				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
+				return;
 			} else {
-				# Repetition?
-				$signature = $signatures[-1] = $pos->[CP_POS_SIGNATURE];
-				my $is_repetition;
-				for (my $n = $signature_slot - 4; $n >= $max_back; $n -= 2) {
-					if ($signatures[$n] == $signature) {
-						$is_repetition = 1;
-						last;
-					}
-				}
-				if ($is_repetition) {
-					$dtz = 0;
-				} else {
-					$dtz = -$tb->safeProbeDtz($pos);
-					return if !defined $dtz;
+				# A stalemate but we are winning.
+				delete $root_moves->{$move};
+				goto UNDO_MOVE;
+			}
+		}
+
+		# Does the move result in a draw by insufficient material?
+		if ($pos->insufficientMaterial) {
+			if ($winning) {
+				# Don't even consider that move.
+				delete $root_moves->{$move};
+				goto UNDO_MOVE;
+			} else {
+				# Force playing this move.
+				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
+				return;
+			}
+		}
+
+		# If the probe fails, treat all moves equally.
+		my $dtz = -$tb->safeProbeDtz($pos) // 0;
+
+		# We will later try to filter out moves that will result in an
+		# unwanted draw by the 50-move-rule.
+		my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
+		$root_moves->{$move}->{tb_abs_dtz} = $hmc + abs $dtz;
+
+		if ($hmc == 0) {
+			# The current move is a pawn push or capture. The DTZ is that
+			# of the next endgame phase. Compared to the DTZ before that, it will
+			# make a leap and is useless for move ordering. Therefore, we
+			# use the DTZ from the position before which was -1, -101, 0, 1, or
+			# 101. However, the position before hasn't been probed. But we can
+			# deduce the value from the WDL:
+			$dtz = (-67 * $wdl * $wdl * $wdl + 269 * $wdl) >> 1;
+		} else {
+			# We have already handled stalemate and draw because of
+			# insufficient material. Now check the draws that have to be
+			# claimed.
+			my $is_draw = $pos->[CP_POS_HALFMOVE_CLOCK] > 99;
+			if (!$is_draw) {
+				# Check for draw by 3-fold repetition. Unlike the normal
+				# search, the root search has to check that this is really
+				# the 3rd repetition.
+				my $signature = $pos->[CP_POS_SIGNATURE];
+				my @repetitions = grep { $_ == $signature } @{$self->{signatures}};
+				$is_draw = @repetitions > 1;
+			}
+			
+			if ($is_draw) {
+				# This is only what we want, when we are losing.
+				$dtz = $winning ? -INF : INF;
+			} else {
+				# Correct the DTZ by 1 and apply the offset for the first move.
+				if ($dtz > 0) {
+					++$dtz;
+				} elsif ($dtz < 0) {
+					--$dtz;
 				}
 			}
 		}
 
-		if ($state & CP_GAME_OVER
-		    && (($state & CP_GAME_WHITE_WINS) || ($state & CP_GAME_BLACK_WINS))
-			&& $dtz == 2) {
-			$dtz = 1;
+		$root_moves->{$move}->{tb_rank} = $dtz;
+
+		UNDO_MOVE: @$pos = @backup; # Undo move.
+	}
+
+	if ($self->{tb_50_move_rule}) {
+		my (@drawing, @other) = @_;
+		foreach my $move (keys %{$root_moves}) {
+			my $root_move = $root_moves->{$move};
+
+			if ($root_move->{tb_rank} == 0 || $root_move->{tb_abs_dtz} > 99) {
+				push @drawing, $move;
+			} else {
+				push @other, $move;
+			}
 		}
 
-		@$pos = @backup;
-
-		my $rm = $self->{root_moves}->{$move};
-		my $r = $dtz > 0 ? ($dtz + $hmc <= 99 && !$has_repeated ? $max_dtz - ($rank_dtz ? $dtz : 0)
-						: $max_dtz / 2 - ($dtz + $hmc))
-				: $dtz < 0 ? (-$dtz * 2 + $hmc < 100 ? -$max_dtz - ($rank_dtz ? $dtz : 0)
-						: -$max_dtz / 2 + (-$dtz + $hmc))
-				: 0;
-		
-		$rm->{tb_rank} = $r;
-
-		# This will later be used for displaying the score.
-		my $max = sub { my ($x1, $x2) = @_; $x1 > $x2 ? $x1 : $x2 };
-		my $min = sub { my ($x1, $x2) = @_; $x1 < $x2 ? $x1 : $x2 };
-
-		my $pawn_value = 208;
-		$rm->{tb_score} = $r >= $bound ? MATE - MAX_PLY - 1
-				: $r > 0  ? (($max->(3, $r - ($max_dtz / 2 - 200)) * $pawn_value) / 200)
-				: $r == 0 ? DRAW
-				: $r > -$bound
-				? (($min->(-3, $r + ($max_dtz / 2 - 200)) * $pawn_value) / 200)
-				: -MATE + MAX_PLY + 1;
+		if (@drawing && @other) {
+			# We only keep those moves that are favourable for us.
+			if ($winning) {
+				delete @{$root_moves}{@drawing};
+			} else {
+				delete @{$root_moves}{@other};
+			}
+		}
 	}
 
 	return $self;
 }
-
-sub dtzBeforeZeroing {
-	my ($self, $wdl) = @_;
-
-	return $wdl == WDL_WIN ? 1
-			: $wdl == WDL_CURSED_WIN ? 101
-			: $wdl == WDL_BLESSED_LOSS ? -101
-			: $wdl == WDL_LOSS ? -1
-			: 0;
-}
-
 
 # Fill the lookup table for the move values.
 foreach my $mover (CP_PAWN .. CP_KING) {
