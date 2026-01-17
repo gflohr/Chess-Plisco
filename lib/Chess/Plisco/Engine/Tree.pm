@@ -345,10 +345,10 @@ sub alphabeta {
 		cp_bitboard_popcount $position->[CP_POS_WHITE_PIECES] | $position->[CP_POS_BLACK_PIECES],
 			$pieces_count;
 
-		if ($pieces_count < $self->{tb_cardinality}
+		if ($pieces_count <= $self->{tb_cardinality}
 		    && ($pieces_count < $self->{tb_cardinality}
 		        || $depth >= $self->{tb_probe_depth})
-		    # && cp_pos_halfmove_clock($position) == 0
+		    && cp_pos_halfmove_clock($position) == 0
 		    && !cp_pos_castling_rights($position)) {
 
 			my $tb = $self->{tb};
@@ -1028,6 +1028,11 @@ sub rootSearch {
 sub orderRootMoves {
 	my ($self, $position, $depth, $ply, $pv_move, @moves) = @_;
 
+	if ($self->{tb_hit} && $depth == 1) {
+		my $root_moves = $self->{root_moves};
+		@moves = sort { $root_moves->{$a} <=> $root_moves->{$b} } @moves;
+	}
+
 	my $signature = $self->{position}->[CP_POS_SIGNATURE];
 
 	my $tt = $self->{tt};
@@ -1151,7 +1156,6 @@ sub think {
 	}
 
 	# Check for tablebase hit.
-	$DB::single = 1;
 	$self->tbRankRootMoves;
 
 	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
@@ -1250,7 +1254,7 @@ sub tbRankRootMoves {
 	    && $pos->bitboardPopcount($pos->[CP_POS_WHITE_PIECES]
 	                             | $pos->[CP_POS_BLACK_PIECES])
 	    <= $self->{tb_probe_limit}) {
-		$self->{tb_root_hit} = $self->tbRootProbe;
+		$self->{tb_root_hit} = 1 if $self->tbRootProbe;
 	}
 }
 
@@ -1376,7 +1380,7 @@ sub tbRootProbe {
 	}
 
 	if ($self->{tb_50_move_rule}) {
-		my (@drawing, @other) = @_;
+		my (@drawing, @other);
 		foreach my $move (keys %{$root_moves}) {
 			my $root_move = $root_moves->{$move};
 
