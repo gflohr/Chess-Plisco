@@ -10,6 +10,7 @@
 # http://www.wtfpl.net/ for more details.
 
 use strict;
+use v5.10;
 
 use Locale::TextDomain qw(Chess-Plisco);
 use Getopt::Long;
@@ -17,14 +18,15 @@ use Getopt::Long;
 sub display_usage;
 sub usage_error;
 sub version_information;
-sub print_pv;
+sub list($);
+sub extract($$$);
 
 my %options;
 Getopt::Long::Configure('bundling');
 GetOptions(
 	'e|extract=s' => \$options{extract},
 	'l|list' => \$options{list},
-	'c|colour|color=s' => \$options{colour},
+	'p|player=s' => \$options{player},
 	'h|help' => \$options{help},
 	'v|version' => \$options{version},
 ) or usage_error;
@@ -36,18 +38,90 @@ usage_error __"One of the options '--list' or '--path' is mandatory!"
     if !$options{list} && !$options{extract};
 usage_error __"The options '--list' and '--path' are mutually exclusive!"
     if !$options{list} && !$options{extract};
-usage_error __"The option '--colour' is mandator for '--extract'!"
-    if $options{extract} && !$options{colour};
-use constant COLOUR_CODES => {
-	b => 'black',
-	black => 'black',
-	w => 'white',
-	white => 'white',
-};
+usage_error __"The option '--player' is mandatory for '--extract'!"
+    if $options{extract} && !defined $options{player};
+usage_error __"The option '--player' does not make sense with '--list'!"
+    if $options{list} && defined $options{player};
 
-my $colour = COLOUR_CODES->{$options{colour}};
-usage_error __"Colour must be either 'black' or 'white'!"
-    if $colour;
+usage_error __"Exactly one filename argument must be given!"
+	if 1 != @ARGV;
+
+my ($filename) = @ARGV;
+
+if ($options{list}) {
+	list $filename;
+} else {
+	extract $filename, $options{extract}, $options{player};
+}
+
+sub list($) {
+	my ($filename, $player) = @_;
+
+	open my $fh, '<', $filename
+		or die __x("Error opening '{filename}': {error}!\n",
+				filename => $filename,
+				error => $!);
+	
+	my %ids;
+	my @ids;
+
+	while (my $line = $fh->getline) {
+		if ($line =~ /^.+?< *(0x[0-9a-f]+)> (?:<stderr> )?(.+?) (?:<---|--->)/) {
+			my ($id, $player) = ($1, $2);
+			push @ids, $id if !$ids{$id};
+
+			$ids{$id} //= {
+				player_list => [],
+				players => {},
+			};
+
+			if (!exists $ids{$id}->{players}->{$player}) {
+				$ids{$id}->{players}->{$player} = 1;
+				push @{$ids{$id}->{player_list}}, $player;
+			}
+		}
+	}
+
+	if (!@ids) {
+		die __x"{filename}: no games found!\n", filename => $filename;
+	}
+
+	foreach my $id (@ids) {
+		my (@players) = @{$ids{$id}->{player_list}};
+		if (@players != 2) {
+			warn __x("warning: {filename}: id {id}: not exactly two players!\n",
+				filename => $filename, id => $id);
+			next;
+		}
+
+		say "$id: $players[0] vs. $players[1]";
+	}
+}
+
+sub extract($$$) {
+	my ($filename, $id, $player) = @_;
+
+	open my $fh, '<', $filename
+		or die __x("Error opening '{filename}': {error}!\n",
+				filename => $filename,
+				error => $!);
+	
+	my $count = 0;
+	while (my $line = $fh->getline) {
+		if ($line =~ /^.+?< *(0x[0-9a-f]+)> (<stderr> )?(.+?) (?:<---) (.+)/) {
+			next if $id ne $1;
+			next if $2;
+			next if $player ne $3;
+			my $command = $4;
+			++$count;
+			say $command;
+		}
+	}
+
+	die __x("error: {filename}: {id}: no commands found for player {player}!\n",
+			filename => $filename, id => $id, player => $player)
+		if !$count;
+}
 
 sub display_usage {
 	print __x(<<EOF, program => $0);
@@ -74,8 +148,7 @@ EOF
 
 	print __"Choice of colour:\n";
 	print __(<<'EOF');
-  -c, --colour=COLOUR, --color=COLOR extract game for colour COLOUR or list
-                               only games for that colour
+  -c, --colour=COLOUR, --color=COLOR extract game for colour COLOUR
 EOF
 
 	print "\n";
