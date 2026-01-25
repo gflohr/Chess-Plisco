@@ -21,7 +21,7 @@ use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
 use Chess::Plisco::Engine::Constants;
 
-use Time::HiRes qw(tv_interval);
+use Time::HiRes qw(tv_interval ualarm);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
@@ -36,7 +36,6 @@ use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
 use constant SAFETY_MARGIN => 50;
-use constant SAFETY_MARGIN_TB => 3000;
 
 use constant WDL_LOSS => -2;
 use constant WDL_BLESSED_LOSS => -1;
@@ -186,33 +185,6 @@ sub checkTime {
 
 			my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
 			$self->{nodes_to_tc} = $nodes + $nodes_to_go;
-		}
-	}
-}
-
-sub tbCheckTime {
-	my ($self) = @_;
-
-	return if !$self->{use_time_management};
-
-	no integer;
-
-	# It is important to check for input before checking the time control. If
-	# another "go" command has been received, the engine object will request
-	# us to stop immediately.  When this search terminates, the engine will
-	# immediately resume with the next search.
-	$self->{watcher}->check($self);
-	if ($self->{stop_requested}) {
-		die "PLISCO_ABORTED\n";
-	}
-
-	my $elapsed = 1000 * tv_interval($self->{start_time});
-
-	if (!$self->{ponder}) {
-		my $allocated = $self->{maximum};
-		my $eta = $allocated - $elapsed;
-		if ($eta < SAFETY_MARGIN_TB) {
-			die "PLISCO_ABORTED\n";
 		}
 	}
 }
@@ -1131,20 +1103,42 @@ sub orderRootMoves {
 
 # __END_MACROS__
 
+sub tbSetAlarm {
+	my ($self) = @_;
+
+	return if !$self->{use_time_management};
+
+	local $SIG{ALRM} = sub { $self->checkTime };
+
+	ualarm(SAFETY_MARGIN * 1000);
+}
+
+sub tbCancelAlarm {
+	my ($self) = @_;
+
+	return if !$self->{use_time_management};
+
+	ualarm(0);
+}
+
 sub probeWdl {
 	my ($self, $pos) = @_;
 
-	$self->tbCheckTime;
+	$self->tbSetAlarm;
+	my $wdl = $self->{tb}->safeProbeWdl($pos);
+	$self->tbCancelAlarm;
 
-	return $self->{tb}->safeProbeWdl($pos);
+	return $wdl;
 }
 
 sub probeDtz {
 	my ($self, $pos) = @_;
 
-	$self->tbCheckTime;
+	$self->tbSetAlarm;
+	my $dtz = $self->{tb}->safeProbeDtz($pos);
+	$self->tbCancelAlarm;
 
-	return $self->{tb}->safeProbeDtz($pos);
+	return $dtz;
 }
 
 sub outputMoveEfforts {
