@@ -36,6 +36,7 @@ use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
 use constant SAFETY_MARGIN => 50;
+use constant SAFETY_MARGIN_TB => 3000;
 
 use constant WDL_LOSS => -2;
 use constant WDL_BLESSED_LOSS => -1;
@@ -185,6 +186,33 @@ sub checkTime {
 
 			my $nodes_to_go = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
 			$self->{nodes_to_tc} = $nodes + $nodes_to_go;
+		}
+	}
+}
+
+sub tbCheckTime {
+	my ($self) = @_;
+
+	return if !$self->{use_time_management};
+
+	no integer;
+
+	# It is important to check for input before checking the time control. If
+	# another "go" command has been received, the engine object will request
+	# us to stop immediately.  When this search terminates, the engine will
+	# immediately resume with the next search.
+	$self->{watcher}->check($self);
+	if ($self->{stop_requested}) {
+		die "PLISCO_ABORTED\n";
+	}
+
+	my $elapsed = 1000 * tv_interval($self->{start_time});
+
+	if (!$self->{ponder}) {
+		my $allocated = $self->{maximum};
+		my $eta = $allocated - $elapsed;
+		if ($eta < SAFETY_MARGIN_TB) {
+			die "PLISCO_ABORTED\n";
 		}
 	}
 }
@@ -355,7 +383,14 @@ sub alphabeta {
 		    && !cp_pos_castling_rights($position)) {
 
 			my $tb = $self->{tb};
-			my $wdl = $tb->safeProbeWdl($position);
+			my $wdl;
+			
+			$wdl = eval { $self->probeWdl($position) };
+			if ($@) {
+				# Time used up. Disable all tablebase lookups, and go on with
+				# a regular search.
+				$self->{tb_cardinality} = 0;
+			}
 
 			if (defined $wdl) {
 				if (DEBUG) {
@@ -1096,6 +1131,22 @@ sub orderRootMoves {
 
 # __END_MACROS__
 
+sub probeWdl {
+	my ($self, $pos) = @_;
+
+	$self->tbCheckTime;
+
+	return $self->{tb}->safeProbeWdl($pos);
+}
+
+sub probeDtz {
+	my ($self, $pos) = @_;
+
+	$self->tbCheckTime;
+
+	return $self->{tb}->safeProbeDtz($pos);
+}
+
 sub outputMoveEfforts {
 	my ($self) = @_;
 
@@ -1257,7 +1308,11 @@ sub tbRankRootMoves {
 	    && $pos->bitboardPopcount($pos->[CP_POS_WHITE_PIECES]
 	                             | $pos->[CP_POS_BLACK_PIECES])
 	    <= $self->{tb_probe_limit}) {
-		$self->{tb_root_hit} = 1 if $self->tbRootProbe;
+		eval {
+			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
+		};
+		# If an exception was thrown, we most probably ran out of time.
+		# Simply go on with the regular search without a tablebase.
 	}
 }
 
@@ -1266,10 +1321,8 @@ sub tbRootProbe {
 
 	my $pos = $self->{position}->copy;
 
-	my $tb = $self->{tb};
-
 	# Probe for the outcome of the game.
-	my $wdl = $tb->safeProbeWdl($pos);
+	my $wdl = $self->probeWdl($pos);
 	return if !defined $wdl;
 
 	my $wdl_sign = $wdl <=> 0;
@@ -1295,7 +1348,7 @@ sub tbRootProbe {
 	foreach my $move (keys %{$root_moves}) {
 		$pos->move($move);
 
-		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
+		$root_moves->{$move}->{tb_wdl} = $self->probeWdl($pos);
 		# We consider a missing WDL table a configuration error.
 		return if !defined $root_moves->{$move}->{tb_wdl};
 
@@ -1335,7 +1388,7 @@ sub tbRootProbe {
 		}
 
 		# If the probe fails, treat all moves equally.
-		my $dtz = -$tb->safeProbeDtz($pos) // 0;
+		my $dtz = -$self->probeDtz($pos) // 0;
 
 		# We will later try to filter out moves that will result in an
 		# unwanted draw by the 50-move-rule.

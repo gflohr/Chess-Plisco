@@ -51,11 +51,11 @@ lib/Chess/Plisco/Tutorial.pod
 perlcritic.rc
 scripts/debug-log-to-graphviz.pl
 scripts/extract-scores.pl
+scripts/fastchess-parse.pl
 scripts/full-search.pl
 scripts/gen-positions.pl
 scripts/moves-to-go.pl
 scripts/moves-to-go.py
-scripts/pfathom
 t/00base.t
 t/01expand-placeholders.t
 t/01pre-process.t
