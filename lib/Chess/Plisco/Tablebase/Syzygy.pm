@@ -41,9 +41,9 @@ my $flipdiag = sub {
 };
 
 my $read_byte = sub {
-	my ($data, $offset) = @_;
+	my ($data_ref, $offset) = @_;
 
-	return ord substr $data, $offset, 1;
+	return ord substr $$data_ref, $offset, 1;
 };
 
 my $remove_ep = sub {
@@ -580,7 +580,9 @@ sub _initMmap {
 		or die __x("Cannot mmap '{path}': {error}\n",
 			path => $self->{path}, error => $@);
 
-	$self->{data} = $data;
+	# Only store the reference. Storing the scalar will make Perl read the
+	# entire file once.
+	$self->{data} = \$data;
 }
 
 sub _checkMagic {
@@ -588,7 +590,7 @@ sub _checkMagic {
 
 	my @valid_magics = ($magic); # Use list so that we can theoretically expand.
 
-	my $header = substr($self->{data}, 0, 4);
+	my $header = substr(${$self->{data}}, 0, 4);
 
 	my $ok = 0;
 	for my $m (@valid_magics) {
@@ -1063,25 +1065,25 @@ sub _decompressPairs {
 sub _readUint64BE {
 	my ($self, $data_ptr) = @_;
 
-	return uint64(unpack(UINT64_BE, substr($self->{data}, $data_ptr, 8)));
+	return uint64(unpack(UINT64_BE, substr(${$self->{data}}, $data_ptr, 8)));
 }
 
 sub _readUint32 {
 	my ($self, $data_ptr) = @_;
 
-	return uint64(unpack(UINT32, substr($self->{data}, $data_ptr, 4)));
+	return uint64(unpack(UINT32, substr(${$self->{data}}, $data_ptr, 4)));
 }
 
 sub _readUint32BE {
 	my ($self, $data_ptr) = @_;
 
-	return unpack(UINT32_BE, substr($self->{data}, $data_ptr, 4));
+	return unpack(UINT32_BE, substr(${$self->{data}}, $data_ptr, 4));
 }
 
 sub _readUint16 {
 	my ($self, $data_ptr) = @_;
 
-	return unpack(UINT16, substr($self->{data}, $data_ptr, 2));
+	return unpack(UINT16, substr(${$self->{data}}, $data_ptr, 2));
 }
 
 sub close {
