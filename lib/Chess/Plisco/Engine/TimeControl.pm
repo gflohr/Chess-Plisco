@@ -57,7 +57,7 @@ sub init {
 
 	return if !$my_time;
 
-	my $move_overhead = $params->{move_overhead};
+	my $move_overhead = $max->($params->{move_overhead}, 5000);
 	my ($opt_scale, $max_scale);
 
 	my $scaled_time = $my_time;
@@ -97,6 +97,7 @@ sub init {
 	$self->{tree}->{optimum} = ($opt_scale * $time_left);
 	$self->{tree}->{maximum} =
 		$min->(0.825179 * $my_time - $move_overhead, $max_scale * $self->{tree}->{optimum}) - 10;
+	$self->{tree}->{maximum} = $self->{tree}->{optimum} if $self->{tree}->{maximum} <= 0;
 
 	if ($params->{ponder}) {
 		$self->{tree}->{optimum} += $self->{optimum} >> 2;

@@ -666,7 +666,7 @@ sub __measureMoveOverhead {
 	return if !($params{$my_time} && $last_params->{$my_time});
 	return if $params{$my_inc} != $last_params->{$my_inc};
 
-	my $expected_time = $last_params->{$my_time} + $params{$my_inc} - $self->{__last_search_time};
+	my $expected_time = $last_params->{$my_time} + $last_params->{$my_inc} - $self->{__last_search_time};
 	my $overhead = $expected_time - $params{$my_time};
 	if ($overhead >= 0) {
 		push @{$self->{__move_overheads}}, $overhead;
