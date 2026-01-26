@@ -370,6 +370,7 @@ sub alphabeta {
 				# Time used up. Disable all tablebase lookups, and go on with
 				# a regular search.
 				$self->{tb_cardinality} = 0;
+				ualarm 0;
 			}
 
 			if (defined $wdl) {
@@ -916,7 +917,7 @@ sub rootSearch {
 			my $pv_move = $line[0] & 0xffff_ffff;
 			my $delta = 15 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 8000;
 			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
-#warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+#stop "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
 #warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
 			my $alpha = int(cp_max($avg - $delta, -INF));
 			my $beta = int(cp_min($avg + $delta, +INF));
@@ -1188,7 +1189,9 @@ sub think {
 		$self->tbRankRootMoves;
 		ualarm 0;
 	};
-	# Ignore exceptions. This will be a timeout. Try to find a better move.
+	if ($@) {
+		ualarm 0;
+	}
 
 	# There must always be a valid move in the line.
 	my @line = ($legal[0]);
@@ -1281,10 +1284,15 @@ sub tbRankRootMoves {
 		eval {
 			local $SIG{ALRM} = sub { $self->checkTime };
 
+			ualarm UALARM_INTERVAL, UALARM_INTERVAL;
 			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
+			ualarm 0;
 		};
-		# If an exception was thrown, we most probably ran out of time.
-		# Simply go on with the regular search without a tablebase.
+		if ($@) {
+			# If an exception was thrown, we most probably ran out of time.
+			# Simply go on with the regular search without a tablebase.
+			ualarm 0;
+		}
 	}
 }
 
