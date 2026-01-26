@@ -21,7 +21,7 @@ use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
 use Chess::Plisco::Engine::Constants;
 
-use Time::HiRes qw(tv_interval ualarm);
+use Time::HiRes qw(tv_interval ualarm gettimeofday);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
@@ -35,7 +35,8 @@ use Chess::Plisco::Engine::TranspositionTable;
 use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
-use constant SAFETY_MARGIN => 50;
+use constant SAFETY_MARGIN => 300;
+use constant UALARM_INTERVAL => 500 * SAFETY_MARGIN;
 
 use constant WDL_LOSS => -2;
 use constant WDL_BLESSED_LOSS => -1;
@@ -357,7 +358,14 @@ sub alphabeta {
 			my $tb = $self->{tb};
 			my $wdl;
 			
-			$wdl = eval { $self->probeWdl($position) };
+			my $started = [gettimeofday];
+			eval {
+				local $SIG{ALRM} = sub { $self->checkTime };
+
+				ualarm UALARM_INTERVAL, UALARM_INTERVAL;
+				$wdl = $tb->safeProbeWdl($position);
+				ualarm 0;
+			};
 			if ($@) {
 				# Time used up. Disable all tablebase lookups, and go on with
 				# a regular search.
@@ -1103,44 +1111,6 @@ sub orderRootMoves {
 
 # __END_MACROS__
 
-sub tbSetAlarm {
-	my ($self) = @_;
-
-	return if !$self->{use_time_management};
-
-	local $SIG{ALRM} = sub { $self->checkTime };
-
-	ualarm(SAFETY_MARGIN * 1000);
-}
-
-sub tbCancelAlarm {
-	my ($self) = @_;
-
-	return if !$self->{use_time_management};
-
-	ualarm(0);
-}
-
-sub probeWdl {
-	my ($self, $pos) = @_;
-
-	$self->tbSetAlarm;
-	my $wdl = $self->{tb}->safeProbeWdl($pos);
-	$self->tbCancelAlarm;
-
-	return $wdl;
-}
-
-sub probeDtz {
-	my ($self, $pos) = @_;
-
-	$self->tbSetAlarm;
-	my $dtz = $self->{tb}->safeProbeDtz($pos);
-	$self->tbCancelAlarm;
-
-	return $dtz;
-}
-
 sub outputMoveEfforts {
 	my ($self) = @_;
 
@@ -1203,9 +1173,6 @@ sub think {
 		};
 	}
 
-	# Check for tablebase hit.
-	$self->tbRankRootMoves;
-
 	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
 		my $notation = $self->{book}->pickMove($position);
 		if ($notation) {
@@ -1213,6 +1180,15 @@ sub think {
 			return $move if $move;
 		}
 	}
+
+	# Check for tablebase hit.
+	eval {
+		local $SIG{ALRM} = sub { $self->checkTime };
+		ualarm UALARM_INTERVAL, UALARM_INTERVAL;
+		$self->tbRankRootMoves;
+		ualarm 0;
+	};
+	# Ignore exceptions. This will be a timeout. Try to find a better move.
 
 	# There must always be a valid move in the line.
 	my @line = ($legal[0]);
@@ -1303,7 +1279,11 @@ sub tbRankRootMoves {
 	                             | $pos->[CP_POS_BLACK_PIECES])
 	    <= $self->{tb_probe_limit}) {
 		eval {
+			local $SIG{ALRM} = sub { $self->checkTime };
+
+			ualarm UALARM_INTERVAL, UALARM_INTERVAL;
 			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
+			ualarm 0;
 		};
 		# If an exception was thrown, we most probably ran out of time.
 		# Simply go on with the regular search without a tablebase.
@@ -1315,8 +1295,12 @@ sub tbRootProbe {
 
 	my $pos = $self->{position}->copy;
 
+	my $tb = $self->{tb};
+
 	# Probe for the outcome of the game.
-	my $wdl = $self->probeWdl($pos);
+	Carp::cluck('start WDL root probe');
+	my $wdl = $tb->safeProbeWdl($pos);
+	Carp::cluck('WDL root probe done');
 	return if !defined $wdl;
 
 	my $wdl_sign = $wdl <=> 0;
@@ -1382,7 +1366,7 @@ sub tbRootProbe {
 		}
 
 		# If the probe fails, treat all moves equally.
-		my $dtz = -$self->probeDtz($pos) // 0;
+		my $dtz = -$tb->safeProbeDtz($pos) // 0;
 
 		# We will later try to filter out moves that will result in an
 		# unwanted draw by the 50-move-rule.
