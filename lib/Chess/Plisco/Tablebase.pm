@@ -19,7 +19,6 @@ use Chess::Plisco::Engine::Position;
 sub getPV {
 	my ($self, $_pos) = @_;
 
-$DB::single = 1;
 	# Upgrade the position and make a copy of it.
 	my $pos = Chess::Plisco::Engine::Position->newFromFEN($_pos->toFEN);
 
@@ -38,7 +37,6 @@ $DB::single = 1;
 		my @moves = $pos->legalMoves;
 		my @backup = @$pos;
 		foreach my $move (@moves) {
-my $san = $pos->SAN($move);
 			$pos->move($move);
 			my $next_wdl = $self->safeProbeWdl($pos);
 			last MOVE if !defined $next_wdl;

@@ -225,7 +225,7 @@ sub printPV {
 	my $nodes = $self->{nodes};
 	my $elapsed = tv_interval($self->{start_time});
 	my $nps = $elapsed ? (int(0.5 + $nodes / $elapsed)) : 0;
-	if ($self->{tb_hit} && !$mate_in) {
+	if ($self->{tb_root_hit} && !$mate_in) {
 		$score = $self->{tb_outcome};
 	}
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
@@ -1281,9 +1281,7 @@ sub tbRankRootMoves {
 		eval {
 			local $SIG{ALRM} = sub { $self->checkTime };
 
-			ualarm UALARM_INTERVAL, UALARM_INTERVAL;
 			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
-			ualarm 0;
 		};
 		# If an exception was thrown, we most probably ran out of time.
 		# Simply go on with the regular search without a tablebase.
@@ -1298,9 +1296,7 @@ sub tbRootProbe {
 	my $tb = $self->{tb};
 
 	# Probe for the outcome of the game.
-	Carp::cluck('start WDL root probe');
 	my $wdl = $tb->safeProbeWdl($pos);
-	Carp::cluck('WDL root probe done');
 	return if !defined $wdl;
 
 	my $wdl_sign = $wdl <=> 0;
@@ -1326,7 +1322,7 @@ sub tbRootProbe {
 	foreach my $move (keys %{$root_moves}) {
 		$pos->move($move);
 
-		$root_moves->{$move}->{tb_wdl} = $self->probeWdl($pos);
+		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
 		# We consider a missing WDL table a configuration error.
 		return if !defined $root_moves->{$move}->{tb_wdl};
 
