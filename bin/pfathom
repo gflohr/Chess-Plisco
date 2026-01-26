@@ -28,6 +28,7 @@ my %options = (
 Getopt::Long::Configure('bundling');
 GetOptions(
 	'p|path=s' => \$options{path},
+	'r|recursive' => \$options{recursive},
 	'h|help' => \$options{help},
 	'v|version' => \$options{version},
 ) or usage_error;
@@ -42,7 +43,7 @@ my $fen = join ' ', @ARGV;
 usage_error __"No position as FEN given!"
     if !length $fen;
 
-my $tb = Chess::Plisco::Tablebase::Syzygy->new($options{path});
+my $tb = Chess::Plisco::Tablebase::Syzygy->new($options{path}, recursive => $options{recursive});
 my $largest = $tb->largest;
 if (!defined $largest) {
 	usage_error __"Error initializing tablebase.";
