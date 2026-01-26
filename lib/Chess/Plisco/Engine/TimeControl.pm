@@ -57,7 +57,7 @@ sub init {
 
 	return if !$my_time;
 
-	my $move_overhead = $max->($params->{move_overhead}, 5000);
+	my $move_overhead = $min->($params->{move_overhead}, 5000);
 	my ($opt_scale, $max_scale);
 
 	my $scaled_time = $my_time;

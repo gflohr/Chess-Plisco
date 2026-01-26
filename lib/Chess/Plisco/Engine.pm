@@ -615,7 +615,7 @@ sub __onUciCmdGo {
 		my $dyn_nodes = ($tree->{maximum} * $self->{__nps}) >> 13;
 		$tree->{nodes_to_tc} = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
 		$tree->{nodes_to_tc} = 50 if $tree->{nodes_to_tc} < 50;
-		$tree->{nodes_to_tc} = 5000 if $tree->{nodes_to_tc} > 500;
+		$tree->{nodes_to_tc} = 5000 if $tree->{nodes_to_tc} > 5000;
 	}
 
 	$self->{__tree} = $tree;
