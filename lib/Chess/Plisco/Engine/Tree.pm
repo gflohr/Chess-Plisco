@@ -212,7 +212,7 @@ sub printPV {
 
 	no integer;
 	my $position = $self->{start};
-	my $score = $self->{score};
+	my $score = $self->{score} // 0;
 	my $mate_in;
 	if ($score >= MATE - MAX_PLY) {
 		use integer;
@@ -222,7 +222,7 @@ sub printPV {
 		$mate_in = -((-(-MATE - $score)) >> 1);
 	}
 
-	my $nodes = $self->{nodes};
+	my $nodes = $self->{nodes} // 1;
 	my $elapsed = tv_interval($self->{start_time});
 	my $nps = $elapsed ? (int(0.5 + $nodes / $elapsed)) : 0;
 	if ($self->{tb_root_hit} && !$mate_in) {
@@ -231,8 +231,11 @@ sub printPV {
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
 	my $pv = join ' ', $position->movesCoordinateNotation(@$pline);
 	my $time = int(0.5 + (1000 * $elapsed));
-	my $hashfull = $self->{tt}->hashfull;
-	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
+	my $hashfull = $self->{tt}->hashfull // 0;
+	my $depth = $self->{depth} // 1;
+	my $seldepth = $self->{seldepth} // $depth;
+	my $tbhits = $self->{tb_hits} // 0;
+	$self->{info}->("depth $depth seldepth $seldepth"
 			. " score $scorestr nodes $nodes nps $nps hashfull $hashfull"
 			. " tbhits $self->{tb_hits} time $time pv $pv");
 	if ($self->{__debug}) {
