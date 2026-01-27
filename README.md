@@ -27,6 +27,9 @@ as a reference implementation for your own experiments and tests.
 	- [Engine](#engine)
 		- [Running the Engine](#running-the-engine)
 		- [Graphical User Interfaces](#graphical-user-interfaces)
+		- [Differences to Other UCI Engines](#differences-to-other-uci-engines)
+			- [Option `SyzygyPath`](#option-syzygypath)
+			- [Option `Move Overhead`](#option-move-overhead)
 	- [Internals](#internals)
 	- [Copryight](#copryight)
 
@@ -170,6 +173,31 @@ interface.  Try using one of these:
 * [Cute Chess](https://cutechess.com/) (Linux, MacOS, and Windows)
 * [Banksia GUI](https://banksiagui.com/) (Linux, MacOS, and Windows)
 * [Arena](http://www.playwitharena.de/) (Linux, Windows)
+
+### Differences to Other UCI Engines
+
+#### Option `SyzygyPath`
+
+Unlike other engines do, directories are searched recursively for tablebase
+files.
+
+#### Option `Move Overhead`
+
+You can use the option name `Move Overhead` or `MoveOverhead`, whatever you
+prefer.
+
+The default value for the move overhead is displayed as 10 ms. But this is
+only the initial value, and in reality, the move overhead is determined
+dynamically accurately measured. That has the advantage that the engine
+automatically detects network lags or other performance penalties.
+
+The downside of this is that the engine output is not deterministic, which
+can be a problem for debugging. You can avoid that by specifying the move
+overhead explicitely:
+
+```
+setoption name Move Overhead value 10
+```
 
 ## Internals
 

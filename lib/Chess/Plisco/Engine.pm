@@ -82,6 +82,7 @@ use constant UCI_OPTIONS => [
 		min => 0,
 		max => 5000,
 		default => 10,
+		callback => '__setMoveOverhead',
 	},
 	{
 		name => 'SyzygyPath',
@@ -127,7 +128,9 @@ sub new {
 		__started => undef,
 		__moves => [],
 		__continued => 0,
+		__move_overhead => 10,
 		__move_overheads => [],
+		__move_overhead_fixed => 0,
 		__last_params => {},
 		__original_time_adjust => -1,
 		__tb => Chess::Plisco::Tablebase::Syzygy->new,
@@ -600,7 +603,7 @@ sub __onUciCmdGo {
 	$limits->{ponder} = $params{ponder};
 	$limits->{nodes} = $params{nodes};
 
-	$params{move_overhead} = $self->{__options}->{'Move Overhead'};
+	$params{move_overhead} = $self->{__move_overhead_fixed} ? $self->{__options}->{'Move Overhead'} : $self->{__move_overhead};
 
 	$tc->init(
 		$limits, $tree->{position}->turn,
@@ -782,6 +785,16 @@ sub __setBookFile {
 
 	my $callback = sub { $self->__info(@_) };
 	$self->{__book}->setFile($value, $callback);
+
+	return $self;
+}
+
+sub __setMoveOverhead {
+	my ($self, $value) = @_;
+
+	$self->{__move_overhead_fixed} = 1;
+
+	$self->__info('');
 
 	return $self;
 }
