@@ -25,8 +25,9 @@ use constant CP_POS_REVERSIBLE_CLOCK => CP_POS_USR2;
 use constant CP_POS_GAME_PHASE => CP_POS_USR3;
 use constant CP_POS_OPENING_SCORE => CP_POS_USR4;
 use constant CP_POS_ENDGAME_SCORE => CP_POS_USR5;
+use constant CP_POS_POPCOUNT => CP_POS_USR6;
 
-our @EXPORT_OK = qw(CP_POS_REVERSIBLE_CLOCK);
+our @EXPORT_OK = qw(CP_POS_REVERSIBLE_CLOCK CP_POS_POPCOUNT);
 
 use constant PAWN_PHASE => 0;
 use constant KNIGHT_PHASE => 1;
@@ -386,6 +387,9 @@ sub __init {
 
 	my $white = $self->[CP_POS_WHITE_PIECES];
 	my $black = $self->[CP_POS_BLACK_PIECES];
+	my $popcount;
+	cp_bitboard_popcount $white | $black, $popcount;
+	$self->[CP_POS_POPCOUNT] = $popcount;
 
 	foreach my $piece (CP_PAWN .. CP_KING) {
 		my $pieces = $self->[$piece];
@@ -444,6 +448,7 @@ sub move {
 
 	my $captured = cp_move_captured $move;
 	if ($captured != CP_NO_PIECE) {
+		--$self->[CP_POS_POPCOUNT];
 		if ($piece == CP_PAWN && $ep_shift && $to == $ep_shift) {
 			# En passant. The captured piece is not on the to square.
 			my $ep_file = $to & 0x7;

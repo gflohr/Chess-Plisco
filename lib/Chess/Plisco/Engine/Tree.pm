@@ -18,7 +18,7 @@ use Locale::TextDomain ('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
+use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK CP_POS_POPCOUNT);
 use Chess::Plisco::Engine::Constants;
 
 use Time::HiRes qw(tv_interval ualarm gettimeofday);
@@ -57,6 +57,8 @@ my @mvv_lva;
 # Usually only queen promotions and sometimes promotions to a knight are
 # interesting. This mask is used to filter them out.
 use constant GOOD_PROMO_MASK => (1 << (CP_QUEEN)) | (1 << (CP_KNIGHT));
+
+my ($self_tb_cardinality, $self_tb_probe_depth);
 
 sub new {
 	my ($class, %options) = @_;
@@ -98,6 +100,9 @@ sub new {
 		tb_hits => 0,
 		tb_root_hit => 0,
 	};
+
+	$self_tb_cardinality = $options{tb_cardinality};
+	$self_tb_probe_depth = $options{tb_probe_depth};
 
 	bless $self, $class;
 }
@@ -249,7 +254,8 @@ sub quiesce;
 # __BEGIN_MACROS__
 
 sub alphabeta {
-	my ($self, $ply, $depth, $alpha, $beta, $pline, $node_type, $cut_node, $tt_pvs) = @_;
+	my ($self, $ply, $depth, $alpha, $beta, $pline, $node_type, $cut_node,
+		$tt_pvs, $min_probe_ply) = @_;
 
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
@@ -258,7 +264,7 @@ sub alphabeta {
 	my $pv_node = $node_type != NON_PV_NODE;
 
 	if ($depth <= 0) {
-		return quiesce($self, $ply, $alpha, $beta, $pv_node ? PV_NODE : NON_PV_NODE);
+		return quiesce($self, $ply, $alpha, $beta, $pv_node ? PV_NODE : NON_PV_NODE, $min_probe_ply);
 	}
 
 	$depth = cp_min $depth, MAX_PLY - 1;
@@ -347,17 +353,21 @@ sub alphabeta {
 
 	# Probe endgame tablebase.
 	my $best_value = -INF;
-	if ($node_type != ROOT_NODE) {
-		my $pieces_count;
-		cp_bitboard_popcount $position->[CP_POS_WHITE_PIECES] | $position->[CP_POS_BLACK_PIECES],
-			$pieces_count;
+	if ($ply >= $min_probe_ply) {
+		my $pieces_count = $position->[CP_POS_POPCOUNT];
+		if ($min_probe_ply > 1) {
+			if ($pieces_count <= $self_tb_cardinality) {
+				$min_probe_ply = 1;
+			} else {
+				$min_probe_ply = $ply + $pieces_count - $self_tb_cardinality;
+				goto TB_PROBE_DONE;
+			}
+		}
 
-		if ($pieces_count <= $self->{tb_cardinality}
-		    && ($pieces_count < $self->{tb_cardinality}
-		        || $depth >= $self->{tb_probe_depth})
-		    && cp_pos_halfmove_clock($position) == 0
-		    && !cp_pos_castling_rights($position)) {
-
+		if (cp_pos_halfmove_clock($position) == 0
+			&& !cp_pos_castling_rights($position)
+			&& ($pieces_count < $self_tb_cardinality
+			   || $depth >= $self->{tb_probe_depth})) {
 			my $tb = $self->{tb};
 			my $wdl;
 			
@@ -399,7 +409,7 @@ sub alphabeta {
 				}
 
 				if ($tt_type == BOUND_EXACT
-				    || ($tt_type == BOUND_LOWER ? $value >= $beta : $value <= $alpha)) {
+					|| ($tt_type == BOUND_LOWER ? $value >= $beta : $value <= $alpha)) {
 					if (DEBUG) {
 						my $tt_type_name = BOUND_TYPES->[$tt_type];
 						my $tt_value = _cp_value_to_tt($value, $ply);
@@ -428,6 +438,7 @@ sub alphabeta {
 			}
 		}
 	}
+TB_PROBE_DONE:
 
 	my @moves;
 	my $pv_move;
@@ -545,19 +556,23 @@ sub alphabeta {
 			if (DEBUG) {
 				$self->indent($ply, "null window search");
 			}
-			$score = -alphabeta($self, $ply + 1, $depth - 1, -$alpha - 1, -$alpha, \@line, NON_PV_NODE, $tt_pvs);
+			$score = -alphabeta($self, $ply + 1, $depth - 1,
+				-$alpha - 1, -$alpha, \@line, NON_PV_NODE, $tt_pvs, $min_probe_ply);
 			if (($score > $alpha) && ($score < $beta)) {
 				if (DEBUG) {
 					$self->indent($ply, "value $score outside null window, re-search");
 				}
 				undef @line;
-				$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line, NON_PV_NODE, $tt_pvs);
+				$score = -alphabeta($self, $ply + 1, $depth - 1,
+					-$beta, -$alpha, \@line, NON_PV_NODE, $tt_pvs, $min_probe_ply);
 			}
 		} else {
 			if (DEBUG) {
 				$self->indent($ply, "recurse normal search");
 			}
-			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line, $pv_node ? PV_NODE : NON_PV_NODE, $tt_pvs);
+			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha,
+				\@line, $pv_node ? PV_NODE : NON_PV_NODE, $tt_pvs,
+				$min_probe_ply);
 		}
 
 		++$legal;
@@ -702,7 +717,7 @@ sub alphabeta {
 }
 
 sub quiesce {
-	my ($self, $ply, $alpha, $beta, $node_type) = @_;
+	my ($self, $ply, $alpha, $beta, $node_type, $min_probe_ply) = @_;
 
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
@@ -728,7 +743,8 @@ sub quiesce {
 			$self->indent($ply, "quiescence check extension");
 		}
 
-		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type, [$pv_node]);
+		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type,
+			[$pv_node], $min_probe_ply);
 	}
 
 	my $tt = $self->{tt};
@@ -826,7 +842,7 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "recurse quiescence search");
 		}
-		my $score = -quiesce($self, $ply + 1, -$beta, -$alpha, $node_type);
+		my $score = -quiesce($self, $ply + 1, -$beta, -$alpha, $node_type, $min_probe_ply);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value: $score");
@@ -894,6 +910,22 @@ sub rootSearch {
 	my $last_best_move_depth = 0;
 	my $search_again_counter = 0;
 
+	# Checking whether a tablebase probe is elegible is relatively expensive.
+	# But we know that the popcount of the position can only decrease by
+	# one per ply. So we pre-calculate the minimum ply, where a probe makes
+	# sense. If we hit that limit during the search, we re-evaluate.  That
+	# reduces the number of checks to a minimum. If we have a cardinality
+	# of 7, then we start even thinking a about probing at ply 26.
+	my $min_probe_ply = INF;
+	if ($self_tb_cardinality > 2) {
+		my $popcount = $position->[CP_POS_POPCOUNT];
+		if ($popcount <= $self_tb_cardinality) {
+			$min_probe_ply = 2;
+		} else {
+			$min_probe_ply = 1 + $popcount - $self_tb_cardinality;
+		}
+	}
+
 	if (DEBUG) {
 		my $fen = $position->toFEN;
 		$self->debug("Searching $fen");
@@ -929,7 +961,8 @@ sub rootSearch {
 			while (1) {
 				my @tt_pvs;
 #warn "DEPTH $depth: delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
-				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
+				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line,
+					ROOT_NODE, \@tt_pvs, $min_probe_ply);
 #warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
