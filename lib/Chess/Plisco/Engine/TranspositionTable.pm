@@ -52,12 +52,6 @@ use constant GENERATION_MASK => (0xFF << (GENERATION_BITS)) & 0xFF;
 
 my $generation = 0;
 
-# FIXME! Inline this!
-my $relative_age = sub {
-	return (GENERATION_CYCLE + $generation - $_[0]) & GENERATION_MASK;
-};
-
-
 sub new {
 	my ($class, $size) = @_;
 
@@ -132,12 +126,12 @@ sub probe {
 	# Nothing found. Find a bucket to replace.
 	my ($depth, $generation) = unpack 'CC', substr $cluster, 8;
 	my $bucket_index = 0;
-	my $best = $depth - 8 * $relative_age->($generation);
+	my $best = $depth - 8 * (GENERATION_CYCLE & GENERATION_MASK);
 	for (my $i = 1; $i < @keys; ++$i) {
 		my $offset = 8 + $i * BUCKET_BYTES;
 		my $repl_bucket = substr $cluster, $offset, BUCKET_BYTES;
 		my ($repl_depth, $repl_generation) = unpack 'CC', $repl_bucket;
-		if ($repl_depth - 8 * $relative_age->($repl_generation) < $best) {
+		if ($repl_depth - 8 * ((GENERATION_CYCLE + $generation - $repl_generation) & GENERATION_MASK) < $best) {
 			$depth = $repl_depth;
 			$generation = $repl_generation;
 			$bucket_index = $i;
@@ -173,7 +167,7 @@ sub store {
 	if ($bound == BOUND_EXACT || $key != $k
 		|| ($stored_depth = unpack('C', substr $bucket, 0, 1) || 0) # Always false, forces stored_depth to be defined.
 		|| $depth - DEPTH_ENTRY_OFFSET + ($pv << 1) > $stored_depth - 4
-		|| $relative_age->($stored_depth) & GENERATION_MASK) {
+		|| ((GENERATION_CYCLE + $generation - $stored_depth) & GENERATION_MASK)) {
 		# Overwrite!
 		substr($self->[$cluster_index], $bucket_index << 1, 2) = pack 'S', $k; # Key.
 		substr($self->[$cluster_index], 8 + ($bucket_index << 3), BUCKET_BYTES) =
