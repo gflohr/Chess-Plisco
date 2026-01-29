@@ -23,6 +23,17 @@ use Chess::Plisco::Macro;
 
 my $TBPIECES = 7;
 
+use constant PD_INDEXTABLE => 0;
+use constant PD_SIZETABLE => 1;
+use constant PD_DATA => 2;
+use constant PD_OFFSET => 3;
+use constant PD_SYMLEN => 4;
+use constant PD_SYMPAT => 5;
+use constant PD_BLOCKSIZE => 6;
+use constant PD_IDXBITS => 7;
+use constant PD_MIN_LEN => 8;
+use constant PD_BASE => 9;
+
 use constant INVTRIANGLE => [1, 2, 3, 10, 11, 19, 0, 9, 18, 27];
 
 # FIXME! These are candidates for macros!
@@ -63,6 +74,17 @@ my $is_checkmate = sub {
 	return 1 if ($game_over && CP_GAME_WHITE_WINS);
 	return 1 if ($game_over && CP_GAME_BLACK_WINS);
 };
+
+use constant PD_INDEXTABLE => 0;
+use constant PD_SIZETABLE => 1;
+use constant PD_DATA => 2;
+use constant PD_OFFSET => 3;
+use constant PD_SYMLEN => 4;
+use constant PD_SYMPAT => 5;
+use constant PD_BLOCKSIZE => 6;
+use constant PD_IDXBITS => 7;
+use constant PD_MIN_LEN => 8;
+use constant PD_BASE => 9;
 
 my @PTWIST = (
 	 0,  0,  0,  0,  0,  0,  0,  0,
@@ -309,18 +331,18 @@ package Chess::Plisco::Tablebase::Syzygy::PairsData;
 sub new {
 	my ($class, %args) = @_;
 
-	bless {
-		indextable => $args{indextable} // 0,
-		sizetable => $args{sizetable} // 0,
-		data => $args{data} // 0,
-		offset => $args{offset} // 0,
-		symlen => $args{symlen} // [],
-		sympat => $args{sympat} // 0,
-		blocksize => $args{blocksize} // 0,
-		idxbits => $args{idxbits} // 0,
-		min_len => $args{min_len} // 0,
-		base => $args{base} // [],
-	}, $class;
+	bless [
+		$args{indextable} // 0,
+		$args{sizetable} // 0,
+		$args{data} // 0,
+		$args{offset} // 0,
+		$args{symlen} // [],
+		$args{sympat} // 0,
+		$args{blocksize} // 0,
+		$args{idxbits} // 0,
+		$args{min_len} // 0,
+		$args{base} // [],
+	], $class;
 }
 
 package Chess::Plisco::Tablebase::Syzygy::PawnFileData;
@@ -501,6 +523,17 @@ use constant UINT32 => 'V'; # Unsigned 32-bit little-endian
 use constant UINT32_BE => 'N'; # Unsigned 32-bit big-endian
 use constant UINT16 => 'v'; # Unsigned 16-bit little-endian
 
+use constant PD_INDEXTABLE => 0;
+use constant PD_SIZETABLE => 1;
+use constant PD_DATA => 2;
+use constant PD_OFFSET => 3;
+use constant PD_SYMLEN => 4;
+use constant PD_SYMPAT => 5;
+use constant PD_BLOCKSIZE => 6;
+use constant PD_IDXBITS => 7;
+use constant PD_MIN_LEN => 8;
+use constant PD_BASE => 9;
+
 sub new {
 	my ($class, $path) = @_;
 
@@ -615,13 +648,13 @@ sub _setupPairs {
 	$self->{_flags} = $read_byte->($self->{data}, $data_ptr);
 
 	if ($self->{_flags} & 0x80) {
-		$d->{idxbits} = 0;
+		$d->[PD_IDXBITS] = 0;
 
 		if ($wdl) {
-			$d->{min_len} = $read_byte->($self->{data}, $data_ptr + 1);
+			$d->[PD_MIN_LEN] = $read_byte->($self->{data}, $data_ptr + 1);
 		} else {
 			# http://www.talkchess.com/forum/viewtopic.php?p=698093#698093
-			$d->{min_len} = 0;
+			$d->[PD_MIN_LEN] = 0;
 		}
 
 		$self->{_next} = $data_ptr + 2;
@@ -632,8 +665,8 @@ sub _setupPairs {
 		return $d;
 	}
 
-	$d->{blocksize} = $read_byte->($self->{data}, $data_ptr + 1);
-	$d->{idxbits} = $read_byte->($self->{data}, $data_ptr + 2);
+	$d->[PD_BLOCKSIZE] = $read_byte->($self->{data}, $data_ptr + 1);
+	$d->[PD_IDXBITS] = $read_byte->($self->{data}, $data_ptr + 2);
 
 	my $real_num_blocks = $self->_readUint32($data_ptr + 4);
 	my $num_blocks = $real_num_blocks + $read_byte->($self->{data}, $data_ptr + 3);
@@ -642,17 +675,17 @@ sub _setupPairs {
 	my $h = $max_len - $min_len + 1;
 	my $num_syms = $self->_readUint16($data_ptr + 10 + 2 * $h);
 
-	${d}->{offset} = $data_ptr + 10;
-	${d}->{symlen} = [(0) x ($h * 8 + $num_syms - 1)];
-	${d}->{sympat} = $data_ptr + 12 + 2 * $h;
-	${d}->{min_len} = $min_len;
+	${d}->[PD_OFFSET] = $data_ptr + 10;
+	${d}->[PD_SYMLEN] = [(0) x ($h * 8 + $num_syms - 1)];
+	${d}->[PD_SYMPAT] = $data_ptr + 12 + 2 * $h;
+	${d}->[PD_MIN_LEN] = $min_len;
 
 	$self->{_next} = $data_ptr + 12 + 2 * $h + 3 * $num_syms + ($num_syms & 1);
 
-	my $num_indices = ($tb_size + (1 << $d->{idxbits}) - 1) >> $d->{idxbits};
+	my $num_indices = ($tb_size + (1 << $d->[PD_IDXBITS]) - 1) >> $d->[PD_IDXBITS];
 	$self->{size}->[$size_idx + 0] = 6 * $num_indices;
 	$self->{size}->[$size_idx + 1] = 2 * $num_blocks;
-	$self->{size}->[$size_idx + 2] = (1 << $d->{blocksize}) * $real_num_blocks;
+	$self->{size}->[$size_idx + 2] = (1 << $d->[PD_BLOCKSIZE]) * $real_num_blocks;
 
 	my @tmp = ((0) x ($num_syms - 1));
 	for my $i (0 .. $num_syms - 1) {
@@ -661,20 +694,20 @@ sub _setupPairs {
 		}
 	}
 
-	$d->{base} = [(0) x $h];
-	$d->{base}->[$h - 1] = 0;
+	$d->[PD_BASE] = [(0) x $h];
+	$d->[PD_BASE]->[$h - 1] = 0;
 
 	for my $i (reverse 0 .. $h - 2) {
-		$d->{base}->[$i] = uint64(($d->{base}->[$i + 1]
-			+ $self->_readUint16($d->{offset} + $i * 2)
-			- $self->_readUint16($d->{offset} + $i * 2 + 2)) / 2);
+		$d->[PD_BASE]->[$i] = uint64(($d->[PD_BASE]->[$i + 1]
+			+ $self->_readUint16($d->[PD_OFFSET] + $i * 2)
+			- $self->_readUint16($d->[PD_OFFSET] + $i * 2 + 2)) / 2);
 	}
 
 	for my $i (0 .. $h) {
-		$d->{base}->[$i] <<= 64 - ($min_len + $i);
+		$d->[PD_BASE]->[$i] <<= 64 - ($min_len + $i);
 	}
 
-	$d->{offset} -= 2 * $d->{min_len};
+	$d->[PD_OFFSET] -= 2 * $d->[PD_MIN_LEN];
 
 	return $d;
 }
@@ -785,12 +818,12 @@ sub _setNormPawn {
 sub __calcSymlen {
 	my ($self, $d, $s, $tmp) = @_;
 
-	my $w = $d->{sympat} + 3 * $s;
+	my $w = $d->[PD_SYMPAT] + 3 * $s;
 
 	my $data = $self->{data};
 	my $s2 = ($read_byte->($data, $w + 2) << 4) | ($read_byte->($data, $w + 1) >> 4);
 
-	my $symlen = $d->{symlen};
+	my $symlen = $d->[PD_SYMLEN];
 	if ($s2 == 0x0fff) {
 		$symlen->[$s] = 0;
 	} else {
@@ -989,17 +1022,17 @@ sub _encodePawn {
 sub _decompressPairs {
 	my ($self, $d, $idx) = @_;
 
-	my $idxbits = $d->{idxbits} or return $d->{min_len};
+	my $idxbits = $d->[PD_IDXBITS] or return $d->[PD_MIN_LEN];
 
 	my $mainidx = $idx >> $idxbits;
 	my $litidx = ($idx & (1 << $idxbits) - 1) - (1 << ($idxbits - 1));
-	my $indextable = $d->{indextable};
+	my $indextable = $d->[PD_INDEXTABLE];
 	my $block = $self->_readUint32($indextable + 6 * $mainidx);
 
 	my $idx_offset = $self->_readUint16($indextable + 6 * $mainidx + 4);
 	$litidx += $idx_offset;
 
-	my $sizetable = $d->{sizetable};
+	my $sizetable = $d->[PD_SIZETABLE];
 	if ($litidx < 0) {
 		while ($litidx < 0) {
 			--$block;
@@ -1012,9 +1045,9 @@ sub _decompressPairs {
 		}
 	}
 
-	my $ptr = $d->{data} + ($block << $d->{blocksize});
+	my $ptr = $d->[PD_DATA] + ($block << $d->[PD_BLOCKSIZE]);
 
-	my $m = $d->{min_len};
+	my $m = $d->[PD_MIN_LEN];
 	my $base_idx = -$m;
 	my $symlen_idx = 0;
 
@@ -1024,9 +1057,9 @@ sub _decompressPairs {
 	my $bitcnt = 0; # Number of empty bits in code
 	my $sym;
 
-	my $base = $d->{base};
-	my $offset = $d->{offset};
-	my $symlen = $d->{symlen};
+	my $base = $d->[PD_BASE];
+	my $offset = $d->[PD_OFFSET];
+	my $symlen = $d->[PD_SYMLEN];
 	while (1) {
 		my $l = $m;
 		while ($code < $base->[$base_idx + $l]) {
@@ -1047,7 +1080,7 @@ sub _decompressPairs {
 		}
 	}
 
-	my $sympat = $d->{sympat};
+	my $sympat = $d->[PD_SYMPAT];
 	my $data = $self->{data};
 	while ($symlen->[$symlen_idx + $sym]) {
 		my $w = $sympat + 3 * $sym;
@@ -1119,6 +1152,17 @@ use base qw(Chess::Plisco::Tablebase::Syzygy::Table);
 
 use constant TBW_MAGIC => "\x71\xe8\x23\x5d";
 
+use constant PD_INDEXTABLE => 0;
+use constant PD_SIZETABLE => 1;
+use constant PD_DATA => 2;
+use constant PD_OFFSET => 3;
+use constant PD_SYMLEN => 4;
+use constant PD_SYMPAT => 5;
+use constant PD_BLOCKSIZE => 6;
+use constant PD_IDXBITS => 7;
+use constant PD_MIN_LEN => 8;
+use constant PD_BASE => 9;
+
 sub new {
 	my ($class, @args) = @_;
 
@@ -1176,26 +1220,26 @@ sub __initTableWdl {
 			$data_ptr = $self->{_next};
 		}
 
-		$self->{precomp}->[0]->{indextable} = $data_ptr;
+		$self->{precomp}->[0]->[PD_INDEXTABLE] = $data_ptr;
 		$data_ptr += $self->{size}->[0];
 		if ($split) {
-			$self->{precomp}->[1]->{indextable} = $data_ptr;
+			$self->{precomp}->[1]->[PD_INDEXTABLE] = $data_ptr;
 			$data_ptr += $self->{size}->[3];
 		}
 
-		$self->{precomp}->[0]->{sizetable} = $data_ptr;
+		$self->{precomp}->[0]->[PD_SIZETABLE] = $data_ptr;
 		$data_ptr += $self->{size}->[1];
 		if ($split) {
-			$self->{precomp}->[1]->{sizetable} = $data_ptr;
+			$self->{precomp}->[1]->[PD_SIZETABLE] = $data_ptr;
 			$data_ptr += $self->{size}->[4];
 		}
 
 		$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
-		$self->{precomp}->[0]->{data} = $data_ptr;
+		$self->{precomp}->[0]->[PD_DATA] = $data_ptr;
 		$data_ptr += $self->{size}->[2];
 		if ($split) {
 			$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
-			$self->{precomp}->[1]->{data} = $data_ptr;
+			$self->{precomp}->[1]->[PD_DATA] = $data_ptr;
 		}
 
 		$self->{key} = $recalc_key->($self->{pieces}->[0]);
@@ -1218,30 +1262,30 @@ sub __initTableWdl {
 		}
 
 		foreach my $f (0 .. $files - 1) {
-			$self->{files}->[$f]->{precomp}->[0]->{indextable} = $data_ptr;
+			$self->{files}->[$f]->{precomp}->[0]->[PD_INDEXTABLE] = $data_ptr;
 			$data_ptr += $self->{size}->[6 * $f];
 			if ($split) {
-				$self->{files}->[$f]->{precomp}->[1]->{indextable} = $data_ptr;
+				$self->{files}->[$f]->{precomp}->[1]->[PD_INDEXTABLE] = $data_ptr;
 				$data_ptr += $self->{size}->[6 * $f + 3];
 			}
 		}
 
 		foreach my $f (0 .. $files - 1) {
-			$self->{files}->[$f]->{precomp}->[0]->{sizetable} = $data_ptr;
+			$self->{files}->[$f]->{precomp}->[0]->[PD_SIZETABLE] = $data_ptr;
 			$data_ptr += $self->{size}[6 * $f + 1];
 			if ($split) {
-				$self->{files}->[$f]->{precomp}->[1]->{sizetable} = $data_ptr;
+				$self->{files}->[$f]->{precomp}->[1]->[PD_SIZETABLE] = $data_ptr;
 				$data_ptr += $self->{size}->[6 * $f + 4];
 			}
 		}
 
 		foreach my $f (0 .. $files - 1) {
 			$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
-			$self->{files}->[$f]->{precomp}->[0]->{data} = $data_ptr;
+			$self->{files}->[$f]->{precomp}->[0]->[PD_DATA] = $data_ptr;
 			$data_ptr += $self->{size}->[6 * $f + 2];
 			if ($split) {
 				$data_ptr = ($data_ptr + 0x3f) & ~0x3f;
-				$self->{files}->[$f]->{precomp}->[1]->{data} = $data_ptr;
+				$self->{files}->[$f]->{precomp}->[1]->[PD_DATA] = $data_ptr;
 				$data_ptr += $self->{size}->[6 * $f + 5];
 			}
 		}
@@ -1390,6 +1434,17 @@ use constant WDL_TO_MAP => [1, 3, 0, 2, 0];
 
 use constant PA_FLAGS => [8, 0, 0, 0, 4];
 
+use constant PD_INDEXTABLE => 0;
+use constant PD_SIZETABLE => 1;
+use constant PD_DATA => 2;
+use constant PD_OFFSET => 3;
+use constant PD_SYMLEN => 4;
+use constant PD_SYMPAT => 5;
+use constant PD_BLOCKSIZE => 6;
+use constant PD_IDXBITS => 7;
+use constant PD_MIN_LEN => 8;
+use constant PD_BASE => 9;
+
 sub __initTableDtz {
 	my ($self) = @_;
 
@@ -1444,14 +1499,14 @@ sub __initTableDtz {
 		}
 		$p_data += $p_data & 0x01;
 
-		$self->{precomp}->{indextable} = $p_data;
+		$self->{precomp}->[PD_INDEXTABLE] = $p_data;
 		$p_data += $self->{size}->[0];
 
-		$self->{precomp}->{sizetable} = $p_data;
+		$self->{precomp}->[PD_SIZETABLE] = $p_data;
 		$p_data += $self->{size}->[1];
 
 		$p_data = ($p_data + 0x3f) & ~0x3f;
-		$self->{precomp}->{data} = $p_data;
+		$self->{precomp}->[PD_DATA] = $p_data;
 		$p_data += $self->{size}->[2];
 
 		$self->{key} = $recalc_key->($self->{pieces});
@@ -1497,18 +1552,18 @@ sub __initTableDtz {
 		$p_data += $p_data & 0x01;
 
 		foreach my $f (0 .. ($files - 1)) {
-			$self->{files}->[$f]->{precomp}->{indextable} = $p_data;
+			$self->{files}->[$f]->{precomp}->[PD_INDEXTABLE] = $p_data;
 			$p_data += $self->{size}->[3 * $f];
 		}
 
 		foreach my $f (0 .. ($files - 1)) {
-			$self->{files}->[$f]->{precomp}->{sizetable} = $p_data;
+			$self->{files}->[$f]->{precomp}->[PD_SIZETABLE] = $p_data;
 			$p_data += $self->{size}->[3 * $f + 1];
 		}
 
 		foreach my $f (0 .. ($files - 1)) {
 			$p_data = ($p_data + 0x3f) & ~0x3f;
-			$self->{files}->[$f]->{precomp}->{data} = $p_data;
+			$self->{files}->[$f]->{precomp}->[PD_DATA] = $p_data;
 			$p_data += $self->{size}->[3 * $f + 2];
 		}
 	}
