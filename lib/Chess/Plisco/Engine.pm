@@ -134,6 +134,7 @@ sub new {
 		__last_params => {},
 		__original_time_adjust => -1,
 		__tb => Chess::Plisco::Tablebase::Syzygy->new,
+		__last_score => 0,
 	};
 
 	my $options = UCI_OPTIONS;
@@ -567,6 +568,7 @@ sub __onUciCmdGo {
 	$tree->{debug} = 1 if $self->{__debug};
 	$tree->{ponder} = 1 if $params{ponder};
 	$tree->{start_time} = $self->{__start_time};
+	$tree->{score} = $self->{__continued} ? $self->{__last_score} : 0;
 	if ($params{depth}) {
 		$tree->{max_depth} = $params{depth};
 	} elsif ($params{mate}) {
@@ -641,6 +643,7 @@ sub __onUciCmdGo {
 	delete $self->{__tc};
 
 	if ($bestmove) {
+		$self->{__last_score} = $tree->{score};
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
 		if (defined $ponder) {
 			my $pcn = $self->{__position}->copy->moveCoordinateNotation($ponder);
@@ -698,6 +701,7 @@ sub __onUciCmdUcinewgame {
 	$self->__cancelSearch;
 
 	$self->{__tt}->clear;
+	$self->{__last_score} = 0;
 
 	return $self;
 }

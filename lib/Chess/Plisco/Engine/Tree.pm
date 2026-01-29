@@ -1067,6 +1067,7 @@ sub rootSearch {
 		if ($@ ne "PLISCO_ABORTED\n") {
 			$self->{info}->(__"Error: exception raised: $@");
 		}
+		$self->printPV(\@line);
 	}
 
 	if ($self->{maximum} && !$self->{ponderhit}) {
@@ -1193,8 +1194,14 @@ sub think {
 		my $move = $legal[0];
 		$self->{depth} = 1;
 		$self->printCurrentMove($move, 1);
+		my $ponder_move = $self->getPonderMove(@line);
 		$self->printPV([$move]);
-		return $move;
+
+		if (defined $ponder_move) {
+			return $move, $ponder_move;
+		} else {
+			return $move;
+		}
 	}
 
 	# Initialize root moves.
