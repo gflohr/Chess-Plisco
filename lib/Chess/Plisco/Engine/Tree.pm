@@ -367,7 +367,7 @@ sub alphabeta {
 		if (cp_pos_halfmove_clock($position) == 0
 			&& !cp_pos_castling_rights($position)
 			&& ($pieces_count < $self_tb_cardinality
-			   || $depth >= $self->{tb_probe_depth})) {
+			   || $depth >= $self_tb_probe_depth)) {
 			my $tb = $self->{tb};
 			my $wdl;
 			
@@ -381,7 +381,7 @@ sub alphabeta {
 			if ($@) {
 				# Time used up. Disable all tablebase lookups, and go on with
 				# a regular search.
-				$self->{tb_cardinality} = 0;
+				$self_tb_cardinality = 0;
 				ualarm 0;
 			}
 
