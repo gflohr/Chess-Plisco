@@ -1194,7 +1194,7 @@ sub think {
 		my $move = $legal[0];
 		$self->{depth} = 1;
 		$self->printCurrentMove($move, 1);
-		my $ponder_move = $self->getPonderMove(@line);
+		my $ponder_move = $self->getPonderMove($move);
 		$self->printPV([$move]);
 
 		if (defined $ponder_move) {
