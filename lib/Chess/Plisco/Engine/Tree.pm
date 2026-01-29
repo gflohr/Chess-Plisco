@@ -371,7 +371,6 @@ sub alphabeta {
 			my $tb = $self->{tb};
 			my $wdl;
 			
-			my $started = [gettimeofday];
 			eval {
 				local $SIG{ALRM} = sub { $self->checkTime };
 
@@ -557,21 +556,21 @@ TB_PROBE_DONE:
 				$self->indent($ply, "null window search");
 			}
 			$score = -alphabeta($self, $ply + 1, $depth - 1,
-				-$alpha - 1, -$alpha, \@line, NON_PV_NODE, $tt_pvs, $min_probe_ply);
+				-$alpha - 1, -$alpha, \@line, NON_PV_NODE, 1, $tt_pvs, $min_probe_ply);
 			if (($score > $alpha) && ($score < $beta)) {
 				if (DEBUG) {
 					$self->indent($ply, "value $score outside null window, re-search");
 				}
 				undef @line;
 				$score = -alphabeta($self, $ply + 1, $depth - 1,
-					-$beta, -$alpha, \@line, NON_PV_NODE, $tt_pvs, $min_probe_ply);
+					-$beta, -$alpha, \@line, NON_PV_NODE, 0, $tt_pvs, $min_probe_ply);
 			}
 		} else {
 			if (DEBUG) {
 				$self->indent($ply, "recurse normal search");
 			}
 			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha,
-				\@line, $pv_node ? PV_NODE : NON_PV_NODE, $tt_pvs,
+				\@line, $pv_node ? PV_NODE : NON_PV_NODE, 0, $tt_pvs,
 				$min_probe_ply);
 		}
 
@@ -744,7 +743,7 @@ sub quiesce {
 		}
 
 		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type,
-			[$pv_node], $min_probe_ply);
+			!$pv_node && $beta == $alpha + 1, [$pv_node], $min_probe_ply);
 	}
 
 	my $tt = $self->{tt};
@@ -962,7 +961,7 @@ sub rootSearch {
 				my @tt_pvs;
 #warn "DEPTH $depth: delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
 				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line,
-					ROOT_NODE, \@tt_pvs, $min_probe_ply);
+					ROOT_NODE, 0, \@tt_pvs, $min_probe_ply);
 #warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
