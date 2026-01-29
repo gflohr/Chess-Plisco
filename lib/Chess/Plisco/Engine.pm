@@ -27,6 +27,7 @@ use Chess::Plisco::Engine::InputWatcher;
 use Chess::Plisco::Engine::TranspositionTable;
 use Chess::Plisco::Engine::Book;
 use Chess::Plisco::Engine::LimitsType;
+use Chess::Plisco::Tablebase::Syzygy;
 
 # These figures are taken from 
 use constant MIN_HASH_SIZE => 1;
@@ -81,6 +82,31 @@ use constant UCI_OPTIONS => [
 		min => 0,
 		max => 5000,
 		default => 10,
+		callback => '__setMoveOverhead',
+	},
+	{
+		name => 'SyzygyPath',
+		type => 'string',
+		callback => '__setSyzygyPath',
+	},
+	{
+		name => 'SyzygyProbeDepth',
+		type => 'spin',
+		min => 1,
+		max => 100,
+		default => 1,
+	},
+	{
+		name => 'Syzygy50MoveRule',
+		type => 'check',
+		default => 'true',
+	},
+	{
+		name => 'SyzygyProbeLimit',
+		type => 'spin',
+		min => 0,
+		max => 7,
+		default => 7,
 	},
 ];
 
@@ -102,9 +128,13 @@ sub new {
 		__started => undef,
 		__moves => [],
 		__continued => 0,
+		__move_overhead => 10,
 		__move_overheads => [],
+		__move_overhead_fixed => 0,
 		__last_params => {},
 		__original_time_adjust => -1,
+		__tb => Chess::Plisco::Tablebase::Syzygy->new,
+		__last_score => 0,
 	};
 
 	my $options = UCI_OPTIONS;
@@ -153,7 +183,7 @@ sub __calibrateNPS {
 }
 
 sub uci {
-	my ($self, $in, $out) = @_;
+	my ($self, $in, $out, $init) = @_;
 
 	if ($^O =~ /win32/i) {
 		$in = $self->__msDosSocket($in);
@@ -161,7 +191,7 @@ sub uci {
 
 	$self->{__out} = $out;
 	$self->{__out}->autoflush(1);
-	$self->{__watcher} = Chess::Plisco::Engine::InputWatcher->new($in);
+	$self->{__watcher} = Chess::Plisco::Engine::InputWatcher->new($in, @$init);
 	$self->{__watcher}->onInput(sub {
 		$self->__onUciInput(@_);
 	});
@@ -173,12 +203,14 @@ sub uci {
 	$self->__output(<<"EOF");
 Welcome to Plisco $version!
 
-Plisco is a chess engine written in Perl that implements the UCI protocol (see
-http://wbec-ridderkerk.nl/html/UCIProtocol.html).
-
 Try 'help' for a list of commands!
 
 EOF
+
+	foreach my $command (@$init) {
+		$out->print("$command\n");
+		$self->__onUciInput($command);
+	}
 
 	while (1) {
 		$self->{__watcher}->check;
@@ -521,6 +553,11 @@ sub __onUciCmdGo {
 		watcher => $self->{__watcher},
 		info => $info,
 		signatures => $self->{__signatures},
+		tb => $self->{__tb},
+		tb_cardinality => $self->{__tb}->largestWdl,
+		tb_probe_depth => $self->{__options}->{SyzygyProbeDepth},
+		tb_probe_limit => $self->{__options}->{SyzygyProbeLimit},
+		tb_50_move_rule => $self->{__options}->{Syzygy50MoveRule},
 	);
 	if ($self->{__options}->{OwnBook} eq 'true') {
 		$options{book} = $self->{__book};
@@ -531,6 +568,7 @@ sub __onUciCmdGo {
 	$tree->{debug} = 1 if $self->{__debug};
 	$tree->{ponder} = 1 if $params{ponder};
 	$tree->{start_time} = $self->{__start_time};
+	$tree->{score} = $self->{__continued} ? $self->{__last_score} : 0;
 	if ($params{depth}) {
 		$tree->{max_depth} = $params{depth};
 	} elsif ($params{mate}) {
@@ -567,7 +605,7 @@ sub __onUciCmdGo {
 	$limits->{ponder} = $params{ponder};
 	$limits->{nodes} = $params{nodes};
 
-	$params{move_overhead} = $self->{__options}->{'Move Overhead'};
+	$params{move_overhead} = $self->{__move_overhead_fixed} ? $self->{__options}->{'Move Overhead'} : $self->{__move_overhead};
 
 	$tc->init(
 		$limits, $tree->{position}->turn,
@@ -582,7 +620,7 @@ sub __onUciCmdGo {
 		my $dyn_nodes = ($tree->{maximum} * $self->{__nps}) >> 13;
 		$tree->{nodes_to_tc} = ($max_nodes < $dyn_nodes) ? $max_nodes : $dyn_nodes;
 		$tree->{nodes_to_tc} = 50 if $tree->{nodes_to_tc} < 50;
-		$tree->{nodes_to_tc} = 5000 if $tree->{nodes_to_tc} > 500;
+		$tree->{nodes_to_tc} = 5000 if $tree->{nodes_to_tc} > 5000;
 	}
 
 	$self->{__tree} = $tree;
@@ -605,6 +643,7 @@ sub __onUciCmdGo {
 	delete $self->{__tc};
 
 	if ($bestmove) {
+		$self->{__last_score} = $tree->{score};
 		my $cn = $self->{__position}->moveCoordinateNotation($bestmove);
 		if (defined $ponder) {
 			my $pcn = $self->{__position}->copy->moveCoordinateNotation($ponder);
@@ -633,7 +672,7 @@ sub __measureMoveOverhead {
 	return if !($params{$my_time} && $last_params->{$my_time});
 	return if $params{$my_inc} != $last_params->{$my_inc};
 
-	my $expected_time = $last_params->{$my_time} + $params{$my_inc} - $self->{__last_search_time};
+	my $expected_time = $last_params->{$my_time} + $last_params->{$my_inc} - $self->{__last_search_time};
 	my $overhead = $expected_time - $params{$my_time};
 	if ($overhead >= 0) {
 		push @{$self->{__move_overheads}}, $overhead;
@@ -662,6 +701,7 @@ sub __onUciCmdUcinewgame {
 	$self->__cancelSearch;
 
 	$self->{__tt}->clear;
+	$self->{__last_score} = 0;
 
 	return $self;
 }
@@ -749,6 +789,36 @@ sub __setBookFile {
 
 	my $callback = sub { $self->__info(@_) };
 	$self->{__book}->setFile($value, $callback);
+
+	return $self;
+}
+
+sub __setMoveOverhead {
+	my ($self, $value) = @_;
+
+	$self->{__move_overhead_fixed} = 1;
+
+	$self->__info('');
+
+	return $self;
+}
+
+sub __setSyzygyPath {
+	my ($self, $value) = @_;
+
+	my $path_sep = $^O eq 'MSWin32' ? ';' : ':';
+
+	my @directories = map { $self->__trim($_) } split $path_sep, $value;
+
+	$self->{__tb} = Chess::Plisco::Tablebase::Syzygy->new(undef);
+	foreach my $directory (@directories) {
+		$self->{__tb}->addDirectory($directory, recursive => 1);
+	}
+
+	my $largest = $self->{__tb}->largestWdl;
+	my $num_wdl = $self->{__tb}->numWdlFiles;
+	my $num_dtz = $self->{__tb}->numDtzFiles;
+	$self->__info("Found $num_wdl WDL and $num_dtz DTZ tablebase files (up to $largest-man)");
 
 	return $self;
 }
@@ -866,27 +936,28 @@ sub __onUciCmdHelp {
 	my ($self) = @_;
 
 	$self->__output(<<"EOF");
-    The Plisco Chess Engine
+The Plisco Chess Engine
 
-    The engine understands the following commands:
+The engine understands the following commands:
 
-        uci - switch to UCI mode (no-op)
-        debug (on|off) - switch debugging on or off
-        go [depth, wtime, btime, ... see protocol!]
-        go perft DEPTH - do performance test (blocks engine, hit CTRL-C ...)
-        setoption name NAME[ value VALUE] - set option NAME to VALUE
-        isready - ping the engine
-        stop - move immediately
-        fen - print the current position as FEN
-        board - print a compact representation of the board
-        evaluate - print the static score of the current position
-        see MOVE - do a static exchange evaluation for MOVE
-        help - show available commands
-        quit - quit the engine immediately
+	uci - switch to UCI mode (no-op)
+	debug (on|off) - switch debugging on or off
+	go [depth, wtime, btime, ... see protocol!]
+	go perft DEPTH - do performance test (blocks engine, hit CTRL-C ...)
+	setoption name NAME[ value VALUE] - set option NAME to VALUE
+	isready - ping the engine
+	stop - move immediately
+	fen - print the current position as FEN
+	board - print a compact representation of the board
+	evaluate - print the static score of the current position
+	see MOVE - do a static exchange evaluation for MOVE
+	help - show available commands
+	quit - quit the engine immediately
 
-    See http://wbec-ridderkerk.nl/html/UCIProtocol.html for more information!
+See https://gist.github.com/DOBRO/2592c6dad754ba67e6dcaec8c90165bf for
+more information!
 
-    In batch mode, the engine is unresponsive during searches.
+In batch mode, the engine is unresponsive during searches.
 EOF
 
 	return;

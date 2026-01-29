@@ -18,10 +18,10 @@ use Locale::TextDomain ('Chess-Plisco');
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK);
+use Chess::Plisco::Engine::Position qw(CP_POS_REVERSIBLE_CLOCK CP_POS_POPCOUNT);
 use Chess::Plisco::Engine::Constants;
 
-use Time::HiRes qw(tv_interval);
+use Time::HiRes qw(tv_interval ualarm gettimeofday);
 
 use constant DEBUG => $ENV{DEBUG_PLISCO_TREE};
 
@@ -35,7 +35,14 @@ use Chess::Plisco::Engine::TranspositionTable;
 use constant MOVE_ORDERING_PV => 1 << 62;
 use constant MOVE_ORDERING_TT => 1 << 61;
 
-use constant SAFETY_MARGIN => 50;
+use constant SAFETY_MARGIN => 300;
+use constant UALARM_INTERVAL => 500 * SAFETY_MARGIN;
+
+use constant WDL_LOSS => -2;
+use constant WDL_BLESSED_LOSS => -1;
+use constant WDL_DRAW => 0;
+use constant WDL_CURSED_WIN => 1;
+use constant WDL_WIN => 2;
 
 # For all combinations of promotion piece and captured piece, calculate a
 # value suitable for sorting.  We choose the raw material balance minus the
@@ -50,6 +57,8 @@ my @mvv_lva;
 # Usually only queen promotions and sometimes promotions to a knight are
 # interesting. This mask is used to filter them out.
 use constant GOOD_PROMO_MASK => (1 << (CP_QUEEN)) | (1 << (CP_KNIGHT));
+
+my ($self_tb_cardinality, $self_tb_probe_depth);
 
 sub new {
 	my ($class, %options) = @_;
@@ -83,7 +92,17 @@ sub new {
 		previous_time_reduction => 0.85,
 		root_moves => {},
 		total_best_move_changes => 0,
+		tb => $options{tb},
+		tb_cardinality => $options{tb_cardinality},
+		tb_probe_depth => $options{tb_probe_depth},
+		tb_probe_limit => $options{tb_probe_limit},
+		tb_50_move_rule => $options{tb_50_move_rule},
+		tb_hits => 0,
+		tb_root_hit => 0,
 	};
+
+	$self_tb_cardinality = $options{tb_cardinality};
+	$self_tb_probe_depth = $options{tb_probe_depth};
 
 	bless $self, $class;
 }
@@ -198,7 +217,7 @@ sub printPV {
 
 	no integer;
 	my $position = $self->{start};
-	my $score = $self->{score};
+	my $score = $self->{score} // 0;
 	my $mate_in;
 	if ($score >= MATE - MAX_PLY) {
 		use integer;
@@ -208,16 +227,22 @@ sub printPV {
 		$mate_in = -((-(-MATE - $score)) >> 1);
 	}
 
-	my $nodes = $self->{nodes};
+	my $nodes = $self->{nodes} // 1;
 	my $elapsed = tv_interval($self->{start_time});
 	my $nps = $elapsed ? (int(0.5 + $nodes / $elapsed)) : 0;
+	if ($self->{tb_root_hit} && !$mate_in) {
+		$score = $self->{tb_outcome};
+	}
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
 	my $pv = join ' ', $position->movesCoordinateNotation(@$pline);
 	my $time = int(0.5 + (1000 * $elapsed));
-	my $hashfull = $self->{tt}->hashfull;
-	$self->{info}->("depth $self->{depth} seldepth $self->{seldepth}"
+	my $hashfull = $self->{tt}->hashfull // 0;
+	my $depth = $self->{depth} // 1;
+	my $seldepth = $self->{seldepth} // $depth;
+	my $tbhits = $self->{tb_hits} // 0;
+	$self->{info}->("depth $depth seldepth $seldepth"
 			. " score $scorestr nodes $nodes nps $nps hashfull $hashfull"
-			. " time $time pv $pv");
+			. " tbhits $self->{tb_hits} time $time pv $pv");
 	if ($self->{__debug}) {
 		$self->{info}->("tt_hits $self->{tt_hits}") if $self->{__debug};
 	}
@@ -229,7 +254,8 @@ sub quiesce;
 # __BEGIN_MACROS__
 
 sub alphabeta {
-	my ($self, $ply, $depth, $alpha, $beta, $pline, $node_type, $cut_node, $tt_pvs) = @_;
+	my ($self, $ply, $depth, $alpha, $beta, $pline, $node_type, $cut_node,
+		$tt_pvs, $min_probe_ply) = @_;
 
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
@@ -238,7 +264,7 @@ sub alphabeta {
 	my $pv_node = $node_type != NON_PV_NODE;
 
 	if ($depth <= 0) {
-		return quiesce($self, $ply, $alpha, $beta, $pv_node ? PV_NODE : NON_PV_NODE);
+		return quiesce($self, $ply, $alpha, $beta, $pv_node ? PV_NODE : NON_PV_NODE, $min_probe_ply);
 	}
 
 	$depth = cp_min $depth, MAX_PLY - 1;
@@ -324,6 +350,94 @@ sub alphabeta {
 			return $tt_value;
 		}
 	}
+
+	# Probe endgame tablebase.
+	my $best_value = -INF;
+	if ($ply >= $min_probe_ply) {
+		my $pieces_count = $position->[CP_POS_POPCOUNT];
+		if ($min_probe_ply > 1) {
+			if ($pieces_count <= $self_tb_cardinality) {
+				$min_probe_ply = 1;
+			} else {
+				$min_probe_ply = $ply + $pieces_count - $self_tb_cardinality;
+				goto TB_PROBE_DONE;
+			}
+		}
+
+		if (cp_pos_halfmove_clock($position) == 0
+			&& !cp_pos_castling_rights($position)
+			&& ($pieces_count < $self_tb_cardinality
+			   || $depth >= $self_tb_probe_depth)) {
+			my $tb = $self->{tb};
+			my $wdl;
+			
+			eval {
+				local $SIG{ALRM} = sub { $self->checkTime };
+
+				ualarm UALARM_INTERVAL, UALARM_INTERVAL;
+				$wdl = $tb->safeProbeWdl($position);
+				ualarm 0;
+			};
+			if ($@) {
+				# Time used up. Disable all tablebase lookups, and go on with
+				# a regular search.
+				$self_tb_cardinality = 0;
+				ualarm 0;
+			}
+
+			if (defined $wdl) {
+				if (DEBUG) {
+					$self->indent($ply, "tablebase hit, WDL: $wdl\n");
+				}
+
+				++$self->{tb_hits};
+
+				my $draw_score = $self->{tb_50_move_rule} ? 1 : 0;
+				my $tb_value = VALUE_TB - $ply;
+
+				my ($value, $tt_type);
+				if ($wdl < -$draw_score) {
+					$value = -$tb_value;
+					$tt_type = BOUND_UPPER;
+				} elsif ($wdl > $draw_score) {
+					$value = $tb_value;
+					$tt_type = BOUND_LOWER;
+				} else {
+					$value = DRAW + 2 * $wdl * $draw_score;
+					$tt_type = BOUND_EXACT;
+				}
+
+				if ($tt_type == BOUND_EXACT
+					|| ($tt_type == BOUND_LOWER ? $value >= $beta : $value <= $alpha)) {
+					if (DEBUG) {
+						my $tt_type_name = BOUND_TYPES->[$tt_type];
+						my $tt_value = _cp_value_to_tt($value, $ply);
+						$self->indent($ply, "store value $ply \@depth $depth with bound type $tt_type_name");
+					}
+					$tt->store(
+						@tt_address, # Address.
+						$signature, # Zobrist key.
+						_cp_value_to_tt($value, $ply), # score, mate distance adjusted.
+						$tt_pvs->[-1], # PV flag.
+						$tt_type, # BOUND_EXACT/TT_SCORE_ALPHA/TT_SCORE_LOWER.
+						$depth, # Depth searched.
+						0, # Best move at this node.
+					);
+
+					return $value;
+				}
+
+				if ($pv_node && $tt_type == BOUND_LOWER) {
+					$best_value = $value;
+					if (DEBUG && $best_value > $alpha) {
+						$self->indent($ply, "raise alpha to tablebase value $best_value");
+					}
+					$alpha = cp_max $alpha, $best_value;
+				}
+			}
+		}
+	}
+TB_PROBE_DONE:
 
 	my @moves;
 	my $pv_move;
@@ -424,7 +538,6 @@ sub alphabeta {
 	my $signature_slot = $self->{history_length} + $ply;
 	my @check_info = $position->inCheck;
 	my @backup = @$position;
-	my $best_value = -INF;
 	foreach my $move (@moves) {
 		next if !$position->checkPseudoLegalMove($move, @check_info);
 		my @line;
@@ -442,19 +555,23 @@ sub alphabeta {
 			if (DEBUG) {
 				$self->indent($ply, "null window search");
 			}
-			$score = -alphabeta($self, $ply + 1, $depth - 1, -$alpha - 1, -$alpha, \@line, NON_PV_NODE, $tt_pvs);
+			$score = -alphabeta($self, $ply + 1, $depth - 1,
+				-$alpha - 1, -$alpha, \@line, NON_PV_NODE, 1, $tt_pvs, $min_probe_ply);
 			if (($score > $alpha) && ($score < $beta)) {
 				if (DEBUG) {
 					$self->indent($ply, "value $score outside null window, re-search");
 				}
 				undef @line;
-				$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line, NON_PV_NODE, $tt_pvs);
+				$score = -alphabeta($self, $ply + 1, $depth - 1,
+					-$beta, -$alpha, \@line, NON_PV_NODE, 0, $tt_pvs, $min_probe_ply);
 			}
 		} else {
 			if (DEBUG) {
 				$self->indent($ply, "recurse normal search");
 			}
-			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha, \@line, $pv_node ? PV_NODE : NON_PV_NODE, $tt_pvs);
+			$score = -alphabeta($self, $ply + 1, $depth - 1, -$beta, -$alpha,
+				\@line, $pv_node ? PV_NODE : NON_PV_NODE, 0, $tt_pvs,
+				$min_probe_ply);
 		}
 
 		++$legal;
@@ -599,7 +716,7 @@ sub alphabeta {
 }
 
 sub quiesce {
-	my ($self, $ply, $alpha, $beta, $node_type) = @_;
+	my ($self, $ply, $alpha, $beta, $node_type, $min_probe_ply) = @_;
 
 	if ($self->{nodes} >= $self->{nodes_to_tc}) {
 		$self->checkTime;
@@ -625,7 +742,8 @@ sub quiesce {
 			$self->indent($ply, "quiescence check extension");
 		}
 
-		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type, [$pv_node]);
+		return alphabeta($self, $ply, 1, $alpha, $beta, [], $node_type,
+			!$pv_node && $beta == $alpha + 1, [$pv_node], $min_probe_ply);
 	}
 
 	my $tt = $self->{tt};
@@ -723,7 +841,7 @@ sub quiesce {
 		if (DEBUG) {
 			$self->indent($ply, "recurse quiescence search");
 		}
-		my $score = -quiesce($self, $ply + 1, -$beta, -$alpha, $node_type);
+		my $score = -quiesce($self, $ply + 1, -$beta, -$alpha, $node_type, $min_probe_ply);
 		if (DEBUG) {
 			my $cn = $position->moveCoordinateNotation($move);
 			$self->indent($ply, "move $cn: value: $score");
@@ -791,6 +909,22 @@ sub rootSearch {
 	my $last_best_move_depth = 0;
 	my $search_again_counter = 0;
 
+	# Checking whether a tablebase probe is elegible is relatively expensive.
+	# But we know that the popcount of the position can only decrease by
+	# one per ply. So we pre-calculate the minimum ply, where a probe makes
+	# sense. If we hit that limit during the search, we re-evaluate.  That
+	# reduces the number of checks to a minimum. If we have a cardinality
+	# of 7, then we start even thinking a about probing at ply 26.
+	my $min_probe_ply = INF;
+	if ($self_tb_cardinality > 2) {
+		my $popcount = $position->[CP_POS_POPCOUNT];
+		if ($popcount <= $self_tb_cardinality) {
+			$min_probe_ply = 2;
+		} else {
+			$min_probe_ply = 1 + $popcount - $self_tb_cardinality;
+		}
+	}
+
 	if (DEBUG) {
 		my $fen = $position->toFEN;
 		$self->debug("Searching $fen");
@@ -817,7 +951,7 @@ sub rootSearch {
 			my $pv_move = $line[0] & 0xffff_ffff;
 			my $delta = 15 + abs $self->{root_moves}->{$pv_move}->{mean_squared_score} / 8000;
 			my $avg = $self->{root_moves}->{$pv_move}->{average_score};
-#warn "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
+#stop "pv mean squared score: $self->{root_moves}->{$pv_move}->{mean_squared_score}\n";
 #warn "pv average score: $self->{root_moves}->{$pv_move}->{average_score}\n";
 			my $alpha = int(cp_max($avg - $delta, -INF));
 			my $beta = int(cp_min($avg + $delta, +INF));
@@ -826,7 +960,8 @@ sub rootSearch {
 			while (1) {
 				my @tt_pvs;
 #warn "DEPTH $depth: delta: $delta avg: $avg alpha: $alpha beta: $beta\n";
-				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line, ROOT_NODE, \@tt_pvs);
+				$score = $self->alphabeta(1, $depth, $alpha, $beta, \@line,
+					ROOT_NODE, 0, \@tt_pvs, $min_probe_ply);
 #warn "  best value: $score\n";
 				if (DEBUG) {
 					$self->debug("Score at depth $depth: $score");
@@ -932,6 +1067,7 @@ sub rootSearch {
 		if ($@ ne "PLISCO_ABORTED\n") {
 			$self->{info}->(__"Error: exception raised: $@");
 		}
+		$self->printPV(\@line);
 	}
 
 	if ($self->{maximum} && !$self->{ponderhit}) {
@@ -946,6 +1082,11 @@ sub rootSearch {
 
 sub orderRootMoves {
 	my ($self, $position, $depth, $ply, $pv_move, @moves) = @_;
+
+	if ($self->{tb_hit} && $depth == 1) {
+		my $root_moves = $self->{root_moves};
+		@moves = sort { $root_moves->{$a} <=> $root_moves->{$b} } @moves;
+	}
 
 	my $signature = $self->{position}->[CP_POS_SIGNATURE];
 
@@ -1053,20 +1194,26 @@ sub think {
 		my $move = $legal[0];
 		$self->{depth} = 1;
 		$self->printCurrentMove($move, 1);
+		my $ponder_move = $self->getPonderMove($move);
 		$self->printPV([$move]);
-		return $move;
-	} else {
-		# Initialize root moves.
-		foreach my $move (@legal) {
-			$self->{root_moves}->{$move} = {
-				move_effort => 0,
-				score => -INF,
-				previous_score => -INF,
-				average_score => -INF,
-				previous_average_score => -INF,
-				mean_squared_score => -INF * INF,
-			};
+
+		if (defined $ponder_move) {
+			return $move, $ponder_move;
+		} else {
+			return $move;
 		}
+	}
+
+	# Initialize root moves.
+	foreach my $move (@legal) {
+		$self->{root_moves}->{$move} = {
+			move_effort => 0,
+			score => -INF,
+			previous_score => -INF,
+			average_score => -INF,
+			previous_average_score => -INF,
+			mean_squared_score => -INF * INF,
+		};
 	}
 
 	if ($self->{book} && $self->{history_length} < $self->{book_depth}) {
@@ -1075,6 +1222,17 @@ sub think {
 			my $move = eval { $position->parseMove($notation) };
 			return $move if $move;
 		}
+	}
+
+	# Check for tablebase hit.
+	eval {
+		local $SIG{ALRM} = sub { $self->checkTime };
+		ualarm UALARM_INTERVAL, UALARM_INTERVAL;
+		$self->tbRankRootMoves;
+		ualarm 0;
+	};
+	if ($@) {
+		ualarm 0;
 	}
 
 	# There must always be a valid move in the line.
@@ -1144,6 +1302,192 @@ sub getPonderMove {
 	}
 
 	return $tt_move if $tt_move;
+}
+
+sub tbRankRootMoves {
+	my ($self) = @_;
+
+	my $tb = $self->{tb};
+
+	$self->{tb_root_hit} = 0;
+
+	# Limit probe depth to 0 if table piece count too small.
+	if ($self->{tb_probe_limit} > $self->{tb_cardinality}) {
+		$self->{tb_probe_limit} = $self->{tb_cardinality};
+		$self->{tb_probe_depth} = 0;
+	}
+
+	my $pos = $self->{position};
+	
+	if (!$pos->[CP_POS_CASTLING_RIGHTS]
+	    && $pos->bitboardPopcount($pos->[CP_POS_WHITE_PIECES]
+	                             | $pos->[CP_POS_BLACK_PIECES])
+	    <= $self->{tb_probe_limit}) {
+		eval {
+			local $SIG{ALRM} = sub { $self->checkTime };
+
+			ualarm UALARM_INTERVAL, UALARM_INTERVAL;
+			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
+			ualarm 0;
+		};
+		if ($@) {
+			# If an exception was thrown, we most probably ran out of time.
+			# Simply go on with the regular search without a tablebase.
+			ualarm 0;
+		}
+	}
+}
+
+sub tbRootProbe {
+	my ($self) = @_;
+
+	my $pos = $self->{position}->copy;
+
+	my $tb = $self->{tb};
+
+	# Probe for the outcome of the game.
+	my $wdl = $tb->safeProbeWdl($pos);
+	return if !defined $wdl;
+
+	my $wdl_sign = $wdl <=> 0;
+
+	# First determine whether we are winning or losing.
+	my $winning = $wdl > 0;
+	if ($wdl == 0) {
+		# In case of a draw, we want to escape there, if we are behind.
+		my $static_eval = $pos->evaluate;
+		$winning = $static_eval > 0;
+	}
+
+	# Pass 1. Probe all root moves.
+	my $root_moves = $self->{root_moves};
+	my @backup = @$pos;
+
+	# Pass 2.
+	# Discard all moves that change the outcome of the game.  They cannot be
+	# part of the PV.
+	#
+	# We want to order the moves by the DTZ of the position after the move
+	# has been made.
+	foreach my $move (keys %{$root_moves}) {
+		$pos->move($move);
+
+		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
+		# We consider a missing WDL table a configuration error.
+		return if !defined $root_moves->{$move}->{tb_wdl};
+
+		if (($root_moves->{$move}->{tb_wdl} <=> 0) != -$wdl_sign) {
+			delete $root_moves->{$move};
+			goto UNDO_MOVE;
+		}
+
+		# First, get mate, stalemate out of the way.
+		my @legal = $pos->legalMoves;
+		if (!@legal) {
+			if ($pos->inCheck || !$winning) {
+				# We have found a mate or stalemate. Our single-threaded
+				# engine cannot be used for multiPV analysys. We can just as
+				# well bypass the search altogether and return the winning
+				# move.
+				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
+				return;
+			} else {
+				# A stalemate but we are winning.
+				delete $root_moves->{$move};
+				goto UNDO_MOVE;
+			}
+		}
+
+		# Does the move result in a draw by insufficient material?
+		if ($pos->insufficientMaterial) {
+			if ($winning) {
+				# Don't even consider that move.
+				delete $root_moves->{$move};
+				goto UNDO_MOVE;
+			} else {
+				# Force playing this move.
+				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
+				return;
+			}
+		}
+
+		# If the probe fails, treat all moves equally.
+		my $dtz = -$tb->safeProbeDtz($pos) // 0;
+
+		# We will later try to filter out moves that will result in an
+		# unwanted draw by the 50-move-rule.
+		my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
+		$root_moves->{$move}->{tb_abs_dtz} = $hmc + abs $dtz;
+
+		if ($hmc == 0) {
+			# The current move is a pawn push or capture. The DTZ is that
+			# of the next endgame phase. Compared to the DTZ before that, it will
+			# make a leap and is useless for move ordering. Therefore, we
+			# use the DTZ from the position before which was -1, -101, 0, 1, or
+			# 101. However, the position before hasn't been probed. But we can
+			# deduce the value from the WDL:
+			$dtz = (-67 * $wdl * $wdl * $wdl + 269 * $wdl) >> 1;
+		} else {
+			# We have already handled stalemate and draw because of
+			# insufficient material. Now check the draws that have to be
+			# claimed.
+			my $is_draw = $pos->[CP_POS_HALFMOVE_CLOCK] > 99;
+			if (!$is_draw) {
+				# Check for draw by 3-fold repetition. Unlike the normal
+				# search, the root search has to check that this is really
+				# the 3rd repetition.
+				my $signature = $pos->[CP_POS_SIGNATURE];
+				my @repetitions = grep { $_ == $signature } @{$self->{signatures}};
+				$is_draw = @repetitions > 1;
+			}
+			
+			if ($is_draw) {
+				# This is only what we want, when we are losing.
+				$dtz = $winning ? -INF : INF;
+			} else {
+				# Correct the DTZ by 1 and apply the offset for the first move.
+				if ($dtz > 0) {
+					++$dtz;
+				} elsif ($dtz < 0) {
+					--$dtz;
+				}
+			}
+		}
+
+		$root_moves->{$move}->{tb_rank} = $dtz;
+
+		UNDO_MOVE: @$pos = @backup; # Undo move.
+	}
+
+	if ($self->{tb_50_move_rule}) {
+		my (@drawing, @other);
+		foreach my $move (keys %{$root_moves}) {
+			my $root_move = $root_moves->{$move};
+
+			if ($root_move->{tb_rank} == 0 || $root_move->{tb_abs_dtz} > 99) {
+				push @drawing, $move;
+			} else {
+				push @other, $move;
+			}
+		}
+
+		if (@drawing && @other) {
+			# We only keep those moves that are favourable for us.
+			if ($winning) {
+				delete @{$root_moves}{@drawing};
+			} else {
+				delete @{$root_moves}{@other};
+			}
+		}
+	}
+
+	if ($self->{tb_50_move_rule}) {
+		$self->{tb_outcome} = $wdl == WDL_WIN ? 20000 : $wdl == WDL_LOSS ? -20000 : 0;
+	} else {
+		$self->{tb_outcome} = 20000 * $wdl_sign;
+	}
+
+	return $self;
 }
 
 # Fill the lookup table for the move values.

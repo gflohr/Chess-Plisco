@@ -34,6 +34,7 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Chess-Plisco",
   "EXE_FILES" => [
+    "bin/pfathom",
     "bin/plisco"
   ],
   "LICENSE" => "unrestricted",
@@ -47,6 +48,7 @@ my %WriteMakefileArgs = (
     "File::Globstar" => 0,
     "File::Temp" => 0,
     "Filter::Util::Call" => 0,
+    "Getopt::Long" => 0,
     "IO::Select" => 0,
     "IO::Socket::UNIX" => 0,
     "List::Util" => 0,
@@ -91,6 +93,7 @@ my %FallbackPrereqs = (
   "File::Spec" => 0,
   "File::Temp" => 0,
   "Filter::Util::Call" => 0,
+  "Getopt::Long" => 0,
   "IO::Select" => 0,
   "IO::Socket::UNIX" => 0,
   "List::Util" => 0,

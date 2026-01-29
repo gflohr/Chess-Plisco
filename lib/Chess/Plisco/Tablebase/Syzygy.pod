@@ -194,6 +194,18 @@ of 0 means that no DTZ tables have been found.
 
 Returns the maximum of B<largestWdl> and B<largestDtz>.
 
+=item B<numWdlFiles>
+
+Returns the number of WDL (F<.rtbw>) files found.
+
+This method has been added in version 1.0.3.
+
+=item B<numDtziles>
+
+Returns the number of DTZ (F<.rtbw>) files found.
+
+This method has been added in version 1.0.3.
+
 =back
 
 =head1 COPYRIGHT

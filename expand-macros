@@ -41,7 +41,7 @@ foreach my $source_file (@files) {
 	$source = Chess::Plisco::Macro::preprocess($source);
 
 	my $warning = "# Macros from Chess::Plisco::Macro are already expanded here!";
-	$source =~ s/^use[ \t]+Chess::Plisco::Macro;/$warning/m or die "$source_file: huh?";
+	$source =~ s/^use[ \t]+Chess::Plisco::Macro;/$warning/gm or die "$source_file: huh?";
 
 	chmod 0644, $source_file or die $!;
 	open my $fh, '>', $source_file or die "$source_file: $!";
