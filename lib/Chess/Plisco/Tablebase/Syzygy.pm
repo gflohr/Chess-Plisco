@@ -645,33 +645,35 @@ sub _setupPairs {
 
 	my $d = Chess::Plisco::Tablebase::Syzygy::PairsData->new;
 
-	$self->{_flags} = $read_byte->($self->{data}, $data_ptr);
+	my $data = $self->{data};
+	$self->{_flags} = $read_byte->($data, $data_ptr);
 
+	my $sizes = $self->{size};
 	if ($self->{_flags} & 0x80) {
 		$d->[PD_IDXBITS] = 0;
 
 		if ($wdl) {
-			$d->[PD_MIN_LEN] = $read_byte->($self->{data}, $data_ptr + 1);
+			$d->[PD_MIN_LEN] = $read_byte->($data, $data_ptr + 1);
 		} else {
 			# http://www.talkchess.com/forum/viewtopic.php?p=698093#698093
 			$d->[PD_MIN_LEN] = 0;
 		}
 
 		$self->{_next} = $data_ptr + 2;
-		$self->{size}->[$size_idx + 0] = 0;
-		$self->{size}->[$size_idx + 1] = 0;
-		$self->{size}->[$size_idx + 2] = 0;
+		$sizes->[$size_idx + 0] = 0;
+		$sizes->[$size_idx + 1] = 0;
+		$sizes->[$size_idx + 2] = 0;
 
 		return $d;
 	}
 
-	$d->[PD_BLOCKSIZE] = $read_byte->($self->{data}, $data_ptr + 1);
-	$d->[PD_IDXBITS] = $read_byte->($self->{data}, $data_ptr + 2);
+	$d->[PD_BLOCKSIZE] = $read_byte->($data, $data_ptr + 1);
+	$d->[PD_IDXBITS] = $read_byte->($data, $data_ptr + 2);
 
 	my $real_num_blocks = $self->_readUint32($data_ptr + 4);
-	my $num_blocks = $real_num_blocks + $read_byte->($self->{data}, $data_ptr + 3);
-	my $max_len = $read_byte->($self->{data}, $data_ptr + 8);
-	my $min_len = $read_byte->($self->{data}, $data_ptr + 9);
+	my $num_blocks = $real_num_blocks + $read_byte->($data, $data_ptr + 3);
+	my $max_len = $read_byte->($data, $data_ptr + 8);
+	my $min_len = $read_byte->($data, $data_ptr + 9);
 	my $h = $max_len - $min_len + 1;
 	my $num_syms = $self->_readUint16($data_ptr + 10 + 2 * $h);
 
@@ -683,9 +685,9 @@ sub _setupPairs {
 	$self->{_next} = $data_ptr + 12 + 2 * $h + 3 * $num_syms + ($num_syms & 1);
 
 	my $num_indices = ($tb_size + (1 << $d->[PD_IDXBITS]) - 1) >> $d->[PD_IDXBITS];
-	$self->{size}->[$size_idx + 0] = 6 * $num_indices;
-	$self->{size}->[$size_idx + 1] = 2 * $num_blocks;
-	$self->{size}->[$size_idx + 2] = (1 << $d->[PD_BLOCKSIZE]) * $real_num_blocks;
+	$sizes->[$size_idx + 0] = 6 * $num_indices;
+	$sizes->[$size_idx + 1] = 2 * $num_blocks;
+	$sizes->[$size_idx + 2] = (1 << $d->[PD_BLOCKSIZE]) * $real_num_blocks;
 
 	my @tmp = ((0) x ($num_syms - 1));
 	for my $i (0 .. $num_syms - 1) {
@@ -694,17 +696,18 @@ sub _setupPairs {
 		}
 	}
 
-	$d->[PD_BASE] = [(0) x $h];
-	$d->[PD_BASE]->[$h - 1] = 0;
+	my $base = $d->[PD_BASE] = [(0) x $h];
+	$base->[$h - 1] = 0;
 
+	my $offset = $d->[PD_OFFSET];
 	for my $i (reverse 0 .. $h - 2) {
-		$d->[PD_BASE]->[$i] = uint64(($d->[PD_BASE]->[$i + 1]
-			+ $self->_readUint16($d->[PD_OFFSET] + $i * 2)
-			- $self->_readUint16($d->[PD_OFFSET] + $i * 2 + 2)) / 2);
+		$base->[$i] = uint64(($base->[$i + 1]
+			+ $self->_readUint16($offset + $i * 2)
+			- $self->_readUint16($offset + $i * 2 + 2)) / 2);
 	}
 
 	for my $i (0 .. $h) {
-		$d->[PD_BASE]->[$i] <<= 64 - ($min_len + $i);
+		$base->[$i] <<= 64 - ($min_len + $i);
 	}
 
 	$d->[PD_OFFSET] -= 2 * $d->[PD_MIN_LEN];
