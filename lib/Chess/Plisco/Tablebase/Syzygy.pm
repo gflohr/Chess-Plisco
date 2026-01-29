@@ -787,12 +787,14 @@ sub __calcSymlen {
 
 	my $w = $d->{sympat} + 3 * $s;
 
-	my $s2 = ($read_byte->($self->{data}, $w + 2) << 4) | ($read_byte->($self->{data}, $w + 1) >> 4);
+	my $data = $self->{data};
+	my $s2 = ($read_byte->($data, $w + 2) << 4) | ($read_byte->($data, $w + 1) >> 4);
 
+	my $symlen = $d->{symlen};
 	if ($s2 == 0x0fff) {
-		$d->{symlen}->[$s] = 0;
+		$symlen->[$s] = 0;
 	} else {
-		my $s1 = (($read_byte->($self->{data}, $w + 1) & 0xf) << 8) | $read_byte->($self->{data}, $w);
+		my $s1 = (($read_byte->($data, $w + 1) & 0xf) << 8) | $read_byte->($data, $w);
 		if (!$tmp->[$s1]) {
 			$self->__calcSymlen($d, $s1, $tmp);
 		}
@@ -800,7 +802,7 @@ sub __calcSymlen {
 			$self->__calcSymlen($d, $s2, $tmp);
 		}
 
-		$d->{symlen}->[$s] = $d->{symlen}->[$s1] + $d->{symlen}->[$s2] + 1;
+		$symlen->[$s] = $symlen->[$s1] + $symlen->[$s2] + 1;
 	}
 
 	$tmp->[$s] = 1;
@@ -987,25 +989,25 @@ sub _encodePawn {
 sub _decompressPairs {
 	my ($self, $d, $idx) = @_;
 
-	if (!$d->{idxbits}) {
-		return $d->{min_len};
-	}
+	my $idxbits = $d->{idxbits} or return $d->{min_len};
 
-	my $mainidx = $idx >> $d->{idxbits};
-	my $litidx = ($idx & (1 << $d->{idxbits}) - 1) - (1 << ($d->{idxbits} - 1));
-	my $block = $self->_readUint32($d->{indextable} + 6 * $mainidx);
+	my $mainidx = $idx >> $idxbits;
+	my $litidx = ($idx & (1 << $idxbits) - 1) - (1 << ($idxbits - 1));
+	my $indextable = $d->{indextable};
+	my $block = $self->_readUint32($indextable + 6 * $mainidx);
 
-	my $idx_offset = $self->_readUint16($d->{indextable} + 6 * $mainidx + 4);
+	my $idx_offset = $self->_readUint16($indextable + 6 * $mainidx + 4);
 	$litidx += $idx_offset;
 
+	my $sizetable = $d->{sizetable};
 	if ($litidx < 0) {
 		while ($litidx < 0) {
 			--$block;
-			$litidx += $self->_readUint16($d->{sizetable} + 2 * $block) + 1;
+			$litidx += $self->_readUint16($sizetable + 2 * $block) + 1;
 		}
 	} else {
-		while ($litidx > $self->_readUint16($d->{sizetable} + 2 * $block)) {
-			$litidx -= $self->_readUint16($d->{sizetable} + 2 * $block) + 1;
+		while ($litidx > $self->_readUint16($sizetable + 2 * $block)) {
+			$litidx -= $self->_readUint16($sizetable + 2 * $block) + 1;
 			++$block;
 		}
 	}
@@ -1022,17 +1024,20 @@ sub _decompressPairs {
 	my $bitcnt = 0; # Number of empty bits in code
 	my $sym;
 
+	my $base = $d->{base};
+	my $offset = $d->{offset};
+	my $symlen = $d->{symlen};
 	while (1) {
 		my $l = $m;
-		while ($code < $d->{base}->[$base_idx + $l]) {
+		while ($code < $base->[$base_idx + $l]) {
 			++$l;
 		}
-		$sym = $self->_readUint16($d->{offset} + $l * 2);
-		$sym += ($code - $d->{base}->[$base_idx + $l]) >> (64 - $l);
-		if ($litidx < $d->{symlen}->[$symlen_idx + $sym] + 1) {
+		$sym = $self->_readUint16($offset + $l * 2);
+		$sym += ($code - $base->[$base_idx + $l]) >> (64 - $l);
+		if ($litidx < $symlen->[$symlen_idx + $sym] + 1) {
 			last;
 		}
-		$litidx -= $d->{symlen}->[$symlen_idx + $sym] + 1;
+		$litidx -= $symlen->[$symlen_idx + $sym] + 1;
 		$code <<= $l;
 		$bitcnt += $l;
 		if ($bitcnt >= 32) {
@@ -1043,22 +1048,23 @@ sub _decompressPairs {
 	}
 
 	my $sympat = $d->{sympat};
-	while ($d->{symlen}->[$symlen_idx + $sym]) {
+	my $data = $self->{data};
+	while ($symlen->[$symlen_idx + $sym]) {
 		my $w = $sympat + 3 * $sym;
-		my $s1 = (($read_byte->($self->{data}, $w + 1) & 0xf) << 8) | $read_byte->($self->{data}, $w);
-		if ($litidx < $d->{symlen}->[$symlen_idx + $s1] + 1) {
+		my $s1 = (($read_byte->($data, $w + 1) & 0xf) << 8) | $read_byte->($data, $w);
+		if ($litidx < $symlen->[$symlen_idx + $s1] + 1) {
 			$sym = $s1;
 		} else {
-			$litidx -= $d->{symlen}->[$symlen_idx + $s1] + 1;
-			$sym = ($read_byte->($self->{data}, $w + 2) << 4) | ($read_byte->($self->{data}, $w + 1) >> 4);
+			$litidx -= $symlen->[$symlen_idx + $s1] + 1;
+			$sym = ($read_byte->($data, $w + 2) << 4) | ($read_byte->($data, $w + 1) >> 4);
 		}
 	}
 
 	my $w = $sympat + 3 * $sym;
 	if ($self->isa('DtzTable')) {
-		return (($read_byte->($self->{data}, $w + 1) & 0x0f) << 8) | $read_byte->($self->{data}, $w);
+		return (($read_byte->($data, $w + 1) & 0x0f) << 8) | $read_byte->($data, $w);
 	} else {
-		return $read_byte->($self->{data}, $w);
+		return $read_byte->($data, $w);
 	}
 }
 
