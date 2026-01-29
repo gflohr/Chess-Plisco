@@ -193,7 +193,7 @@ sub hashfull {
 	my $max_age_internal = $max_age << (GENERATION_BITS);
 	my $cnt = 0;
 
-	my $limit = @$self < 1000 ? @$self : 1000;
+	my $limit = @$self < 100 ? @$self : 100;
 
 	for my $ci (0 .. $limit - 1) {
 		my @c = unpack 'C40', $self->[$ci];
@@ -214,7 +214,7 @@ sub hashfull {
 		}
 	}
 
-	return int($cnt / CLUSTER_CAPACITY);
+	return 10 * int($cnt / CLUSTER_CAPACITY);
 }
 
 1;
