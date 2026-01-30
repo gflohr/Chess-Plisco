@@ -813,7 +813,11 @@ sub quiesce {
 		} elsif ($position->moveGivesCheck($move)) { # FIXME! Too expensive?
 			push @checks, $move;
 		} else {
-			$captures{$move} = $position->SEE($move);
+			# info depth 10 seldepth 37 score cp 6 nodes 46676164 nps 39461 hashfull 500 tbhits 0 time 1182841 pv e2e4 e7e5 c2c3 g8f6 g1f3 f8e7 f3e5 f6e4 d1g4 e4g5
+			# bestmove e2e4 ponder e7e5
+
+			my $see = $position->SEE($move);
+			$captures{$move} = $see if $see >= -80;
 		}
 	}
 
