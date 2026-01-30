@@ -1229,6 +1229,9 @@ sub think {
 	}
 
 	# Check for tablebase hit.
+	$self->{info}->('ranking root moves');
+	my $started = [gettimeofday];
+	$DB::single = 1;
 	eval {
 		local $SIG{ALRM} = sub { $self->checkTime };
 		ualarm UALARM_INTERVAL, UALARM_INTERVAL;
@@ -1236,8 +1239,12 @@ sub think {
 		ualarm 0;
 	};
 	if ($@) {
+		$self->{info}->("took too long :(");
 		ualarm 0;
 	}
+	my $elapsed = tv_interval $started;
+	my $hit = $self->{tb_root_hit} || 0;
+	$self->{info}->("root move ranking took $elapsed s, hit: $hit");
 
 	# There must always be a valid move in the line.
 	my @line = ($legal[0]);
@@ -1324,21 +1331,17 @@ sub tbRankRootMoves {
 	my $pos = $self->{position};
 	
 	if (!$pos->[CP_POS_CASTLING_RIGHTS]
-	    && $pos->bitboardPopcount($pos->[CP_POS_WHITE_PIECES]
-	                             | $pos->[CP_POS_BLACK_PIECES])
-	    <= $self->{tb_probe_limit}) {
-		eval {
-			local $SIG{ALRM} = sub { $self->checkTime };
-
-			ualarm UALARM_INTERVAL, UALARM_INTERVAL;
-			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
-			ualarm 0;
-		};
-		if ($@) {
-			# If an exception was thrown, we most probably ran out of time.
-			# Simply go on with the regular search without a tablebase.
-			ualarm 0;
+	    && $pos->[CP_POS_POPCOUNT] <= $self->{tb_probe_limit}) {
+		if ($self->{use_time_management}) {
+			my $min_time = $self->{tb_7} / (5 ^ (7 - $pos->[CP_POS_POPCOUNT]));
+			if ($min_time < $self->{tb_3}) {
+				$min_time = $self->{tb_3};
+				if ($self->{maximum} < $min_time) {
+					return;
+				}
+			}
 		}
+		$self->{tb_root_hit} = 1 if $self->tbRootProbe;
 	}
 }
 

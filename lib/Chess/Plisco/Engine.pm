@@ -90,6 +90,20 @@ use constant UCI_OPTIONS => [
 		callback => '__setSyzygyPath',
 	},
 	{
+		name => 'Syzygy7TimeCushion',
+		type => 'spin',
+		min => 500,
+		max => 30000,
+		default => 1000,
+	},
+	{
+		name => 'Syzygy3TimeCushion',
+		type => 'spin',
+		min => 100,
+		max => 500,
+		default => 200,
+	},
+	{
 		name => 'SyzygyProbeDepth',
 		type => 'spin',
 		min => 1,
@@ -558,6 +572,8 @@ sub __onUciCmdGo {
 		tb_probe_depth => $self->{__options}->{SyzygyProbeDepth},
 		tb_probe_limit => $self->{__options}->{SyzygyProbeLimit},
 		tb_50_move_rule => $self->{__options}->{Syzygy50MoveRule},
+		tb_7 => $self->{__options}->{Syzygy7TimeCushion},
+		tb_3 => $self->{__options}->{Syzygy3TimeCushion},
 	);
 	if ($self->{__options}->{OwnBook} eq 'true') {
 		$options{book} = $self->{__book};

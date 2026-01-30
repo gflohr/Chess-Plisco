@@ -29,6 +29,7 @@ as a reference implementation for your own experiments and tests.
 		- [Graphical User Interfaces](#graphical-user-interfaces)
 		- [Differences to Other UCI Engines](#differences-to-other-uci-engines)
 			- [Option `SyzygyPath`](#option-syzygypath)
+			- [Options `Syzygy7TimeCusion` and `Syzygy3TimeCushion`](#options-syzygy7timecusion-and-syzygy3timecushion)
 			- [Option `Move Overhead`](#option-move-overhead)
 	- [Internals](#internals)
 	- [Copryight](#copryight)
@@ -180,6 +181,29 @@ interface.  Try using one of these:
 
 Unlike other engines do, directories are searched recursively for tablebase
 files.
+
+#### Options `Syzygy7TimeCusion` and `Syzygy3TimeCushion`
+
+Probing the table bases in Perl is a lot slower than in C or similar languages
+because the records have to be decompressed.
+
+The engine will therefore not sort root moves if it is likely to be flagged
+because of the tablebase probes. But the performance largely depends on the
+speed of your storage media.
+
+These two non-standard options control whether the engine will try to order
+the root moves with tablebase probes.  The default values for T7
+(`Syzygy7TimeCushion`) is 1000 (milliseconds) and the default value for T3
+(`Syzygy3TimeCushion`) is 200 (milliseconds). If there are 7 pieces on the
+board, and the maximum allocated time for the move is less than T7, no
+tablebase will be probed. For fewer pieces, the formula is as follows:
+
+    min_time_left = max(T3, T7 / 5^(7 - n))
+
+Where n is the number of pieces on the board.
+
+If you see that the engine often loses on time, escpecially, with few pieces
+on the board, increase the values accordingly.
 
 #### Option `Move Overhead`
 
