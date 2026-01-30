@@ -97,6 +97,8 @@ sub new {
 		tb_probe_depth => $options{tb_probe_depth},
 		tb_probe_limit => $options{tb_probe_limit},
 		tb_50_move_rule => $options{tb_50_move_rule},
+		tb_7 => $options{tb_7},
+		tb_3 => $options{tb_3},
 		tb_hits => 0,
 		tb_root_hit => 0,
 	};
@@ -1229,9 +1231,6 @@ sub think {
 	}
 
 	# Check for tablebase hit.
-	$self->{info}->('ranking root moves');
-	my $started = [gettimeofday];
-	$DB::single = 1;
 	eval {
 		local $SIG{ALRM} = sub { $self->checkTime };
 		ualarm UALARM_INTERVAL, UALARM_INTERVAL;
@@ -1239,12 +1238,8 @@ sub think {
 		ualarm 0;
 	};
 	if ($@) {
-		$self->{info}->("took too long :(");
 		ualarm 0;
 	}
-	my $elapsed = tv_interval $started;
-	my $hit = $self->{tb_root_hit} || 0;
-	$self->{info}->("root move ranking took $elapsed s, hit: $hit");
 
 	# There must always be a valid move in the line.
 	my @line = ($legal[0]);
@@ -1336,9 +1331,9 @@ sub tbRankRootMoves {
 			my $min_time = $self->{tb_7} / (5 ^ (7 - $pos->[CP_POS_POPCOUNT]));
 			if ($min_time < $self->{tb_3}) {
 				$min_time = $self->{tb_3};
-				if ($self->{maximum} < $min_time) {
-					return;
-				}
+			}
+			if ($self->{maximum} < $min_time) {
+				return;
 			}
 		}
 		$self->{tb_root_hit} = 1 if $self->tbRootProbe;

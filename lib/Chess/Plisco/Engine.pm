@@ -94,14 +94,14 @@ use constant UCI_OPTIONS => [
 		type => 'spin',
 		min => 500,
 		max => 30000,
-		default => 1000,
+		default => 5000,
 	},
 	{
 		name => 'Syzygy3TimeCushion',
 		type => 'spin',
 		min => 100,
-		max => 500,
-		default => 200,
+		max => 3000,
+		default => 500,
 	},
 	{
 		name => 'SyzygyProbeDepth',

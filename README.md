@@ -193,8 +193,8 @@ speed of your storage media.
 
 These two non-standard options control whether the engine will try to order
 the root moves with tablebase probes.  The default values for T7
-(`Syzygy7TimeCushion`) is 1000 (milliseconds) and the default value for T3
-(`Syzygy3TimeCushion`) is 200 (milliseconds). If there are 7 pieces on the
+(`Syzygy7TimeCushion`) is 5000 (milliseconds) and the default value for T3
+(`Syzygy3TimeCushion`) is 500 (milliseconds). If there are 7 pieces on the
 board, and the maximum allocated time for the move is less than T7, no
 tablebase will be probed. For fewer pieces, the formula is as follows:
 
