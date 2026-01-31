@@ -593,7 +593,7 @@ sub __onUciCmdGo {
 		$tree->{maximum} = $tree->{optimum} = $params{movetime};
 		$tree->{fixed_time} = 1;
 	} elsif ($params{infinite}) {
-		$tree->{max_depth} = Plisco::Engine::Tree->MAX_PLY;
+		$tree->{max_depth} = MAX_PLY;
 	} elsif ($params{node}) {
 		$tree->{max_nodes} = $params{node};
 	} else {
