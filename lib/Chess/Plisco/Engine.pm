@@ -20,6 +20,7 @@ use Time::HiRes qw(gettimeofday tv_interval);
 
 use Chess::Plisco qw(:all);
 
+use Chess::Plisco::Engine::Constants;
 use Chess::Plisco::Engine::Position;
 use Chess::Plisco::Engine::TimeControl;
 use Chess::Plisco::Engine::Tree;
@@ -128,7 +129,7 @@ my $uci_options = UCI_OPTIONS;
 my %uci_options = map { $_->{name} => $_ } @$uci_options;
 
 sub new {
-	my ($class) = @_;
+	my ($class, %options) = @_;
 
 	my $position = Chess::Plisco::Engine::Position->new;
 	my $self = {
@@ -149,6 +150,8 @@ sub new {
 		__original_time_adjust => -1,
 		__tb => Chess::Plisco::Tablebase::Syzygy->new,
 		__last_score => 0,
+		__fen_out => $options{fen_out},
+		__pgn_out => $options{pgn_out},
 	};
 
 	my $options = UCI_OPTIONS;
@@ -341,15 +344,19 @@ sub __onUciInput {
 }
 
 sub __onUciCmdFen {
-	my ($self) = @_;
+	my ($self, $fh) = @_;
 
-	$self->{__out}->print($self->{__position}->toFEN . "\n");
+	$fh //= $self->{__out};
+
+	$fh->print($self->{__position}->toFEN . "\n");
 
 	return $self;
 }
 
 sub __onUciCmdPgn {
-	my ($self) = @_;
+	my ($self, $fh) = @_;
+
+	$fh //= $self->{__out};
 
 	my @now = localtime;
 	my $date = sprintf '%04d.%02d.%02d', $now[5] + 1900, $now[4] + 1, $now[3];
@@ -439,7 +446,7 @@ EOF
 
 	$pgn .= "$moves\n";
 
-	$self->{__out}->print($pgn);
+	$fh->print($pgn);
 }
 
 sub __onUciCmdBoard {
@@ -944,6 +951,26 @@ sub __onUciCmdPosition {
 
 	$self->{__position} = $position;
 	$self->{__signatures} = \@signatures;
+
+	if (length $self->{__fen_out}) {
+		if (open my $fh, '>', $self->{__fen_out}) {
+			$self->__onUciCmdFen($fh);
+		} else {
+			$self->__info(__x("error: cannot open '{filename}' for writing: {err}!",
+				filename => $self->{__fen_out},
+				error => $!));
+		}
+	}
+
+	if (length $self->{__pgn_out}) {
+		if (open my $fh, '>', $self->{__pgn_out}) {
+			$self->__onUciCmdPgn($fh);
+		} else {
+			$self->__info(__x("error: cannot open '{filename}' for writing: {err}!",
+				filename => $self->{__pgn_out},
+				error => $!));
+		}
+	}
 
 	return $self;
 }
