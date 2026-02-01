@@ -97,6 +97,8 @@ sub new {
 		tb_probe_depth => $options{tb_probe_depth},
 		tb_probe_limit => $options{tb_probe_limit},
 		tb_50_move_rule => $options{tb_50_move_rule},
+		tb_7 => $options{tb_7},
+		tb_3 => $options{tb_3},
 		tb_hits => 0,
 		tb_root_hit => 0,
 	};
@@ -813,7 +815,11 @@ sub quiesce {
 		} elsif ($position->moveGivesCheck($move)) { # FIXME! Too expensive?
 			push @checks, $move;
 		} else {
-			$captures{$move} = $position->SEE($move);
+			# info depth 10 seldepth 37 score cp 6 nodes 46676164 nps 39461 hashfull 500 tbhits 0 time 1182841 pv e2e4 e7e5 c2c3 g8f6 g1f3 f8e7 f3e5 f6e4 d1g4 e4g5
+			# bestmove e2e4 ponder e7e5
+
+			my $see = $position->SEE($move);
+			$captures{$move} = $see if $see >= -80;
 		}
 	}
 
@@ -1320,21 +1326,17 @@ sub tbRankRootMoves {
 	my $pos = $self->{position};
 	
 	if (!$pos->[CP_POS_CASTLING_RIGHTS]
-	    && $pos->bitboardPopcount($pos->[CP_POS_WHITE_PIECES]
-	                             | $pos->[CP_POS_BLACK_PIECES])
-	    <= $self->{tb_probe_limit}) {
-		eval {
-			local $SIG{ALRM} = sub { $self->checkTime };
-
-			ualarm UALARM_INTERVAL, UALARM_INTERVAL;
-			$self->{tb_root_hit} = 1 if $self->tbRootProbe;
-			ualarm 0;
-		};
-		if ($@) {
-			# If an exception was thrown, we most probably ran out of time.
-			# Simply go on with the regular search without a tablebase.
-			ualarm 0;
+	    && $pos->[CP_POS_POPCOUNT] <= $self->{tb_probe_limit}) {
+		if ($self->{use_time_management}) {
+			my $min_time = $self->{tb_7} / (5 ^ (7 - $pos->[CP_POS_POPCOUNT]));
+			if ($min_time < $self->{tb_3}) {
+				$min_time = $self->{tb_3};
+			}
+			if ($self->{maximum} < $min_time) {
+				return;
+			}
 		}
+		$self->{tb_root_hit} = 1 if $self->tbRootProbe;
 	}
 }
 

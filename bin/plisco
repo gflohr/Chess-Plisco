@@ -29,6 +29,8 @@ Getopt::Long::Configure('bundling');
 GetOptions(
 	'i|init=s' => $options{init},
 	'init-from-file=s' => $options{init_from_file},
+	'f|fen-out=s' => \$options{fen_out},
+	'p|pgn-out=s' => \$options{pgn_out},
 	'h|help' => \$options{help},
 	'v|version' => \$options{version},
 ) or usage_error;
@@ -40,7 +42,7 @@ read_init_commands $options{init_from_file}, $options{init};
 
 # Wrap that into an eval to make sure that the DESTROY function is executed.
 eval {
-	Chess::Plisco::Engine->new->uci(\*STDIN, \*STDOUT, $options{init})
+	Chess::Plisco::Engine->new(%options)->uci(\*STDIN, \*STDOUT, $options{init})
 		or die "cannot create engine";
 };
 if ($@) {
@@ -81,9 +83,17 @@ EOF
 	print "\n";
 
 	print __"Initialisation:\n";
-	print __(<<EOF);
+	print __(<<'EOF');
   -i, --init=UCI_COMMAND       send UCI_COMMAND to the engine
       --init-from-file=FILENAME send UCI_COMMANDS from FILENAME to engine
+EOF
+
+	print "\n";
+
+	print __"Debugging:\n";
+	print __(<<'EOF');
+  -f, --fen-out=FILENAME       write current position to FILENAME
+  -p, --pgn-out=FILENAME       write current game to FILENAME
 EOF
 
 	print "\n";
