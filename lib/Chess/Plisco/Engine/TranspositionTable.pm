@@ -15,6 +15,8 @@ package Chess::Plisco::Engine::TranspositionTable;
 use strict;
 use integer;
 
+use Time::HiRes qw(gettimeofday tv_interval);
+
 use Chess::Plisco::Macro;
 use Chess::Plisco::Engine::Constants;
 
@@ -51,6 +53,8 @@ use constant GENERATION_CYCLE => 255 + GENERATION_DELTA;
 use constant GENERATION_MASK => (0xFF << (GENERATION_BITS)) & 0xFF;
 
 my $generation = 0;
+my $last_hashfull;
+my $last_hashfull_probe = 0;
 
 sub new {
 	my ($class, $size) = @_;
@@ -94,7 +98,6 @@ sub newSearch {
 }
 
 sub probe {
-	#return 0, 0, 0, 0, undef, undef, 0, 0, 0, ''; # Disable TT.
 	my ($self, $signature) = @_;
 
 	# Throw away the sign bit, because we cannot use negative indices.
@@ -144,7 +147,6 @@ sub probe {
 }
 
 sub store {
-	#return; # Disable TT
 	my ($self, $cluster_index, $bucket_index, $bucket, $signature, $value,
 		$pv, $bound, $depth, $move, $eval) = @_;
 
@@ -184,6 +186,17 @@ sub store {
 sub hashfull {
 	my ($self, $max_age) = @_;
 
+	# Do not do that more than once a second.
+	my $now = [gettimeofday];
+	if (defined $last_hashfull) {
+		no integer;
+
+		my $elapsed = tv_interval $last_hashfull_probe, $now;
+		if ($elapsed < 1) {
+			return $last_hashfull;
+		}
+	}
+
 	my $max_age_internal = $max_age << (GENERATION_BITS);
 	my $cnt = 0;
 
@@ -208,7 +221,10 @@ sub hashfull {
 		}
 	}
 
-	return int($cnt / CLUSTER_CAPACITY);
+	$last_hashfull = int($cnt / CLUSTER_CAPACITY);
+	$last_hashfull_probe = $now;
+
+	return $last_hashfull;
 }
 
 1;
