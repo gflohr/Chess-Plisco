@@ -111,6 +111,7 @@ t/30dm1-epd.t
 t/30dm2-epd.t
 t/30dm3-epd.t
 t/30draw.t
+t/30syzygy-root-pruning.t
 t/31engine-move-overhead.t
 t/Flohr.pgn
 t/author-critic.t

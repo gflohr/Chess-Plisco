@@ -27,9 +27,10 @@ as a reference implementation for your own experiments and tests.
 	- [Engine](#engine)
 		- [Running the Engine](#running-the-engine)
 		- [Graphical User Interfaces](#graphical-user-interfaces)
+		- [Syzygy Endgame Tablebases](#syzygy-endgame-tablebases)
 		- [Differences to Other UCI Engines](#differences-to-other-uci-engines)
 			- [Option `SyzygyPath`](#option-syzygypath)
-			- [Options `Syzygy7TimeCusion` and `Syzygy3TimeCushion`](#options-syzygy7timecusion-and-syzygy3timecushion)
+			- [Options `Syzygy7TimeCushion` and `Syzygy3TimeCushion`](#options-syzygy7timecushion-and-syzygy3timecushion)
 			- [Option `Move Overhead`](#option-move-overhead)
 	- [Internals](#internals)
 	- [Copryight](#copryight)
@@ -175,6 +176,16 @@ interface.  Try using one of these:
 * [Banksia GUI](https://banksiagui.com/) (Linux, MacOS, and Windows)
 * [Arena](http://www.playwitharena.de/) (Linux, Windows)
 
+### Syzygy Endgame Tablebases
+
+When you want to use Syzygy Endgame Tablebases, make sure that they are stored
+on a fast SSD disk. Conventional spinning disks are way too small.
+
+The DTZ files are optional but improve performance. They can be stored on a
+slower storage medium. However, try to make sure that the disk does not go to
+sleep while playing. Waking the disk up can take several seconds and that can
+cause the engine to lose on time.
+
 ### Differences to Other UCI Engines
 
 #### Option `SyzygyPath`
@@ -182,7 +193,7 @@ interface.  Try using one of these:
 Unlike other engines do, directories are searched recursively for tablebase
 files.
 
-#### Options `Syzygy7TimeCusion` and `Syzygy3TimeCushion`
+#### Options `Syzygy7TimeCushion` and `Syzygy3TimeCushion`
 
 Probing the table bases in Perl is a lot slower than in C or similar languages
 because the records have to be decompressed.
