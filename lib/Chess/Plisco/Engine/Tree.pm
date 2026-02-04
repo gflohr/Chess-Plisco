@@ -1192,7 +1192,13 @@ sub think {
 	$self->{start} = $position->copy;
 	my @legal = $position->legalMoves;
 	if (!@legal) {
-		$self->{info}->(__"Error: no legal moves");
+		my $state = $position->gameOver;
+		if ($state & (CP_GAME_WHITE_WINS | CP_GAME_BLACK_WINS)) {
+			$self->{info}->("depth 0 score mate 0");
+		} else {
+			$self->{info}->("depth 0 score cp 0");
+		}
+
 		return;
 	} elsif (1 == @legal) {
 		# This is not good if in ponder mode because there will be no move to
