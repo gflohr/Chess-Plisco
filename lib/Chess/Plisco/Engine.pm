@@ -218,10 +218,8 @@ sub uci {
 
 	my $version = $Chess::Plisco::Engine::VERSION || 'development version';
 	$self->__output(<<"EOF");
-Welcome to Plisco $version!
-
-Try 'help' for a list of commands!
-
+🦊 Welcome to Plisco $version!
+💡 Try 'help' for a list of commands!
 EOF
 
 	foreach my $command (@$init) {
@@ -675,6 +673,8 @@ sub __onUciCmdGo {
 			$self->__output("bestmove $cn");
 		}
 		push @{$self->{__moves}}, $cn;
+	} else {
+		$self->__output("bestmove (none)");
 	}
 
 	$self->{__watcher}->setBatchMode(0);

@@ -15,6 +15,7 @@ use strict;
 use integer;
 
 use Locale::TextDomain ('Chess-Plisco');
+use List::Util qw(min);
 
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
@@ -1191,7 +1192,13 @@ sub think {
 	$self->{start} = $position->copy;
 	my @legal = $position->legalMoves;
 	if (!@legal) {
-		$self->{info}->(__"Error: no legal moves");
+		my $state = $position->gameOver;
+		if ($state & (CP_GAME_WHITE_WINS | CP_GAME_BLACK_WINS)) {
+			$self->{info}->("depth 0 score mate 0");
+		} else {
+			$self->{info}->("depth 0 score cp 0");
+		}
+
 		return;
 	} elsif (1 == @legal) {
 		# This is not good if in ponder mode because there will be no move to
@@ -1372,6 +1379,7 @@ sub tbRootProbe {
 	# We want to order the moves by the DTZ of the position after the move
 	# has been made.
 	foreach my $move (keys %{$root_moves}) {
+my $san = $pos->SAN($move);
 		$pos->move($move);
 
 		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
@@ -1419,7 +1427,6 @@ sub tbRootProbe {
 		# We will later try to filter out moves that will result in an
 		# unwanted draw by the 50-move-rule.
 		my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
-		$root_moves->{$move}->{tb_abs_dtz} = $hmc + abs $dtz;
 
 		if ($hmc == 0) {
 			# The current move is a pawn push or capture. The DTZ is that
@@ -1433,59 +1440,86 @@ sub tbRootProbe {
 			# We have already handled stalemate and draw because of
 			# insufficient material. Now check the draws that have to be
 			# claimed.
-			my $is_draw = $pos->[CP_POS_HALFMOVE_CLOCK] > 99;
-			if (!$is_draw) {
-				# Check for draw by 3-fold repetition. Unlike the normal
-				# search, the root search has to check that this is really
-				# the 3rd repetition.
-				my $signature = $pos->[CP_POS_SIGNATURE];
-				my @repetitions = grep { $_ == $signature } @{$self->{signatures}};
-				$is_draw = @repetitions > 1;
+
+			# Check for draw by 3-fold repetition. Unlike the normal
+			# search, the root search has to check that this is really
+			# the 3rd repetition.
+			my $signature = $pos->[CP_POS_SIGNATURE];
+			my @repetitions = grep { $_ == $signature } @{$self->{signatures}};
+			my $is_draw = @repetitions > 1;
+
+			$root_moves->{$move}->{tb_draw} = $is_draw;
+
+			# Correct the DTZ by 1 and apply the offset for the first move.
+			if ($dtz > 0) {
+				++$dtz;
+			} elsif ($dtz < 0) {
+				--$dtz;
 			}
-			
+
 			if ($is_draw) {
-				# This is only what we want, when we are losing.
-				$dtz = $winning ? -INF : INF;
+				$root_moves->{$move}->{tb_rank} = 0;
 			} else {
-				# Correct the DTZ by 1 and apply the offset for the first move.
-				if ($dtz > 0) {
-					++$dtz;
-				} elsif ($dtz < 0) {
-					--$dtz;
-				}
+				$root_moves->{$move}->{tb_rank} = $dtz;
 			}
 		}
 
-		$root_moves->{$move}->{tb_rank} = $dtz;
+		$root_moves->{$move}->{tb_abs_dtz} = $hmc - 1 + abs $dtz;
 
 		UNDO_MOVE: @$pos = @backup; # Undo move.
 	}
 
 	if ($self->{tb_50_move_rule}) {
-		my (@drawing, @other);
+		my (@drawing, @rule50, @other);
 		foreach my $move (keys %{$root_moves}) {
 			my $root_move = $root_moves->{$move};
 
-			if ($root_move->{tb_rank} == 0 || $root_move->{tb_abs_dtz} > 99) {
+			if ($root_move->{tb_rank} == 0) {
+				push @drawing, $move;
+			} elsif ($root_move->{tb_abs_dtz} > 100) {
+				push @rule50, $move;
+			} else {
+				push @other, $move;
+			}
+		}
+
+		if ($winning) {
+			if (@other) {
+				delete @{$root_moves}{@drawing};
+				delete @{$root_moves}{@rule50};
+			} else {
+				my $min_dtz = min map { $root_moves->{$_}->{tb_abs_dtz }} keys %$root_moves;
+				foreach my $move (keys %$root_moves) {
+					delete $root_moves->{$move} if $root_moves->{$move}->{tb_abs_dtz} != $min_dtz;
+				}
+			}
+		} else {
+			if (@drawing) {
+				delete @{$root_moves}{@other};
+			}
+		}
+		$self->{tb_outcome} = $wdl == WDL_WIN ? 20000 : $wdl == WDL_LOSS ? -20000 : 0;
+	} else {
+		my (@drawing, @other) = @_;
+
+		foreach my $move (keys %{$root_moves}) {
+			my $root_move = $root_moves->{$move};
+			if ($root_move->{tb_rank} == 0) {
 				push @drawing, $move;
 			} else {
 				push @other, $move;
 			}
 		}
 
-		if (@drawing && @other) {
-			# We only keep those moves that are favourable for us.
-			if ($winning) {
+		if ($winning) {
+			if (@other) {
 				delete @{$root_moves}{@drawing};
-			} else {
+			}
+		} else {
+			if (@drawing) {
 				delete @{$root_moves}{@other};
 			}
 		}
-	}
-
-	if ($self->{tb_50_move_rule}) {
-		$self->{tb_outcome} = $wdl == WDL_WIN ? 20000 : $wdl == WDL_LOSS ? -20000 : 0;
-	} else {
 		$self->{tb_outcome} = 20000 * $wdl_sign;
 	}
 
