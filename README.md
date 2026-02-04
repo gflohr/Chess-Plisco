@@ -29,6 +29,7 @@ as a reference implementation for your own experiments and tests.
 		- [Graphical User Interfaces](#graphical-user-interfaces)
 		- [Syzygy Endgame Tablebases](#syzygy-endgame-tablebases)
 		- [Differences to Other UCI Engines](#differences-to-other-uci-engines)
+			- [Commandline Options](#commandline-options)
 			- [Option `SyzygyPath`](#option-syzygypath)
 			- [Options `Syzygy7TimeCushion` and `Syzygy3TimeCushion`](#options-syzygy7timecushion-and-syzygy3timecushion)
 			- [Option `Move Overhead`](#option-move-overhead)
@@ -187,6 +188,11 @@ sleep while playing. Waking the disk up can take several seconds and that can
 cause the engine to lose on time.
 
 ### Differences to Other UCI Engines
+
+#### Commandline Options
+
+The program understands several commandline options. Try `plisco --help` for
+details.
 
 #### Option `SyzygyPath`
 
