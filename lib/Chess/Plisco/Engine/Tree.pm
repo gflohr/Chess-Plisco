@@ -232,12 +232,20 @@ sub printPV {
 	my $nodes = $self->{nodes} // 1;
 	my $elapsed = tv_interval($self->{start_time});
 	my $nps = $elapsed ? (int(0.5 + $nodes / $elapsed)) : 0;
+	my $bound = '';
 	if ($self->{tb_root_hit} && !$mate_in) {
-		if (!$self->{tb_score}) {
-			# Tablebase draw. Report a draw, no matter what the search says.
-			$score = 0;
-		} elsif (!$mate_in) {
-			$score = $self->{tb_score};
+		if (!$mate_in) {
+			$DB::single = 1;
+			if ($self->{tb_score} == 20000 && $score > 20000) {
+				$bound = ' upperbound';
+				$mate_in = (VALUE_TB - $score) >> 1;
+			} elsif ($self->{tb_score} == -20000 && $score < -20000) {
+				$bound = ' lowerbound';
+				$mate_in = -((-(-VALUE_TB - $score)) >> 1);
+			} elsif (!$self->{tb_score}) {
+				# Tablebase draw.
+				$score = $self->{tb_score};
+			}
 		}
 	}
 	my $scorestr = $mate_in ? "mate $mate_in" : "cp $score";
@@ -248,7 +256,7 @@ sub printPV {
 	my $seldepth = $self->{seldepth} // $depth;
 	my $tbhits = $self->{tb_hits} // 0;
 	$self->{info}->("depth $depth seldepth $seldepth"
-			. " score $scorestr nodes $nodes nps $nps hashfull $hashfull"
+			. " score $scorestr$bound nodes $nodes nps $nps hashfull $hashfull"
 			. " tbhits $self->{tb_hits} time $time pv $pv");
 	if ($self->{__debug}) {
 		$self->{info}->("tt_hits $self->{tt_hits}") if $self->{__debug};
@@ -419,7 +427,7 @@ sub alphabeta {
 					if (DEBUG) {
 						my $tt_type_name = BOUND_TYPES->[$tt_type];
 						my $tt_value = _cp_value_to_tt($value, $ply);
-						$self->indent($ply, "store value $ply \@depth $depth with bound type $tt_type_name");
+						$self->indent($ply, "store value $tt_value \@depth $depth with bound type $tt_type_name");
 					}
 					$tt->store(
 						@tt_address, # Address.
@@ -982,6 +990,11 @@ sub rootSearch {
 				if (($score >= MATE - $depth) || ($score <= -(MATE - $depth))) {
 					$self->printPV(\@line);
 					last DEEPENING;
+				} elsif (($score >= VALUE_TB - $depth) || ($score <= -(MATE - $depth))) {
+					# If we have found a tablebase score, there is no need to
+					# re-search.
+					$self->printPV(\@line);
+					last;
 				}
 
 				if ($score <= $alpha) {
@@ -1339,7 +1352,7 @@ sub tbRankRootMoves {
 	}
 
 	my $pos = $self->{position};
-	
+
 	if (!$pos->[CP_POS_CASTLING_RIGHTS]
 	    && $pos->[CP_POS_POPCOUNT] <= $self->{tb_probe_limit}) {
 		if ($self->{use_time_management}) {
