@@ -1439,7 +1439,7 @@ sub tbRootProbeWinning {
 			my @legal = $pos->legalMoves;
 			if (!@legal && $pos->inCheck) {
 				# Mate. This is our move.
-				$root_moves = { $move => $root_moves->{$move} };
+				$self->{root_moves} = { $move => $root_moves->{$move} };
 				return $self;
 			}
 		}
@@ -1513,6 +1513,7 @@ sub tbRootProbeDrawing {
 	my ($rep_move, $draw_move);
 	my @backup = @$pos;
 	foreach my $move (keys %{$root_moves}) {
+my $san = $pos->SAN($move);
 		$pos->move($move);
 
 		my $next_wdl = $tb->safeProbeWdl($pos);
@@ -1535,7 +1536,6 @@ sub tbRootProbeDrawing {
 			my @repetitions = grep { $_ == $signature } @{$self->{signatures}};
 			if (@repetitions > 1) {
 				$is_draw = 1;
-				$draw_move = 1;
 			} elsif (@repetitions == 1) {
 				$rep_move = $move; # Remember it.
 			}
@@ -1545,7 +1545,6 @@ sub tbRootProbeDrawing {
 			my @legal = $pos->legalMoves;
 			if (!@legal) {
 				$is_draw = 1;
-				$draw_move = $move;
 			}
 		}
 
@@ -1578,9 +1577,9 @@ sub tbRootProbeDrawing {
 
 		if (!$winning) {
 			if ($draw_move) {
-				$root_moves = { $draw_move => $root_moves->{$draw_move} };
+				$self->{root_moves} = { $draw_move => $root_moves->{$draw_move} };
 			} else {
-				$root_moves = { $rep_move => $root_moves->{$rep_move} };
+				$self->{root_moves} = { $rep_move => $root_moves->{$rep_move} };
 			}
 		}
 
@@ -1594,7 +1593,7 @@ sub tbRootProbeDrawing {
 		} @candidates;
 	} else {
 		# The only legal moves were draws. Pick a random one.
-		$root_moves = { $draws[0] => $root_moves->{$draws[0] } };
+		$self->{root_moves} = { $draws[0] => $root_moves->{$draws[0] } };
 	}
 
 	$self->{score} = $self->{tb_score} = 0;
@@ -1678,7 +1677,7 @@ sub tbRootProbeLosing {
 	}
 
 	# Pass 2. Delete all root moves but the best one.
-	$root_moves = { $best_move => $root_moves->{$best_move} };
+	$self->{root_moves} = { $best_move => $root_moves->{$best_move} };
 
 	$self->{score} = $self->{tb_score} = -20000;
 

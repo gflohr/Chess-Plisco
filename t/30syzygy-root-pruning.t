@@ -93,6 +93,14 @@ my @tests = (
 			'Qh8+', 'Kb6', 'Kc5', 'Kd6', 'Kd7', 'Kb5', 'Kd5'],
 		pre_moves => ['Qa2', 'Kc8', 'Qa1', 'Kb8', 'Qa2', 'Kc8', 'Qa1', 'Kb8'],
 	},
+	# Seek a draw by repetition, because we are behind.
+	{
+		name => 'Force draw by repetition',
+		fen => '3nkn2/8/8/8/8/8/8/4K3 w - - 0 1',
+		depth => 1,
+		root_moves => ['Kd1'],
+		pre_moves => ['Kd1', 'Ke7', 'Ke1', 'Ke8', 'Kd1', 'Ke7', 'Ke1', 'Ke8'],
+	},
 );
 
 foreach my $test (@tests) {
@@ -119,9 +127,7 @@ foreach my $test (@tests) {
 	my @legal = $position->legalMoves;
 	my $root_moves = $tree->{root_moves} = {};
 	foreach my $move (@legal) {
-		$root_moves->{$move} = {
-			san => $position->SAN($move),
-		};
+		$root_moves->{$move} = {};
 	}
 
 	$tree->tbRankRootMoves;
