@@ -15,7 +15,7 @@ use integer;
 use Test::More;
 use Chess::Plisco qw(:all);
 use Chess::Plisco::Macro;
-use Chess::Plisco::Engine::Position;
+use Chess::Plisco::Engine::Position qw(CP_POS_SIGNATURE);
 use Chess::Plisco::Tablebase::Syzygy;
 
 use lib 't/lib';
@@ -84,6 +84,15 @@ my @tests = (
 		depth => 1,
 		root_moves => ['Qb1+'],
 	},
+	{
+		name => 'Avoid draw by 3-fold repetition',
+		fen => '1K6/8/2k5/8/8/8/8/q7 b - - 0 1',
+		depth => 1,
+		root_moves => ['Qa3', 'Qa4', 'Qa5', 'Qb2+', 'Qg7', 'Qb1+', 'Qc1',
+			'Qc3', 'Qd1', 'Qd4', 'Qe1', 'Qe5+', 'Qf1', 'Qf6', 'Qg1', 'Qh1',
+			'Qh8+', 'Kb6', 'Kc5', 'Kd6', 'Kd7', 'Kb5', 'Kd5'],
+		pre_moves => ['Qa2', 'Kc8', 'Qa1', 'Kb8', 'Qa2', 'Kc8', 'Qa1', 'Kb8'],
+	},
 );
 
 foreach my $test (@tests) {
@@ -94,6 +103,19 @@ foreach my $test (@tests) {
 	$tree->{tb_50_move_rule} = 1;
 
 	my $position = $tree->{position};
+
+	my @signatures;
+	if ($test->{pre_moves}) {
+		push @signatures, $position->[CP_POS_SIGNATURE];
+		foreach my $san (@{$test->{pre_moves}}) {
+			$position->applyMove($san);
+			push @signatures, $position->[CP_POS_SIGNATURE];
+		}
+		pop @signatures;
+	}
+	push @signatures, $position->[CP_POS_SIGNATURE];
+	$tree->{signatures} = \@signatures;
+
 	my @legal = $position->legalMoves;
 	my $root_moves = $tree->{root_moves} = {};
 	foreach my $move (@legal) {

@@ -1428,9 +1428,10 @@ sub tbRootProbeWinning {
 		if (!$is_draw) {
 			my $signature = $pos->[CP_POS_SIGNATURE];
 			my @repetitions = grep { $_ == $signature } @{$self->{signatures}};
-			# This is not an immediate draw but we count it as one, because
-			# it never makes sense to repeat a position, when we are winning.
-			$is_draw = @repetitions;
+			# Only prune moves that lead to an immediate claimable draw. It
+			# can be that a repetition is still the best move if in the
+			# previous occurrence of the position, a wrong move had been made.
+			$is_draw = @repetitions > 1;
 		}
 		if (!$is_draw) {
 			# Check for mate. There is no need to check for a stalemate. The
@@ -1460,17 +1461,23 @@ sub tbRootProbeWinning {
 	}
 
 	if (@candidates) {
-		my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
-		my @winning = grep { $hmc + $root_moves->{$_}->{tb_dtz} < 100 } @candidates;
+		if ($use_50_move_rule) {
+			my $hmc = $pos->[CP_POS_HALFMOVE_CLOCK];
+			my @winning = grep { $hmc + $root_moves->{$_}->{tb_dtz} < 100 } @candidates;
 
-		if (!@winning) {
-			# Only consider moves with the minimal DTZ.
-			my $min_dtz = min map { $root_moves->{$_}->{tb_dtz} } @candidates;
-			@winning = grep { $root_moves->{$_}->{tb_dtz} == $min_dtz } @candidates;
+			if (!@winning) {
+				# Only consider moves with the minimal DTZ.
+				my $min_dtz = min map { $root_moves->{$_}->{tb_dtz} } @candidates;
+				@winning = grep { $root_moves->{$_}->{tb_dtz} == $min_dtz } @candidates;
+			}
+			%{$root_moves} = map {
+				$_ => $root_moves->{$_}
+			} @winning;
+		} else {
+			%{$root_moves} = map {
+				$_ => $root_moves->{$_}
+			} @candidates;
 		}
-		%{$root_moves} = map {
-			$_ => $root_moves->{$_}
-		} @winning;
 	} else {
 		my $min_dtz = min map { $root_moves->{$_}->{tb_dtz} } @painful;
 		@painful = grep { $root_moves->{$_}->{tb_dtz} == $min_dtz } @painful;
