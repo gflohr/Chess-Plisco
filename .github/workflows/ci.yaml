@@ -1,0 +1,66 @@
+# FIXME! How can we avoid DRY here? The only difference is that we want to
+# include more Perl versions.
+
+name: CI on Pull Request
+
+on:
+  pull_request:
+    branches: [ 'main' ]
+
+jobs:
+  on-pull-request:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        # perl-version should always be one behind the latest version.  The
+        # latest version is tested in the workflow triggered by the push.
+        perl-version:
+        - '5.40'
+        - '5.38'
+        - '5.36'
+        - '5.34'
+        - '5.32'
+        - '5.30'
+        - '5.28'
+        - '5.26'
+        - '5.24'
+        - '5.22'
+        - '5.20'
+        - '5.18'
+        - '5.16'
+        - '5.14'
+        include:
+        - perl-version: '5.38'
+          os: ubuntu-latest
+          coverage: true
+
+    steps:
+    - name: 'Check out repository'
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: 'Perl version'
+      run: perl -V
+
+    - name: Set up perl
+      uses: shogo82148/actions-setup-perl@v1
+      with:
+        perl-version: ${{ matrix.perl }}
+        distribution: strawberry
+
+    - name: 'Install dependencies'
+      run: cpanm --notest --installdeps --verbose .
+
+    - name: 'Prepare build'
+      run: perl Makefile.PL
+
+    - name: Install
+      run: cpanm --notest --verbose .
+
+    - name: Test
+      run: prove -l --verbose
+
