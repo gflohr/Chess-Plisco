@@ -1,0 +1,49 @@
+# FIXME! How can we avoid DRY here? The only difference is that we want to
+# include more Perl versions.
+
+name: CI for Pushes
+
+on:
+  push:
+    branches: [ '*' ]
+
+jobs:
+  on-push:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # FIXME! Test why Sys::Mmap cannot be installed in the pipeline.
+        os: ['ubuntu-latest', 'macos-latest']
+        perl-version:
+        - '5.42'
+
+    steps:
+    - name: 'Check out repository'
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: 'Perl version'
+      run: perl -V
+
+    - name: Set up perl
+      uses: shogo82148/actions-setup-perl@v1
+      with:
+        perl-version: ${{ matrix.perl }}
+        distribution: strawberry
+
+    - name: 'Install dependencies'
+      run: cpanm --notest --installdeps --verbose .
+
+    - name: 'Prepare build'
+      run: perl Makefile.PL
+
+    - name: Install
+      run: cpanm --notest --verbose .
+    - name: Expand macros
+      run: ./expand-macros blib
+
+    - name: Test
+      run: prove -b
