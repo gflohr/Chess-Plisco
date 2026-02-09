@@ -63,5 +63,5 @@ jobs:
       run: cpanm --notest --verbose .
 
     - name: Test
-      run: prove -l --verbose
+      run: prove -l
 
