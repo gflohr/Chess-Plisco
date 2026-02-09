@@ -42,7 +42,7 @@ jobs:
 
     - name: Install
       run: cpanm --notest --verbose .
-    - name: Expand Macros
+    - name: Expand macros
       run: ./expand-macros blib
 
     - name: Test
