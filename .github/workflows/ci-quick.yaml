@@ -14,7 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        # FIXME! Test why Sys::Mmap cannot be installed in the pipeline.
+        os: ['ubuntu-latest', 'macos-latest']
         perl-version:
         - '5.42'
 
