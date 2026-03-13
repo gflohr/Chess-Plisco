@@ -60,7 +60,7 @@ ok !$engine->{__continued}, 'engine sees new game';
 
 $engine->__onUciInput('go wtime 2000 btime 2000 winc 100 binc 100');
 
-warn "engine output:\n$engine_output";
+warn "engine output:\n***$engine_output***";
 
 my @lines = split /\n/, $engine_output;
 $engine_output = '';
