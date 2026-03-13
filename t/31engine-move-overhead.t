@@ -67,6 +67,7 @@ $engine_output = '';
 ok @lines >= 2, 'engine has output';
 
 my %result = parse_bestmove $lines[-1];
+warn Dumper \%result;
 ok %result, 'engine completed search';
 ok $result{bestmove}, 'engine found best move';
 ok $result{ponder}, 'engine found ponder move';
