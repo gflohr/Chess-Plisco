@@ -84,6 +84,16 @@ my @tests = (
 		depth => 1,
 		root_moves => ['Qb1+'],
 	},
+	# This position is a win because the white queen can capture the other
+	# queen. All moves that would lose the own queen instead and all moves that
+	# do not capture must be discarded, because they do not have the same WDL
+	# sign.
+	{
+		name => 'Queen must capture the other queen',
+		fen => '4k3/8/8/2q5/8/8/5Q2/4K3 w - - 0 1',
+		depth => 1,
+		root_moves => ['Qxc5'],
+	}
 );
 
 foreach my $test (@tests) {

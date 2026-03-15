@@ -1379,7 +1379,6 @@ sub tbRootProbe {
 	# We want to order the moves by the DTZ of the position after the move
 	# has been made.
 	foreach my $move (keys %{$root_moves}) {
-my $san = $pos->SAN($move);
 		$pos->move($move);
 
 		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
