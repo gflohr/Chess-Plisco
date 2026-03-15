@@ -1406,18 +1406,11 @@ sub tbRootProbe {
 			return $self;
 		}
 
-		# Does the move result in a draw by insufficient material?
-		if ($pos->insufficientMaterial) {
-			if ($winning) {
-				# Don't even consider that move.
-				delete $root_moves->{$move};
-				goto UNDO_MOVE;
-			} else {
-				# Force playing this move.
-				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
-				return;
-			}
-		}
+		# We used to do a check here for a draw by insufficient material. But
+		# that knowledge is already present in the tablebase. The check only
+		# makes sense for the case that we have tables for the current position
+		# but not for the position after a capture that leads to a draw by
+		# insufficient material. But that is already handled above.
 
 		# If the probe fails, treat all moves equally.
 		my $dtz = -$tb->safeProbeDtz($pos) // 0;
