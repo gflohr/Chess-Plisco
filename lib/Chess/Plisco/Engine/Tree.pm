@@ -1379,7 +1379,6 @@ sub tbRootProbe {
 	# We want to order the moves by the DTZ of the position after the move
 	# has been made.
 	foreach my $move (keys %{$root_moves}) {
-my $san = $pos->SAN($move);
 		$pos->move($move);
 
 		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
@@ -1393,33 +1392,25 @@ my $san = $pos->SAN($move);
 
 		# First, get mate, stalemate out of the way.
 		my @legal = $pos->legalMoves;
-		if (!@legal) {
-			if ($pos->inCheck || !$winning) {
-				# We have found a mate or stalemate. Our single-threaded
-				# engine cannot be used for multiPV analysys. We can just as
-				# well bypass the search altogether and return the winning
-				# move.
-				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
-				return;
-			} else {
-				# A stalemate but we are winning.
-				delete $root_moves->{$move};
-				goto UNDO_MOVE;
-			}
+		if (!@legal && ($pos->inCheck || !$winning)) {
+			# We have found a mate or stalemate. Our single-threaded
+			# engine cannot be used for multiPV analysys. We can just as
+			# well bypass the search altogether and return the winning
+			# move.
+			#
+			# There is no need to check for the case that we are winning
+			# and found a move that stalemates. That will change the WDL
+			# from a positive value to 0, and that case is handled above.
+			$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
+
+			return $self;
 		}
 
-		# Does the move result in a draw by insufficient material?
-		if ($pos->insufficientMaterial) {
-			if ($winning) {
-				# Don't even consider that move.
-				delete $root_moves->{$move};
-				goto UNDO_MOVE;
-			} else {
-				# Force playing this move.
-				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
-				return;
-			}
-		}
+		# We used to do a check here for a draw by insufficient material. But
+		# that knowledge is already present in the tablebase. The check only
+		# makes sense for the case that we have tables for the current position
+		# but not for the position after a capture that leads to a draw by
+		# insufficient material. But that is already handled above.
 
 		# If the probe fails, treat all moves equally.
 		my $dtz = -$tb->safeProbeDtz($pos) // 0;

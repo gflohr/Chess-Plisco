@@ -23,8 +23,9 @@ use lib 't/lib';
 use TreeFactory;
 
 my $tb = Chess::Plisco::Tablebase::Syzygy->new('t/syzygy');
-is 4, $tb->largestWdl, 'largest WDL';
-is 4, $tb->largestDtz, 'largest DTZ';
+is 5, $tb->largestWdl, 'largest WDL';
+is 5, $tb->largestDtz, 'largest DTZ';
+my $probe_limit = $tb->largestWdl < $tb->largestDtz ? $tb->largestWdl : $tb->largestDtz;
 
 my ($pos, @moves, @expect);
 
@@ -84,13 +85,37 @@ my @tests = (
 		depth => 1,
 		root_moves => ['Qb1+'],
 	},
+	# This position is a win because the white queen can capture the other
+	# queen. All moves that would lose the own queen instead and all moves that
+	# do not capture must be discarded, because they do not have the same WDL
+	# sign.
+	{
+		name => 'Queen must capture the other queen',
+		fen => '4k3/8/8/2q5/8/8/5Q2/4K3 w - - 0 1',
+		depth => 1,
+		root_moves => ['Qxc5'],
+	},
+	# A direct mate should be returned immediately.
+	{
+		name => 'Find mate in 1',
+		fen => 'k7/8/2K5/8/8/8/8/1Q6 w - - 0 1',
+		depth => 1,
+		root_moves => ['Qb7#'],
+	},
+	# Moving the king in front of the pawn stalemates the black king.
+	{
+		name => 'Escape into stalemate',
+		fen => '8/8/8/8/8/8/4Kp1p/6bk w - - 0 1',
+		depth => 1,
+		root_moves => ['Kf1'],
+	}
 );
 
 foreach my $test (@tests) {
 	my $factory = TreeFactory->new(%$test);
 	my $tree = $factory->tree;
 	$tree->{tb} = $tb;
-	$tree->{tb_cardinality} = $tree->{tb_probe_limit} = 4;
+	$tree->{tb_cardinality} = $tree->{tb_probe_limit} = $probe_limit;
 	$tree->{tb_50_move_rule} = 1;
 
 	my $position = $tree->{position};
