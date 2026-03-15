@@ -1379,7 +1379,6 @@ sub tbRootProbe {
 	# We want to order the moves by the DTZ of the position after the move
 	# has been made.
 	foreach my $move (keys %{$root_moves}) {
-my $san = $pos->SAN($move);
 		$pos->move($move);
 
 		$root_moves->{$move}->{tb_wdl} = $tb->safeProbeWdl($pos);
@@ -1393,19 +1392,18 @@ my $san = $pos->SAN($move);
 
 		# First, get mate, stalemate out of the way.
 		my @legal = $pos->legalMoves;
-		if (!@legal) {
-			if ($pos->inCheck || !$winning) {
-				# We have found a mate or stalemate. Our single-threaded
-				# engine cannot be used for multiPV analysys. We can just as
-				# well bypass the search altogether and return the winning
-				# move.
-				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
-				return $self;
-			} else {
-				# A stalemate but we are winning.
-				delete $root_moves->{$move};
-				goto UNDO_MOVE;
-			}
+		if (!@legal && ($pos->inCheck || !$winning)) {
+			# We have found a mate or stalemate. Our single-threaded
+			# engine cannot be used for multiPV analysys. We can just as
+			# well bypass the search altogether and return the winning
+			# move.
+			#
+			# There is no need to check for the case that we are winning
+			# and found a move that stalemates. That will change the WDL
+			# from a positive value to 0, and that case is handled above.
+			$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
+
+			return $self;
 		}
 
 		# Does the move result in a draw by insufficient material?
