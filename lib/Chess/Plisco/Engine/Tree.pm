@@ -1399,7 +1399,7 @@ sub tbRootProbe {
 				# well bypass the search altogether and return the winning
 				# move.
 				$self->{root_moves} = { $move => $self->{root_moves}->{$move} };
-				return;
+				return $self;
 			} else {
 				# A stalemate but we are winning.
 				delete $root_moves->{$move};

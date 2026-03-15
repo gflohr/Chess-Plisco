@@ -93,6 +93,13 @@ my @tests = (
 		fen => '4k3/8/8/2q5/8/8/5Q2/4K3 w - - 0 1',
 		depth => 1,
 		root_moves => ['Qxc5'],
+	},
+	# A direct mate should be returned immediately.
+	{
+		name => 'Find mate in 1',
+		fen => 'k7/8/2K5/8/8/8/8/1Q6 w - - 0 1',
+		depth => 1,
+		root_moves => ['Qb7#'],
 	}
 );
 
